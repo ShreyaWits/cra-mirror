@@ -2,7 +2,7 @@ package usecases
 
 import (
 	"encryption_microservice/internal/modules/encryption/api/dtos"
-	"encryption_microservice/internal/modules/encryption/services/crypto"
+	encryptionengine "encryption_microservice/internal/modules/encryption/services/encryption_engine"
 	keymanager "encryption_microservice/internal/modules/encryption/services/key_manager"
 	"encryption_microservice/internal/modules/encryption/services/user"
 	"encryption_microservice/pkg/errors"
@@ -12,14 +12,14 @@ import (
 // EncryptionUseCaseImpl implements the EncryptionUseCase interface
 type EncryptionUseCaseImpl struct {
 	keyManager       keymanager.KeyManager
-	encryptionEngine crypto.EncryptionEngine
+	encryptionEngine encryptionengine.EncryptionEngine
 	userService      user.UserService
 }
 
 // NewEncryptionUseCase creates a new instance of EncryptionUseCaseImpl
 func NewEncryptionUseCase(
 	keyManager keymanager.KeyManager,
-	encryptionEngine crypto.EncryptionEngine,
+	encryptionEngine encryptionengine.EncryptionEngine,
 	userService user.UserService,
 ) EncryptionUseCase {
 	return &EncryptionUseCaseImpl{

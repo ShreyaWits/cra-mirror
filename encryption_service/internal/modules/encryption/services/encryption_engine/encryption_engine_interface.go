@@ -1,4 +1,4 @@
-package crypto
+package encryptionengine
 
 // EncryptionEngine defines the interface for encryption operations
 type EncryptionEngine interface {
