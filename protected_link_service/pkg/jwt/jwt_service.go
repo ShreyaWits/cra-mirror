@@ -9,7 +9,8 @@ import (
 	"errors"
 	"fmt"
 	configEnv "protected_link/internal/configs"
-	apiDtos "protected_link/internal/module/apis/dtos"
+	apiDtos "protected_link/internal/modules/protected_link_generation/apis/dtos"
+
 	"strings"
 	"time"
 )
@@ -109,24 +110,20 @@ func (j *JwtCreation) Decrypt(token string) ([]byte, error) {
 
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 
-	// ✅ Decrypt the actual payload
 	plainText, err := aesGCM.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt data: %w", err)
 	}
 
 	var payload apiDtos.SecurePayload
-	// ✅ Unmarshal into temporary struct to validate time
 	if err := json.Unmarshal(plainText, &payload); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal decrypted payload: %w", err)
 	}
 
-	// ✅ Convert ExpiresAt to time.Time and check expiration
-	expirationTime := time.Unix(payload.ExpiresAt, 0)
-	if time.Now().After(expirationTime) {
-		return nil, fmt.Errorf("⏰ link has expired")
+	// ✅ Expiration check with clean error
+	if time.Now().After(time.Unix(payload.ExpiresAt, 0)) {
+		return nil, errors.New("⏰ link is expired")
 	}
 
-	// Return decrypted plain JSON bytes
 	return plainText, nil
 }

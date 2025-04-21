@@ -9,7 +9,7 @@ import (
 	fiberOtel "github.com/psmarcin/fiber-opentelemetry/pkg/fiber-otel"
 )
 
-func SetupRoutes(radis *database.RedisConfig, server *fiber.App) {
+func SetupRoutes(redis *database.RedisConfig, server *fiber.App) {
 
 	// Allow CORS
 	server.Use(cors.New(cors.Config{
@@ -24,5 +24,5 @@ func SetupRoutes(radis *database.RedisConfig, server *fiber.App) {
 	}))
 
 	// Initialize routes
-	routes.InitializeServerRoutes(radis, server)
+	routes.InitializeServerRoutes(redis, server)
 }

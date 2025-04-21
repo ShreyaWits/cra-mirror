@@ -2,10 +2,9 @@ package handlers
 
 import (
 	"net/http"
-
 	commonDtos "protected_link/internal/common/api/dtos"
-	apiDtos "protected_link/internal/module/apis/dtos"
-	"protected_link/internal/module/services"
+	apiDtos "protected_link/internal/modules/protected_link_generation/apis/dtos"
+	"protected_link/internal/modules/protected_link_generation/services"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -29,6 +28,29 @@ func (h *GenerateLinkHandler) GetProtectedURL(c *fiber.Ctx) error {
 	savedLink, err := h.services.SaveGeneratedLink(body)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(commonDtos.ApiResponseDto{
+			Success: false,
+			Message: "Failed to save link",
+			Data:    err.Error(),
+		})
+	}
+
+	return c.Status(http.StatusOK).JSON(savedLink)
+}
+
+func (h *GenerateLinkHandler) GetExtractData(c *fiber.Ctx) error {
+	token := c.Query("token") // Extract token from query param
+
+	if token == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"message": "Token is missing from the request",
+		})
+	}
+
+	// Save link using the service
+	savedLink, err := h.services.GetExtractData(&token)
+	if err != nil {
+		return c.Status(http.StatusNotFound).JSON(commonDtos.ApiResponseDto{
 			Success: false,
 			Message: "Failed to save link",
 			Data:    err.Error(),

@@ -15,6 +15,3 @@ func GenerateShortCode(length int) string {
 	}
 	return string(code)
 }
-
-
-

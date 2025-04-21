@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	commonDtos "protected_link/internal/common/api/dtos"
-	apiDtos "protected_link/internal/module/apis/dtos"
-	enum "protected_link/internal/module/apis/enums"
 	"protected_link/internal/module/models"
+	apiDtos "protected_link/internal/module/protected_link_generation/apis/dtos"
 
 	"reflect"
 	"strings"
