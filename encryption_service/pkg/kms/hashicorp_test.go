@@ -116,7 +116,7 @@ func TestHashicorpKMS(t *testing.T) {
 		if err != nil {
 			// If deletion is not allowed, that's expected
 			assert.Contains(t, err.Error(), "deletion is not allowed", "Expected error about deletion not being allowed")
-			logger.LogEvent("test", "KEK_DELETE_ATTEMPTED", "test", "expected_failure",
+			logger.LogEvent("test", "KEK_DE¸LETE_ATTEMPTED", "test", "expected_failure",
 				fmt.Sprintf("Attempted to delete KEK with ID: %s (expected to fail as deletion is not allowed)", kekID))
 		}
 
