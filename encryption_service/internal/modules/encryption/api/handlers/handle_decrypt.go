@@ -28,8 +28,16 @@ func (h *EncryptionHandlerImpl) HandleDecrypt(c *fiber.Ctx) error {
 		})
 	}
 
+	token := c.Locals("token").(string)
+
+	userData, err := h.userService.GetUserData(token)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 	// Execute use case
-	response, err := h.encryptionUseCase.Decrypt(&req)
+	response, err := h.encryptionUseCase.Decrypt(userData.ID, userData.EDEKPrivate, userData.EDEKPublic, &req)
 	if err != nil {
 		switch err.(type) {
 		case *errors.BadRequestError:

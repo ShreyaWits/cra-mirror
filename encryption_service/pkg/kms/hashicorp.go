@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"path/filepath"
+	"time"
 
+	"encryption_microservice/internal/config"
 	"encryption_microservice/pkg/logger"
 
 	"github.com/hashicorp/vault/api"
@@ -18,10 +21,23 @@ type HashiCorpKMS struct {
 }
 
 // NewHashiCorpKMS creates a new instance of HashiCorpKMS
-func NewHashiCorpKMS(client *api.Client, transitPath string) KmsService {
+func NewHashiCorpKMS(cfg *config.Config) KmsService {
+	// Initialize Vault client
+	vaultConfig := api.DefaultConfig()
+	vaultConfig.Address = cfg.VaultAddr
+	vaultConfig.MaxRetries = 3
+	vaultConfig.Timeout = 10 * time.Second
+
+	vaultClient, err := api.NewClient(vaultConfig)
+	if err != nil {
+		log.Fatalf("Failed to create Vault client: %v", err)
+	}
+
+	// Set Vault token
+	vaultClient.SetToken(cfg.VaultToken)
 	return &HashiCorpKMS{
-		client:      client,
-		transitPath: transitPath,
+		client:      vaultClient,
+		transitPath: cfg.VaultPath,
 	}
 }
 

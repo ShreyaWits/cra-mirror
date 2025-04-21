@@ -33,7 +33,7 @@ func (e *EncryptionEngineImpl) GenerateEncryptionKey() ([]byte, error) {
 func (e *EncryptionEngineImpl) Encrypt(data string, dek []byte) (string, error) {
 
 	// Encrypt the DEK with KEK
-	encryptedData, err := e.crypto.Encrypt(data, string(dek))
+	encryptedData, err := e.crypto.Encrypt(data, dek)
 	if err != nil {
 		return "", err
 	}
@@ -43,7 +43,7 @@ func (e *EncryptionEngineImpl) Encrypt(data string, dek []byte) (string, error) 
 
 func (e *EncryptionEngineImpl) Decrypt(encryptedData string, dek []byte) (string, error) {
 	// Encrypt the DEK with KEK
-	decryptedData, err := e.crypto.Decrypt(encryptedData, string(dek))
+	decryptedData, err := e.crypto.Decrypt(encryptedData, dek)
 	if err != nil {
 		return "", err
 	}
@@ -53,7 +53,7 @@ func (e *EncryptionEngineImpl) Decrypt(encryptedData string, dek []byte) (string
 
 func (e *EncryptionEngineImpl) EncryptDEK(dek []byte, kek []byte) (string, error) {
 	// Create AES cipher with KEK
-	edek, err := e.crypto.EncryptBytes(dek, string(kek))
+	edek, err := e.crypto.EncryptBytes(dek, kek)
 	if err != nil {
 		return "", err
 	}
@@ -68,7 +68,7 @@ func (e *EncryptionEngineImpl) DecryptDEK(edek string, kek []byte) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	decryptedData, err := e.crypto.DecryptBytes(decryptedEDEK, string(kek))
+	decryptedData, err := e.crypto.DecryptBytes(decryptedEDEK, kek)
 	if err != nil {
 		return nil, err
 	}

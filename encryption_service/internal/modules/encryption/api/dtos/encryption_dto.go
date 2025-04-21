@@ -2,22 +2,22 @@ package dtos
 
 // EncryptRequest represents the request body for encryption
 type EncryptRequest struct {
-	Data string `json:"data" validate:"required"`
+	Data []map[string]interface{} `json:"data" validate:"required,dive,required"`
 }
 
 // EncryptResponse represents the response body for encryption
 type EncryptResponse struct {
-	EncryptedData string `json:"encryptedData"`
+	Data []map[string]interface{} `json:"data" validate:"required,dive,required"`
 }
 
 // DecryptRequest represents the request body for decryption
 type DecryptRequest struct {
-	EncryptedData string `json:"encryptedData" validate:"required"`
+	Data []map[string]interface{} `json:"data" validate:"required,dive,required"`
 }
 
 // DecryptResponse represents the response body for decryption
 type DecryptResponse struct {
-	Data string `json:"data"`
+	Data []map[string]interface{} `json:"data" validate:"required,dive,required"`
 }
 
 // GenerateEDEKResponse represents the response body for EDEK generation

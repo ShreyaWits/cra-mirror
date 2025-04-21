@@ -18,9 +18,9 @@ func NewEncryption() Encrypter {
 }
 
 // Encrypt encrypts a string using AES with CFB mode
-func (e *Encryption) Encrypt(data string, secretKey string) (string, error) {
-	key := []byte(secretKey)
-	block, err := aes.NewCipher(key)
+func (e *Encryption) Encrypt(data string, secretKey []byte) (string, error) {
+
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return "", err
 	}
@@ -44,8 +44,8 @@ func (e *Encryption) Encrypt(data string, secretKey string) (string, error) {
 }
 
 // Decrypt decrypts an AES-encrypted string in CFB mode
-func (e *Encryption) Decrypt(encryptedData string, secretKey string) (string, error) {
-	key := []byte(secretKey)
+func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, error) {
+	// key := []byte(secretKey)
 
 	// Decode the Base64-encoded ciphertext
 	ciphertext, err := base64.URLEncoding.DecodeString(encryptedData)
@@ -61,7 +61,7 @@ func (e *Encryption) Decrypt(encryptedData string, secretKey string) (string, er
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
 
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return "", err
 	}
@@ -74,9 +74,9 @@ func (e *Encryption) Decrypt(encryptedData string, secretKey string) (string, er
 }
 
 // EncryptBytes encrypts a byte slice using AES with CFB mode
-func (e *Encryption) EncryptBytes(data []byte, secretKey string) ([]byte, error) {
-	key := []byte(secretKey)
-	block, err := aes.NewCipher(key)
+func (e *Encryption) EncryptBytes(data []byte, secretKey []byte) ([]byte, error) {
+
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +97,7 @@ func (e *Encryption) EncryptBytes(data []byte, secretKey string) ([]byte, error)
 }
 
 // DecryptBytes decrypts an AES-encrypted byte slice in CFB mode
-func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey string) ([]byte, error) {
-	key := []byte(secretKey)
+func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey []byte) ([]byte, error) {
 
 	if len(encryptedData) < aes.BlockSize {
 		return nil, errors.New("ciphertext too short")
@@ -108,7 +107,7 @@ func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey string) ([]byt
 	iv := encryptedData[:aes.BlockSize]
 	ciphertext := encryptedData[aes.BlockSize:]
 
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return nil, err
 	}
