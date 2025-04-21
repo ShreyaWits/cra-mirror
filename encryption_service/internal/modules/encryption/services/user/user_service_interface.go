@@ -3,11 +3,13 @@ package user
 // UserServiceInterface defines the methods for interacting with the user service
 type UserService interface {
 	// GetUserData fetches user data by user ID
-	GetUserData(userID string) (*User, error)
+	GetUserData(token string) (*User, error)
 
 	// CreateUser creates a new user
-	CreateUser(user *User) error
+	CreateUser(token string, user *User) error
 
 	// DeleteUser deletes a user by user ID
-	DeleteUser(userID string) error
+	DeleteUser(token string, userID string) error
+
+	UpdateUser(userID, edekPrivate, edekPublic string) error
 }
