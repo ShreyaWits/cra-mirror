@@ -2,7 +2,7 @@ package usecases
 
 import (
 	"encryption_microservice/internal/modules/encryption/api/dtos"
-	"encryption_microservice/internal/modules/encryption/services/crypto"
+	encryptionengine "encryption_microservice/internal/modules/encryption/services/encryption_engine"
 	keymanager "encryption_microservice/internal/modules/encryption/services/key_manager"
 	"encryption_microservice/internal/modules/encryption/services/user"
 	"encryption_microservice/pkg/errors"
@@ -12,14 +12,14 @@ import (
 // EncryptionUseCaseImpl implements the EncryptionUseCase interface
 type EncryptionUseCaseImpl struct {
 	keyManager       keymanager.KeyManager
-	encryptionEngine crypto.EncryptionEngine
+	encryptionEngine encryptionengine.EncryptionEngine
 	userService      user.UserService
 }
 
 // NewEncryptionUseCase creates a new instance of EncryptionUseCaseImpl
 func NewEncryptionUseCase(
 	keyManager keymanager.KeyManager,
-	encryptionEngine crypto.EncryptionEngine,
+	encryptionEngine encryptionengine.EncryptionEngine,
 	userService user.UserService,
 ) EncryptionUseCase {
 	return &EncryptionUseCaseImpl{
@@ -32,7 +32,7 @@ func NewEncryptionUseCase(
 // Encrypt implements the encryption use case
 func (u *EncryptionUseCaseImpl) Encrypt(req *dtos.EncryptRequest) (*dtos.EncryptResponse, error) {
 	// Encrypt data and get EDEK
-	encryptedData, err := u.encryptionEngine.Encrypt(req.Data)
+	encryptedData, err := u.encryptionEngine.Encrypt(req.Data, []byte(""))
 	if err != nil {
 		logger.Error("Failed to encrypt data", err)
 		return nil, errors.NewEncryptionError("failed to encrypt data", err)
@@ -49,7 +49,7 @@ func (u *EncryptionUseCaseImpl) Encrypt(req *dtos.EncryptRequest) (*dtos.Encrypt
 // Decrypt implements the decryption use case
 func (u *EncryptionUseCaseImpl) Decrypt(req *dtos.DecryptRequest) (*dtos.DecryptResponse, error) {
 	// Decrypt data using EDEK
-	decryptedData, err := u.encryptionEngine.Decrypt(req.EncryptedData)
+	decryptedData, err := u.encryptionEngine.Decrypt(req.EncryptedData, []byte(""))
 	if err != nil {
 		logger.Error("Failed to decrypt data", err)
 		return nil, errors.NewEncryptionError("failed to decrypt data", err)
@@ -66,7 +66,7 @@ func (u *EncryptionUseCaseImpl) Decrypt(req *dtos.DecryptRequest) (*dtos.Decrypt
 // GenerateEDEK implements the EDEK generation use case
 func (u *EncryptionUseCaseImpl) GenerateEDEK() (*dtos.GenerateEDEKResponse, error) {
 	// Generate a new DEK
-	dekPrivate, err := u.encryptionEngine.GenerateDEK()
+	dekPrivate, err := u.encryptionEngine.GenerateEncryptionKey()
 	if err != nil {
 		logger.Error("Failed to generate DEK Private", err)
 		return nil, errors.NewEncryptionError("failed to generate DEK Private", err)
@@ -100,7 +100,7 @@ func (u *EncryptionUseCaseImpl) GenerateEDEK() (*dtos.GenerateEDEKResponse, erro
 	}
 
 	// Generate a new DEKPublic
-	dekPublic, err := u.encryptionEngine.GenerateDEK()
+	dekPublic, err := u.encryptionEngine.GenerateEncryptionKey()
 	if err != nil {
 		logger.Error("Failed to generate DEKPublic", err)
 		return nil, errors.NewEncryptionError("failed to generate DEKPublic", err)

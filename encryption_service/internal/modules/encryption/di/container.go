@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"encryption_microservice/internal/modules/encryption/api/handlers"
-	"encryption_microservice/internal/modules/encryption/services/crypto"
+	encryptionengine "encryption_microservice/internal/modules/encryption/services/encryption_engine"
 	keymanager "encryption_microservice/internal/modules/encryption/services/key_manager"
 	"encryption_microservice/internal/modules/encryption/services/user"
 	usecases "encryption_microservice/internal/modules/encryption/usecases/encryption"
@@ -31,7 +31,7 @@ type Container struct {
 	KeyManager keymanager.KeyManager
 
 	// Encryption Engine
-	EncryptionEngine crypto.EncryptionEngine
+	EncryptionEngine encryptionengine.EncryptionEngine
 
 	// Use Cases
 	EncryptionUseCase usecases.EncryptionUseCase
@@ -92,7 +92,7 @@ func NewContainer() (*Container, error) {
 	container.KeyManager = keymanager.NewKeyManager(kmsService)
 
 	// Initialize encryption engine
-	container.EncryptionEngine = crypto.NewEncryptionEngine(container.KeyManager)
+	container.EncryptionEngine = encryptionengine.NewEncryptionEngine(container.KeyManager, nil)
 
 	// Initialize use cases
 	container.EncryptionUseCase = usecases.NewEncryptionUseCase(container.KeyManager, container.EncryptionEngine, userService)
