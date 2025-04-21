@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// GrpcServer represents the gRPC server
 type GrpcServer struct {
 	server *grpc.Server
 	port   int
