@@ -10,6 +10,7 @@ import (
 type UserServiceStruct struct {
 	httpClient http.HttpClient
 	baseURL    string
+	token      string
 }
 
 // NewUserService creates a new instance of UserService
@@ -22,14 +23,16 @@ func NewUserService(httpClient http.HttpClient, baseURL string) UserService {
 
 // User represents the structure of user data
 type User struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	EDEKPrivate string `json:"edekPrivate"`
+	EDEKPublic  string `json:"edekPublic"`
 }
 
 // GetUserData fetches user data by user ID
-func (s *UserServiceStruct) GetUserData(userID string) (*User, error) {
-	url := fmt.Sprintf("%s/users/%s", s.baseURL, userID)
+func (s *UserServiceStruct) GetUserData(token string) (*User, error) {
+	url := fmt.Sprintf("%s/users", s.baseURL)
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
@@ -50,7 +53,7 @@ func (s *UserServiceStruct) GetUserData(userID string) (*User, error) {
 }
 
 // CreateUser creates a new user
-func (s *UserServiceStruct) CreateUser(user *User) error {
+func (s *UserServiceStruct) CreateUser(token string, user *User) error {
 	url := fmt.Sprintf("%s/users", s.baseURL)
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -66,7 +69,7 @@ func (s *UserServiceStruct) CreateUser(user *User) error {
 }
 
 // DeleteUser deletes a user by user ID
-func (s *UserServiceStruct) DeleteUser(userID string) error {
+func (s *UserServiceStruct) DeleteUser(token, userID string) error {
 	url := fmt.Sprintf("%s/users/%s", s.baseURL, userID)
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -80,4 +83,28 @@ func (s *UserServiceStruct) DeleteUser(userID string) error {
 	}
 
 	return nil
+}
+
+// UpdateUser updates the EDEKPrivate, EDEKPublic, and Name of the user by ID
+func (s *UserServiceStruct) UpdateUser(userID, edekPrivate, edekPublic string) error {
+	users, err := loadUsers()
+	if err != nil {
+		return err
+	}
+
+	var updated bool
+	for i, user := range users {
+		if user.ID == userID {
+			users[i].EDEKPrivate = edekPrivate
+			users[i].EDEKPublic = edekPublic
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		return fmt.Errorf("user with ID %s not found", userID)
+	}
+
+	return saveUsers(users)
 }
