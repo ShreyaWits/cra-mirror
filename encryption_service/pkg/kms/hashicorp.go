@@ -60,54 +60,45 @@ func (h *HashiCorpKMS) GenerateKEK() ([]byte, error) {
 	return key, nil
 }
 
-// StoreKEK stores a Key Encryption Key in Vault
+// StoreKEK stores a Key Encryption Key in Vault's KV engine
 func (h *HashiCorpKMS) StoreKEK(kekID string, kek []byte) error {
-	// Convert the key to base64
 	keyBase64 := base64.StdEncoding.EncodeToString(kek)
-
-	// Store the key in Vault's transit engine
-	path := filepath.Join(h.transitPath, "keys", kekID)
+	path := filepath.Join("secret/data", kekID)
 	data := map[string]interface{}{
-		"type": "aes256-gcm96",
-		"key":  keyBase64,
+		"data": map[string]interface{}{
+			"key": keyBase64,
+		},
 	}
-
 	_, err := h.client.Logical().WriteWithContext(context.Background(), path, data)
 	if err != nil {
 		return fmt.Errorf("failed to store KEK: %w", err)
 	}
-
 	return nil
 }
 
-// RetrieveKEK retrieves a Key Encryption Key from Vault
+// RetrieveKEK retrieves a Key Encryption Key from Vault's KV engine
 func (h *HashiCorpKMS) RetrieveKEK(kekID string) ([]byte, error) {
-	// Retrieve the key from Vault's transit engine
-	path := filepath.Join(h.transitPath, "keys", kekID)
+	path := filepath.Join("secret/data", kekID)
 	secret, err := h.client.Logical().ReadWithContext(context.Background(), path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve KEK: %w", err)
 	}
 
-	// Get the key in plaintext
-	path = filepath.Join(h.transitPath, "datakey", "plaintext", kekID)
-	secret, err = h.client.Logical().WriteWithContext(context.Background(), path, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get plaintext key: %w", err)
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("no KEK found at path: %s", path)
 	}
 
-	// Extract and decode the plaintext key
-	plaintext, ok := secret.Data["plaintext"].(string)
+	data, ok := secret.Data["data"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid response format from Vault")
+		return nil, fmt.Errorf("unexpected secret data structure")
 	}
 
-	key, err := base64.StdEncoding.DecodeString(plaintext)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode key: %w", err)
+	plaintext, ok := data["key"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing key field in Vault response")
 	}
 
-	return key, nil
+	return base64.StdEncoding.DecodeString(plaintext)
 }
 
 // DeleteKEK deletes a Key Encryption Key from Vault

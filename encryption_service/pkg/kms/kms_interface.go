@@ -19,33 +19,11 @@ type KmsService interface {
 	StoreKEK(kekID string, kek []byte) error
 
 	// RetrieveKEK retrieves a Key Encryption Key (KEK) from Vault's transit engine.
-	// The key is retrieved only if the specified role matches the stored role.
-	// Parameters:
-	//   - kekID: Unique identifier for the key
-	//   - role: The role to verify against ("ete" or "shared")
-	// Returns the decrypted key material or an error if retrieval fails or role mismatch.
 	RetrieveKEK(kekID string) ([]byte, error)
 
 	// DeleteKEK deletes a Key Encryption Key (KEK) from Vault's transit engine.
-	// The key is deleted only if the specified role matches the stored role.
-	// Parameters:
-	//   - kekID: Unique identifier for the key
-	//   - role: The role to verify against ("ete" or "shared")
-	// Returns an error if deletion fails or if the role doesn't match.
 	DeleteKEK(kekID string) error
 
 	// ListKEKs lists all Key Encryption Keys (KEKs) stored in Vault's transit engine
-	// that match the specified role.
-	// Parameters:
-	//   - role: The role to filter keys by ("ete" or "shared")
-	// Returns a slice of key IDs or an error if listing fails.
 	ListKEKs() ([]string, error)
 }
-
-// Role constants for key management
-const (
-	// RoleETE represents end-to-end encryption keys
-	RoleETE = "ete"
-	// RoleShared represents shared encryption keys
-	RoleShared = "shared"
-)
