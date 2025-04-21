@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "nps-reciept-service/proto";
+
+message ClaimRequest {
+  string pran = 1;
+  string date_of_claim = 2;
+  string transaction_type = 3;
+}
+
+message ClaimData {
+  string claim_id = 1;
+}
+
+message ClaimResponse {
+  string status = 1;
+  string message = 2;
+  ClaimData data = 3;
+}
+
+service ClaimService {
+  rpc ProcessClaim (ClaimRequest) returns (ClaimResponse) {}
+}
