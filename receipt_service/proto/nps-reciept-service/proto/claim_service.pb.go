@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: proto/claim_service.proto
+// source: claim_service.proto
 
 package proto
 
@@ -32,7 +32,7 @@ type ClaimRequest struct {
 
 func (x *ClaimRequest) Reset() {
 	*x = ClaimRequest{}
-	mi := &file_proto_claim_service_proto_msgTypes[0]
+	mi := &file_claim_service_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *ClaimRequest) String() string {
 func (*ClaimRequest) ProtoMessage() {}
 
 func (x *ClaimRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_claim_service_proto_msgTypes[0]
+	mi := &file_claim_service_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +57,7 @@ func (x *ClaimRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimRequest.ProtoReflect.Descriptor instead.
 func (*ClaimRequest) Descriptor() ([]byte, []int) {
-	return file_proto_claim_service_proto_rawDescGZIP(), []int{0}
+	return file_claim_service_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ClaimRequest) GetPran() string {
@@ -90,7 +90,7 @@ type ClaimData struct {
 
 func (x *ClaimData) Reset() {
 	*x = ClaimData{}
-	mi := &file_proto_claim_service_proto_msgTypes[1]
+	mi := &file_claim_service_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -102,7 +102,7 @@ func (x *ClaimData) String() string {
 func (*ClaimData) ProtoMessage() {}
 
 func (x *ClaimData) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_claim_service_proto_msgTypes[1]
+	mi := &file_claim_service_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -115,12 +115,64 @@ func (x *ClaimData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimData.ProtoReflect.Descriptor instead.
 func (*ClaimData) Descriptor() ([]byte, []int) {
-	return file_proto_claim_service_proto_rawDescGZIP(), []int{1}
+	return file_claim_service_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ClaimData) GetClaimId() string {
 	if x != nil {
 		return x.ClaimId
+	}
+	return ""
+}
+
+type ClaimErrorResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ErrorCode     string                 `protobuf:"bytes,1,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
+	ErrorMessage  string                 `protobuf:"bytes,2,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimErrorResponse) Reset() {
+	*x = ClaimErrorResponse{}
+	mi := &file_claim_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimErrorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimErrorResponse) ProtoMessage() {}
+
+func (x *ClaimErrorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_claim_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimErrorResponse.ProtoReflect.Descriptor instead.
+func (*ClaimErrorResponse) Descriptor() ([]byte, []int) {
+	return file_claim_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ClaimErrorResponse) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *ClaimErrorResponse) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
 	}
 	return ""
 }
@@ -136,7 +188,7 @@ type ClaimResponse struct {
 
 func (x *ClaimResponse) Reset() {
 	*x = ClaimResponse{}
-	mi := &file_proto_claim_service_proto_msgTypes[2]
+	mi := &file_claim_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -148,7 +200,7 @@ func (x *ClaimResponse) String() string {
 func (*ClaimResponse) ProtoMessage() {}
 
 func (x *ClaimResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_claim_service_proto_msgTypes[2]
+	mi := &file_claim_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -161,7 +213,7 @@ func (x *ClaimResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimResponse.ProtoReflect.Descriptor instead.
 func (*ClaimResponse) Descriptor() ([]byte, []int) {
-	return file_proto_claim_service_proto_rawDescGZIP(), []int{2}
+	return file_claim_service_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ClaimResponse) GetStatus() string {
@@ -185,17 +237,21 @@ func (x *ClaimResponse) GetData() *ClaimData {
 	return nil
 }
 
-var File_proto_claim_service_proto protoreflect.FileDescriptor
+var File_claim_service_proto protoreflect.FileDescriptor
 
-const file_proto_claim_service_proto_rawDesc = "" +
+const file_claim_service_proto_rawDesc = "" +
 	"\n" +
-	"\x19proto/claim_service.proto\x12\x05proto\"q\n" +
+	"\x13claim_service.proto\x12\x05proto\"q\n" +
 	"\fClaimRequest\x12\x12\n" +
 	"\x04pran\x18\x01 \x01(\tR\x04pran\x12\"\n" +
 	"\rdate_of_claim\x18\x02 \x01(\tR\vdateOfClaim\x12)\n" +
 	"\x10transaction_type\x18\x03 \x01(\tR\x0ftransactionType\"&\n" +
 	"\tClaimData\x12\x19\n" +
-	"\bclaim_id\x18\x01 \x01(\tR\aclaimId\"g\n" +
+	"\bclaim_id\x18\x01 \x01(\tR\aclaimId\"X\n" +
+	"\x12ClaimErrorResponse\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x01 \x01(\tR\terrorCode\x12#\n" +
+	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"g\n" +
 	"\rClaimResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12$\n" +
@@ -204,27 +260,28 @@ const file_proto_claim_service_proto_rawDesc = "" +
 	"\fProcessClaim\x12\x13.proto.ClaimRequest\x1a\x14.proto.ClaimResponse\"\x00B\x1bZ\x19nps-reciept-service/protob\x06proto3"
 
 var (
-	file_proto_claim_service_proto_rawDescOnce sync.Once
-	file_proto_claim_service_proto_rawDescData []byte
+	file_claim_service_proto_rawDescOnce sync.Once
+	file_claim_service_proto_rawDescData []byte
 )
 
-func file_proto_claim_service_proto_rawDescGZIP() []byte {
-	file_proto_claim_service_proto_rawDescOnce.Do(func() {
-		file_proto_claim_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_claim_service_proto_rawDesc), len(file_proto_claim_service_proto_rawDesc)))
+func file_claim_service_proto_rawDescGZIP() []byte {
+	file_claim_service_proto_rawDescOnce.Do(func() {
+		file_claim_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_claim_service_proto_rawDesc), len(file_claim_service_proto_rawDesc)))
 	})
-	return file_proto_claim_service_proto_rawDescData
+	return file_claim_service_proto_rawDescData
 }
 
-var file_proto_claim_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_proto_claim_service_proto_goTypes = []any{
-	(*ClaimRequest)(nil),  // 0: proto.ClaimRequest
-	(*ClaimData)(nil),     // 1: proto.ClaimData
-	(*ClaimResponse)(nil), // 2: proto.ClaimResponse
+var file_claim_service_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_claim_service_proto_goTypes = []any{
+	(*ClaimRequest)(nil),       // 0: proto.ClaimRequest
+	(*ClaimData)(nil),          // 1: proto.ClaimData
+	(*ClaimErrorResponse)(nil), // 2: proto.ClaimErrorResponse
+	(*ClaimResponse)(nil),      // 3: proto.ClaimResponse
 }
-var file_proto_claim_service_proto_depIdxs = []int32{
+var file_claim_service_proto_depIdxs = []int32{
 	1, // 0: proto.ClaimResponse.data:type_name -> proto.ClaimData
 	0, // 1: proto.ClaimService.ProcessClaim:input_type -> proto.ClaimRequest
-	2, // 2: proto.ClaimService.ProcessClaim:output_type -> proto.ClaimResponse
+	3, // 2: proto.ClaimService.ProcessClaim:output_type -> proto.ClaimResponse
 	2, // [2:3] is the sub-list for method output_type
 	1, // [1:2] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -232,26 +289,26 @@ var file_proto_claim_service_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_proto_claim_service_proto_init() }
-func file_proto_claim_service_proto_init() {
-	if File_proto_claim_service_proto != nil {
+func init() { file_claim_service_proto_init() }
+func file_claim_service_proto_init() {
+	if File_claim_service_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_claim_service_proto_rawDesc), len(file_proto_claim_service_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_claim_service_proto_rawDesc), len(file_claim_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_claim_service_proto_goTypes,
-		DependencyIndexes: file_proto_claim_service_proto_depIdxs,
-		MessageInfos:      file_proto_claim_service_proto_msgTypes,
+		GoTypes:           file_claim_service_proto_goTypes,
+		DependencyIndexes: file_claim_service_proto_depIdxs,
+		MessageInfos:      file_claim_service_proto_msgTypes,
 	}.Build()
-	File_proto_claim_service_proto = out.File
-	file_proto_claim_service_proto_goTypes = nil
-	file_proto_claim_service_proto_depIdxs = nil
+	File_claim_service_proto = out.File
+	file_claim_service_proto_goTypes = nil
+	file_claim_service_proto_depIdxs = nil
 }
