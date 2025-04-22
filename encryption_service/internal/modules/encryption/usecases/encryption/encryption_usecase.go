@@ -121,7 +121,7 @@ func (u *EncryptionUseCaseImpl) Decrypt(userID string, edekPrivate string, edekP
 			strVal := fmt.Sprintf("%v", value)
 
 			// Skip if no KMS identifier
-			if !enums.HaskeyTypeIdentifier(strVal) {
+			if !enums.HasKeyTypeIdentifier(strVal) {
 				logger.Error("Skipping field without recognized prefix", fmt.Errorf("field: %s", key))
 				decryptedItem[key] = strVal
 				continue
