@@ -56,12 +56,27 @@ func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*
 		"key": key,
 	})
 
-	sequence, err := config.GetRedisClient().Incr(ctx, key).Result()
+	redisClient := config.GetRedisClient()
+
+	// Increment the sequence number in Redis
+	sequence, err := redisClient.Incr(ctx, key).Result()
 	if err != nil {
 		utils.LogError("Failed to increment Redis sequence", err, map[string]interface{}{
 			"key": key,
 		})
 		return nil, errorResponse.SendError("CLM0005")
+	}
+
+	// Set expiry for 24 hours only when the key is newly created
+	if sequence == 1 {
+		expiry := 24 * time.Hour
+		err = redisClient.Expire(ctx, key, expiry).Err()
+		if err != nil {
+			utils.LogError("Failed to set expiry for Redis key", err, map[string]interface{}{
+				"key": key,
+			})
+			// Optional: decide if you want to return error or continue
+		}
 	}
 
 	claimID := "CLM" + datePart + last4 + formatSequence(sequence)
