@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"encryption_microservice/internal/modules/encryption/di"
 
@@ -23,14 +22,8 @@ func main() {
 	// Setup routes
 	container.SetupRoutes(app)
 
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Starting server on port %s", port)
-	if err := app.Listen(":" + port); err != nil {
+	log.Printf("Starting server on port %s", container.Config.ServerPort)
+	if err := app.Listen(":" + container.Config.ServerPort); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

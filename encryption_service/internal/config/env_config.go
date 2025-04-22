@@ -33,9 +33,9 @@ func LoadConfig() (*Config, error) {
 		UserServiceURL: getEnv("USER_SERVICE_URL", "http://localhost:8080"),
 
 		// Load Vault configuration
-		VaultAddr:  os.Getenv("VAULT_ADDR"),
-		VaultToken: os.Getenv("VAULT_TOKEN"),
-		VaultPath:  os.Getenv("VAULT_PATH"),
+		VaultAddr:  getEnv("VAULT_ADDR", "https://localhost:8200"),
+		VaultToken: getEnv("VAULT_TOKEN", "root"),
+		VaultPath:  getEnv("VAULT_PATH", "transit"),
 	}
 
 	// Validate required Vault configuration
