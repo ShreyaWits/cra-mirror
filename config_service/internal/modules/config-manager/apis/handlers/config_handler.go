@@ -1,12 +1,20 @@
 package handler
 
 import (
-	"nps-config-service/internal/config-manager/services"
+	"nps-config-service/internal/modules/config-manager/services"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func StoreConfigHandler(c *fiber.Ctx) error {
+type Handler struct {
+	Service *services.ConfigService
+}
+
+func NewHandler(service *services.ConfigService) *Handler {
+	return &Handler{Service: service}
+}
+
+func (h *Handler) StoreConfigHandler(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
@@ -17,7 +25,7 @@ func StoreConfigHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	responseData, responseError := services.StoreConfigService(environment, serviceName, configData)
+	responseData, responseError := h.Service.StoreConfigService(environment, serviceName, configData)
 
 	if responseError != nil {
 		return responseError
@@ -25,11 +33,11 @@ func StoreConfigHandler(c *fiber.Ctx) error {
 	return c.JSON(responseData)
 }
 
-func GetfullConfig(c *fiber.Ctx) error {
+func (h *Handler) GetfullConfig(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
-	config, err := services.GetConfigService(serviceName, environment)
+	config, err := h.Service.GetConfigService(serviceName, environment)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -39,12 +47,12 @@ func GetfullConfig(c *fiber.Ctx) error {
 	return c.JSON(config)
 }
 
-func GetByValue(c *fiber.Ctx) error {
+func (h *Handler) GetByValue(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 	key := c.Params("key")
 
-	value, err := services.GetConfigValueService(serviceName, environment, key)
+	value, err := h.Service.GetConfigValueService(serviceName, environment, key)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -56,11 +64,11 @@ func GetByValue(c *fiber.Ctx) error {
 	})
 }
 
-func GetByMetadata(c *fiber.Ctx) error {
+func (h *Handler) GetByMetadata(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
-	metadata, err := services.GetConfigMetadataService(serviceName, environment)
+	metadata, err := h.Service.GetConfigMetadataService(serviceName, environment)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
