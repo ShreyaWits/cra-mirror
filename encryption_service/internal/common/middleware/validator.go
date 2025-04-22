@@ -1,4 +1,4 @@
-package commomiddleware
+package middleware
 
 import (
 	"github.com/go-playground/validator/v10"
@@ -23,62 +23,24 @@ func ValidateParams[T any]() fiber.Handler {
 		// Parse request body
 		if err := c.BodyParser(&dto); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-			// return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			// 	"fieldErrors": []dtos.FieldErrorResponseDTO{
-			// 		{
-			// 			Field:        "requestBody",
-			// 			ErrorMessage: "Invalid request body",
-			// 			ErrorCode:    "InvalidRequestBody",
-			// 		},
-			// 	},
-			// })
+
 		}
 
 		// Extract query parameters
 		if err := c.QueryParser(&dto); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-			// return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			// 	"fieldErrors": []dtos.FieldErrorResponseDTO{
-			// 		{
-			// 			Field:        "requestParams",
-			// 			ErrorMessage: "Failed to read request params",
-			// 			ErrorCode:    "InvalidRequestParams",
-			// 		},
-			// 	},
-			// })
+
 		}
 
 		// Extract path parameters
 		if err := c.ParamsParser(&dto); err != nil {
-			// return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			// 	"fieldErrors": []dtos.FieldErrorResponseDTO{
-			// 		{
-			// 			Field:        "requestParams",
-			// 			ErrorMessage: "Failed to read request params",
-			// 			ErrorCode:    "InvalidRequestParams",
-			// 		},
-			// 	},
-			// })
+
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
 		var validate = validator.New()
 		// Validate the DTO
 		if err := validate.Struct(dto); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-			// var errorMessages []dtos.FieldErrorResponseDTO
-
-			// for _, err := range err.(validator.ValidationErrors) {
-			// 	errorMessages = append(errorMessages, dtos.FieldErrorResponseDTO{
-			// 		Field:        err.Field(),
-			// 		ErrorMessage: fmt.Sprintf("Validation failed: '%s'", err.Tag()),
-			// 	})
-			// }
-
-			// if len(errorMessages) > 0 {
-			// 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			// 		"fieldErrors": errorMessages,
-			// 	})
-			// }
 		}
 
 		// Store the validated DTO in the context

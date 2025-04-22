@@ -1,4 +1,4 @@
-package commomiddleware
+package middleware
 
 import (
 	"strings"
