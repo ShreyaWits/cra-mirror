@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	configEnv "protected_link/internal/configs"
-	apiDtos "protected_link/internal/modules/protected_link_generation/apis/dtos"
+	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
 
 	"strings"
 	"time"

@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 	commonDtos "protected_link/internal/common/api/dtos"
-	apiDtos "protected_link/internal/modules/protected_link_generation/apis/dtos"
-	"protected_link/internal/modules/protected_link_generation/services"
+	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+	"protected_link/internal/modules/link_generation/services"
 
 	"github.com/gofiber/fiber/v2"
 )

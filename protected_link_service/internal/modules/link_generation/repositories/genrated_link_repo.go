@@ -6,9 +6,9 @@ import (
 	commonDtos "protected_link/internal/common/api/dtos"
 	configEnv "protected_link/internal/configs"
 
-	apiDtos "protected_link/internal/modules/protected_link_generation/apis/dtos"
-	"protected_link/internal/modules/protected_link_generation/models"
-	"protected_link/internal/modules/protected_link_generation/utils"
+	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+	"protected_link/internal/modules/link_generation/models"
+	"protected_link/internal/modules/link_generation/utils"
 
 	"protected_link/pkg/jwt"
 	database "protected_link/pkg/redis"

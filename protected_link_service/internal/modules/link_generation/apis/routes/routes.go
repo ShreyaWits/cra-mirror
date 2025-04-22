@@ -2,10 +2,10 @@ package linkRoutes
 
 import (
 	"protected_link/internal/common/api/middlewares"
-	apiDtos "protected_link/internal/modules/protected_link_generation/apis/dtos"
-	"protected_link/internal/modules/protected_link_generation/apis/handlers"
-	"protected_link/internal/modules/protected_link_generation/repositories"
-	"protected_link/internal/modules/protected_link_generation/services"
+	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+	"protected_link/internal/modules/link_generation/apis/handlers"
+	"protected_link/internal/modules/link_generation/repositories"
+	"protected_link/internal/modules/link_generation/services"
 
 	database "protected_link/pkg/redis"
 
