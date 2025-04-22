@@ -8,21 +8,29 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
+type EtcdClientImpl struct {
+	Client *clientv3.Client
+}
+
+func NewEtcdClientImpl(client *clientv3.Client) *EtcdClientImpl {
+	return &EtcdClientImpl{Client: client}
+}
+
 // PutKey stores a value with a key
-func PutKey(key, value string) error {
+func (e *EtcdClientImpl) PutKey(key, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := Client.Put(ctx, key, value)
+	_, err := e.Client.Put(ctx, key, value)
 	return err
 }
 
 // GetKey retrieves the value for a given key
-func GetKey(key string) (string, error) {
+func (e *EtcdClientImpl) GetKey(key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	resp, err := Client.Get(ctx, key)
+	resp, err := e.Client.Get(ctx, key)
 	if err != nil {
 		return "", err
 	}
@@ -34,17 +42,17 @@ func GetKey(key string) (string, error) {
 }
 
 // DeleteKey removes a key
-func DeleteKey(key string) error {
+func (e *EtcdClientImpl) DeleteKey(key string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := Client.Delete(ctx, key)
+	_, err := e.Client.Delete(ctx, key)
 	return err
 }
 
 // WatchKey listens for changes
-func WatchKey(key string) {
-	rch := Client.Watch(context.Background(), key)
+func (e *EtcdClientImpl) WatchKey(key string) {
+	rch := e.Client.Watch(context.Background(), key)
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			fmt.Printf("🔄 %s %q: %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
@@ -53,11 +61,11 @@ func WatchKey(key string) {
 }
 
 // GetAllKeys gets all keys under a prefix
-func GetAllKeys(prefix string) (map[string]string, error) {
+func (e *EtcdClientImpl) GetAllKeys(prefix string) (map[string]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	resp, err := Client.Get(ctx, prefix, clientv3.WithPrefix())
+	resp, err := e.Client.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, err
 	}

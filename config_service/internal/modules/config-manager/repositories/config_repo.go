@@ -1,32 +1,41 @@
 package repositories
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"nps-config-service/internal/config-manager/models"
-	app "nps-config-service/pkg/etcd"
+	"nps-config-service/internal/modules/config-manager/models"
+	etcdDB "nps-config-service/pkg/etcd"
+
 	"strconv"
 	"time"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-func StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{},error) {
-	// Initialize etcd connection
-	// app.InitEtcdDB()
-	// defer app.Client.Close()
+type ConfigRepository struct {
+	EtcdClient etcdDB.EtcdClientImpl // ✅ Injected interface
+}
+
+func NewConfigRepository(etcdClient etcdDB.EtcdClientImpl) *ConfigRepository {
+	return &ConfigRepository{EtcdClient: etcdClient}
+}
+
+func (r *ConfigRepository) StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error) {
 
 	// Store each config field as a separate key
 	baseKey := fmt.Sprintf("%s/%s", serviceName, environment)
-	
+
 	log.Printf("Storing config with base key: %s", baseKey)
-	
+
 	// Store config data fields
 	for key, value := range configData {
 		configKey := fmt.Sprintf("%s/%s", baseKey, key)
 		valueStr := fmt.Sprintf("%v", value)
 		log.Printf("Storing key: %s, value: %s", configKey, valueStr)
-		
-		err := app.PutKey(configKey, valueStr)
+
+		err := r.EtcdClient.PutKey(configKey, valueStr)
 		if err != nil {
 			log.Printf("Error storing key %s: %v", configKey, err)
 			return nil, fmt.Errorf("failed to store config field %s: %v", key, err)
@@ -43,8 +52,8 @@ func StoreConfig(serviceName, environment string, configData map[string]interfac
 	for key, value := range metadata {
 		metadataKey := fmt.Sprintf("%s/%s", baseKey, key)
 		log.Printf("Storing metadata key: %s, value: %s", metadataKey, value)
-		
-		err := app.PutKey(metadataKey, value)
+
+		err := r.EtcdClient.PutKey(metadataKey, value)
 		if err != nil {
 			log.Printf("Error storing metadata key %s: %v", metadataKey, err)
 			return nil, fmt.Errorf("failed to store metadata field %s: %v", key, err)
@@ -52,19 +61,19 @@ func StoreConfig(serviceName, environment string, configData map[string]interfac
 	}
 
 	log.Printf("Successfully stored all config and metadata for %s", baseKey)
-	return configData,nil
+	return configData, nil
 }
 
 // GetConfig retrieves a configuration from etcd
-func GetConfig(serviceName, environment string) (map[string]interface{}, error) {
+func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[string]interface{}, error) {
 	// app.InitEtcdDB()
 	// defer app.Client.Close()
 
 	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
 	log.Printf("Getting all config for base key: %s", baseKey)
-	
+
 	// Get all keys under the base key
-	keys, err := app.GetAllKeys(baseKey)
+	keys, err := r.EtcdClient.GetAllKeys(baseKey)
 	if err != nil {
 		log.Printf("Error getting all keys: %v", err)
 		return nil, fmt.Errorf("failed to get config keys: %v", err)
@@ -87,17 +96,15 @@ func GetConfig(serviceName, environment string) (map[string]interface{}, error) 
 	return result, nil
 }
 
-
-func GetAllKeys(prefix string) (map[string]string, error) {
-	return app.GetAllKeys(prefix)
+func (r *ConfigRepository) GetAllKeys(prefix string) (map[string]string, error) {
+	return r.EtcdClient.GetAllKeys(prefix)
 }
 
 // GetConfigMetadata retrieves metadata for a configuration
-func GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error) {
-
+func (r *ConfigRepository) GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error) {
 
 	key := fmt.Sprintf("/metadata/%s/%s", environment, serviceName)
-	res, err := app.GetKey(key)
+	res, err := r.EtcdClient.GetKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get metadata: %v", err)
 	}
@@ -112,7 +119,7 @@ func GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata,
 }
 
 // GetConfigValue retrieves a specific config value from etcd
-func GetConfigValue(serviceName, environment, key string) (interface{}, error) {
+func (r *ConfigRepository) GetConfigValue(serviceName, environment, key string) (interface{}, error) {
 	// app.InitEtcdDB()
 	// defer app.Client.Close()
 
@@ -121,7 +128,7 @@ func GetConfigValue(serviceName, environment, key string) (interface{}, error) {
 	log.Printf("Getting config value for key: %s", fullKey)
 
 	// Get the value
-	value, err := app.GetKey(fullKey)
+	value, err := r.EtcdClient.GetKey(fullKey)
 	if err != nil {
 		log.Printf("Error getting key %s: %v", fullKey, err)
 		return nil, fmt.Errorf("failed to get config value: %v", err)
@@ -144,7 +151,7 @@ func GetConfigValue(serviceName, environment, key string) (interface{}, error) {
 }
 
 // Test function to demonstrate usage
-func StoreAndRetrieveConfig() {
+func (r *ConfigRepository) StoreAndRetrieveConfig() {
 	// Example config data
 	configData := map[string]interface{}{
 		"db_url":      "postgres://user:pass@localhost:5432/db",
@@ -153,14 +160,14 @@ func StoreAndRetrieveConfig() {
 	}
 
 	// Store config
-	_, err := StoreConfig("user-service", "prod", configData)
+	_, err := r.StoreConfig("user-service", "prod", configData)
 	if err != nil {
 		log.Printf("Failed to store config: %v", err)
 		return
 	}
 
 	// Retrieve config
-	config, err := GetConfig("user-service", "prod")
+	config, err := r.GetConfig("user-service", "prod")
 	if err != nil {
 		log.Printf("Failed to get config: %v", err)
 		return
@@ -169,11 +176,54 @@ func StoreAndRetrieveConfig() {
 	fmt.Printf("Retrieved config: %+v\n", config)
 
 	// Retrieve metadata
-	metadata, err := GetConfigMetadata("user-service", "prod")
+	metadata, err := r.GetConfigMetadata("user-service", "prod")
 	if err != nil {
 		log.Printf("Failed to get metadata: %v", err)
 		return
 	}
 
 	fmt.Printf("Retrieved metadata: %+v\n", metadata)
+}
+
+// webhook service
+func (r *ConfigRepository) Set(ctx context.Context, key string, data string, ttl time.Duration) error {
+	// app.InitEtcdDB()
+	// defer app.Client.Close()
+	if ttl > 0 {
+		// Create a lease
+		leaseResp, err := r.EtcdClient.Client.Grant(ctx, int64(ttl.Seconds()))
+		if err != nil {
+			log.Printf("Failed to create lease: %v", err)
+			return fmt.Errorf("lease creation failed: %w", err)
+		}
+
+		_, err = r.EtcdClient.Client.Put(ctx, key, data, clientv3.WithLease(leaseResp.ID))
+		if err != nil {
+			log.Printf("Error storing key with lease %s: %v", key, err)
+			return fmt.Errorf("failed to store key %s: %w", key, err)
+		}
+	} else {
+		_, err := r.EtcdClient.Client.Put(ctx, key, data)
+		if err != nil {
+			log.Printf("Error storing key %s: %v", key, err)
+			return fmt.Errorf("failed to store key %s: %w", key, err)
+		}
+	}
+
+	return nil
+}
+
+func (r *ConfigRepository) Get(ctx context.Context, key string) (string, error) {
+
+	resp, err := r.EtcdClient.Client.Get(ctx, key)
+	if err != nil {
+		log.Printf("Failed to get key %s: %v", key, err)
+		return "", fmt.Errorf("failed to retrieve key %s: %w", key, err)
+	}
+
+	if len(resp.Kvs) == 0 {
+		return "", fmt.Errorf("key %s not found", key)
+	}
+
+	return string(resp.Kvs[0].Value), nil
 }
