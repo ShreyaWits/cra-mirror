@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"nps-config-service/common"
 	"nps-config-service/internal/modules/config-manager/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,9 +21,7 @@ func (h *Handler) StoreConfigHandler(c *fiber.Ctx) error {
 
 	var configData map[string]interface{}
 	if err := c.BodyParser(&configData); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid config data",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError("CNF001"))
 	}
 
 	responseData, responseError := h.Service.StoreConfigService(environment, serviceName, configData)
