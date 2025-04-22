@@ -8,14 +8,6 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-// type EtcdClientImpl struct {
-// 	Client *clientv3.Client
-// }
-
-// func NewEtcdClientImpl(client *clientv3.Client) *EtcdClientImpl {
-// 	return &EtcdClientImpl{Client: client}
-// }
-
 type EtcdClientImpl struct {
 	Client *clientv3.Client
 }
