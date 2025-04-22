@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"nps-reciept-service/config"
+	"nps-reciept-service/internal/config"
 	"nps-reciept-service/internal/utils"
 	pb "nps-reciept-service/proto"
 	"time"

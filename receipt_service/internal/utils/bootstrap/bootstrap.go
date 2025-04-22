@@ -2,18 +2,19 @@ package bootstrap
 
 import (
 	"log"
-	"nps-reciept-service/config"
+	"nps-reciept-service/internal/config"
 	"os"
 	"strconv"
 
-	"github.com/joho/godotenv"
 	grpcServer "nps-reciept-service/internal/grpc"
+
+	"github.com/joho/godotenv"
 )
 
 // Bootstrap initializes env, Redis and returns the gRPC server
 func BootstrapServices() *grpcServer.GrpcServer {
 	// Load .env file
-	if err := godotenv.Load("../../.env"); err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
