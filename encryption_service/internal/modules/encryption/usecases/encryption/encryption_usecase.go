@@ -26,74 +26,66 @@ func NewEncryptionUseCase(
 	}
 }
 
+func (u *EncryptionUseCaseImpl) getDek(kekID string, edek string) ([]byte, error) {
+	kek, err := u.keyManager.RetrieveKEK(kekID)
+	if err != nil {
+		logger.Error("Failed to retrieve private KEK", err)
+		return nil, errors.NewEncryptionError("failed to retrieve private KEK", err)
+	}
+	dek, err := u.encryptionEngine.DecryptDEK(edek, kek)
+	if err != nil {
+		logger.Error("Failed to retrieve private DEK", err)
+		return nil, errors.NewEncryptionError("failed to retrieve private DEK", err)
+	}
+	return dek, nil
+}
+
 // Encrypt implements the encryption use case
-func (u *EncryptionUseCaseImpl) Encrypt(userID string, edekPrivate string, edekPublic string, req *dtos.EncryptRequest) (*dtos.EncryptResponse, error) {
+func (u *EncryptionUseCaseImpl) Encrypt(userID string, edekPrivate, edekPublic string, req *dtos.EncryptRequest) (*dtos.EncryptResponse, error) {
+	var (
+		DEKMap         = make(map[enums.KeyType][]byte)
+		retrievedFlags = make(map[enums.KeyType]bool)
+		encryptedItems []map[string]interface{}
+	)
 
-	var DEKPrivate, DEKPublic []byte
-	var encryptedItems []map[string]interface{}
-	privateRetrieved := false
-	publicRetrieved := false
-
-	// Validate and prepare KEKs
 	for _, item := range req.Data {
 		eType, ok := item["e_type"].(string)
-		isValid, kmsType := enums.IsValidKMSType(eType)
+		isValid, keyType := enums.IsValidKeyType(eType)
 		if !ok || !isValid {
-			logger.Error("Missing or invalid 'e_type' in item", fmt.Errorf("e_type is not valid"))
-			return nil, fmt.Errorf("Missing or invalid 'e_type' in item", fmt.Errorf("e_type is not valid"))
+			err := fmt.Errorf("e_type is missing or invalid")
+			logger.Error("Invalid encryption type in item", err)
+			return nil, err
 		}
 
-		kekID := kmsType.AddKMSTypeIdentifier(userID)
-
-		if kmsType == enums.KMSPrivate {
-			if !privateRetrieved {
-				kek, err := u.keyManager.RetrieveKEK(kekID)
-				if err != nil {
-					logger.Error("Failed to retrieve private KEK", err)
-					return nil, errors.NewEncryptionError("failed to retrieve private KEK", err)
-				}
-				DEKPrivate, err = u.encryptionEngine.DecryptDEK(edekPrivate, kek)
-				if err != nil {
-					logger.Error("Failed to retrieve private DEK", err)
-					return nil, errors.NewEncryptionError("failed to retrieve private DEK", err)
-				}
-				privateRetrieved = true
+		// Fetch DEK if not already fetched
+		if !retrievedFlags[keyType] {
+			kekID := keyType.AddKeyTypeIdentifier(userID)
+			var err error
+			switch keyType {
+			case enums.KeyPrivate:
+				DEKMap[keyType], err = u.getDek(kekID, edekPrivate)
+			case enums.KeyPublic:
+				DEKMap[keyType], err = u.getDek(kekID, edekPublic)
+			default:
+				err = fmt.Errorf("unsupported KMS type: %s", eType)
 			}
-			encryptItem, err := u.encryptItemFields(item, DEKPrivate, kmsType)
 			if err != nil {
-				logger.Error("Failed to encrypt item", err)
-				return nil, errors.NewEncryptionError("failed to encrypt item", err)
+				logger.Error("Failed to retrieve DEK", err)
+				return nil, errors.NewEncryptionError("failed to retrieve DEK", err)
 			}
-			encryptedItems = append(encryptedItems, encryptItem)
+			retrievedFlags[keyType] = true
 		}
 
-		if kmsType == enums.KMSPublic {
-			if !publicRetrieved {
-				kek, err := u.keyManager.RetrieveKEK(kekID)
-				if err != nil {
-					logger.Error("Failed to retrieve public KEK", err)
-					return nil, errors.NewEncryptionError("failed to retrieve public KEK", err)
-				}
-				DEKPublic, err = u.encryptionEngine.DecryptDEK(edekPublic, kek)
-				if err != nil {
-					logger.Error("Failed to retrieve public DEK", err)
-					return nil, errors.NewEncryptionError("failed to retrieve public DEK", err)
-				}
-				publicRetrieved = true
-
-			}
-			encryptItem, err := u.encryptItemFields(item, DEKPublic, kmsType)
-			if err != nil {
-				logger.Error("Failed to encrypt item", err)
-				return nil, errors.NewEncryptionError("failed to encrypt item", err)
-			}
-			encryptedItems = append(encryptedItems, encryptItem)
+		// Encrypt the item using the proper DEK
+		encryptItem, err := u.encryptItemFields(item, DEKMap[keyType], keyType)
+		if err != nil {
+			logger.Error("Failed to encrypt item", err)
+			return nil, errors.NewEncryptionError("failed to encrypt item", err)
 		}
+		encryptedItems = append(encryptedItems, encryptItem)
 	}
 
-	return &dtos.EncryptResponse{
-		Data: encryptedItems, // adjust based on your encryption output
-	}, nil
+	return &dtos.EncryptResponse{Data: encryptedItems}, nil
 }
 
 func (u *EncryptionUseCaseImpl) encryptItemFields(item map[string]interface{}, dek []byte, prefix enums.KeyType) (map[string]interface{}, error) {
@@ -109,18 +101,18 @@ func (u *EncryptionUseCaseImpl) encryptItemFields(item map[string]interface{}, d
 			logger.Error("Failed to encrypt value", err)
 			return nil, errors.NewEncryptionError(fmt.Sprintf("failed to encrypt field: %s", key), err)
 		}
-		encryptedItem[key] = prefix.AddKMSTypeIdentifier(encryptedVal)
+		encryptedItem[key] = prefix.AddKeyTypeIdentifier(encryptedVal)
 	}
 
 	return encryptedItem, nil
 }
 
 func (u *EncryptionUseCaseImpl) Decrypt(userID string, edekPrivate string, edekPublic string, req *dtos.DecryptRequest) (*dtos.DecryptResponse, error) {
-	var DEKPrivate, DEKPublic []byte
-	privateRetrieved := false
-	publicRetrieved := false
-
-	var decryptedItems []map[string]interface{}
+	var (
+		DEKMap         = make(map[enums.KeyType][]byte)
+		retrievedFlags = make(map[enums.KeyType]bool)
+		decryptedItems = make([]map[string]interface{}, 0, len(req.Data))
+	)
 
 	for _, item := range req.Data {
 		decryptedItem := make(map[string]interface{})
@@ -128,58 +120,45 @@ func (u *EncryptionUseCaseImpl) Decrypt(userID string, edekPrivate string, edekP
 		for key, value := range item {
 			strVal := fmt.Sprintf("%v", value)
 
-			var dek []byte
-
-			// Determine DEK based on prefix
-			if enums.HasKMSTypeIdentifier(strVal) {
-				encryptedString, kmsType, _ := enums.RemoveKMSTypeIdentifier(strVal)
-
-				switch *kmsType {
-				case enums.KMSPrivate:
-					if !privateRetrieved {
-						kekID := enums.KMSPrivate.AddKMSTypeIdentifier(userID)
-						kek, err := u.keyManager.RetrieveKEK(kekID)
-						if err != nil {
-							logger.Error("Failed to retrieve private KEK", err)
-							return nil, errors.NewEncryptionError("failed to retrieve private KEK", err)
-						}
-						DEKPrivate, err = u.encryptionEngine.DecryptDEK(edekPrivate, kek)
-						if err != nil {
-							logger.Error("Failed to decrypt private DEK", err)
-							return nil, errors.NewEncryptionError("failed to decrypt private DEK", err)
-						}
-						privateRetrieved = true
-					}
-					dek = DEKPrivate
-
-				case enums.KMSPublic:
-					if !publicRetrieved {
-						kekID := enums.KMSPublic.AddKMSTypeIdentifier(userID)
-						kek, err := u.keyManager.RetrieveKEK(kekID)
-						if err != nil {
-							logger.Error("Failed to retrieve public KEK", err)
-							return nil, errors.NewEncryptionError("failed to retrieve public KEK", err)
-						}
-						DEKPublic, err = u.encryptionEngine.DecryptDEK(edekPublic, kek)
-						if err != nil {
-							logger.Error("Failed to decrypt public DEK", err)
-							return nil, errors.NewEncryptionError("failed to decrypt public DEK", err)
-						}
-						publicRetrieved = true
-					}
-					dek = DEKPublic
-				}
-
-				plainText, err := u.encryptionEngine.Decrypt(encryptedString, dek)
-				if err != nil {
-					logger.Error("Failed to decrypt field", err)
-					return nil, errors.NewEncryptionError(fmt.Sprintf("failed to decrypt field: %s", key), err)
-				}
-				decryptedItem[key] = plainText
-			} else {
-				logger.Error("Skipping field without recognized prefix", fmt.Errorf(key))
-				decryptedItem[key] = strVal // leave unchanged or handle as error
+			// Skip if no KMS identifier
+			if !enums.HaskeyTypeIdentifier(strVal) {
+				logger.Error("Skipping field without recognized prefix", fmt.Errorf("field: %s", key))
+				decryptedItem[key] = strVal
+				continue
 			}
+
+			encryptedString, keyTypePtr, _ := enums.RemoveKeyTypeIdentifier(strVal)
+			keyType := *keyTypePtr
+
+			var dek []byte
+			var err error
+
+			// Retrieve DEK if not already cached
+			if !retrievedFlags[keyType] {
+				kekID := keyType.AddKeyTypeIdentifier(userID)
+				edek := edekPrivate
+				if keyType == enums.KeyPublic {
+					edek = edekPublic
+				}
+
+				dek, err = u.getDek(kekID, edek)
+				if err != nil {
+					logger.Error(fmt.Sprintf("Failed to retrieve %v DEK", keyType), err)
+					return nil, errors.NewEncryptionError(fmt.Sprintf("failed to retrieve %v DEK", keyType), err)
+				}
+				DEKMap[keyType] = dek
+				retrievedFlags[keyType] = true
+			} else {
+				dek = DEKMap[keyType]
+			}
+
+			// Decrypt field
+			plainText, err := u.encryptionEngine.Decrypt(encryptedString, dek)
+			if err != nil {
+				logger.Error("Failed to decrypt field", err)
+				return nil, errors.NewEncryptionError(fmt.Sprintf("failed to decrypt field: %s", key), err)
+			}
+			decryptedItem[key] = plainText
 		}
 
 		decryptedItems = append(decryptedItems, decryptedItem)
@@ -209,7 +188,7 @@ func (u *EncryptionUseCaseImpl) GenerateEDEK(userID string) (*dtos.GenerateEDEKR
 		}
 
 		// Store KEK in KMS
-		kmsKeyName := keyType.AddKMSTypeIdentifier(userID)
+		kmsKeyName := keyType.AddKeyTypeIdentifier(userID)
 		if err := u.keyManager.StoreKEK(kmsKeyName, kek); err != nil {
 			logger.Error("Failed to store KEK for", err)
 			return "", errors.NewKeyManagementError("failed to store KEK", err)
@@ -226,12 +205,12 @@ func (u *EncryptionUseCaseImpl) GenerateEDEK(userID string) (*dtos.GenerateEDEKR
 	}
 
 	// Generate EDEKs for both private and public
-	edekPrivate, err := generateEDEK(enums.KMSPrivate)
+	edekPrivate, err := generateEDEK(enums.KeyPrivate)
 	if err != nil {
 		return nil, err
 	}
 
-	edekPublic, err := generateEDEK(enums.KMSPublic)
+	edekPublic, err := generateEDEK(enums.KeyPublic)
 	if err != nil {
 		return nil, err
 	}

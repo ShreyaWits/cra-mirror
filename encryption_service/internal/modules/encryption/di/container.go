@@ -59,7 +59,7 @@ func NewContainer() (*Container, error) {
 	// Initialize Crypto
 	crypto := crypto.NewEncryption()
 
-	userService := user.NewUserService(container.HttpClient, cfg.UserServiceURL)
+	userService := user.NewMockUserService(container.HttpClient, cfg.UserServiceURL)
 
 	// Initialize encryption engine
 	container.EncryptionEngine = encryptionengine.NewEncryptionEngine(container.KeyManager, crypto)
