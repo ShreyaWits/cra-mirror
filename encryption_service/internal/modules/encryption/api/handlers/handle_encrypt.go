@@ -27,9 +27,16 @@ func (h *EncryptionHandlerImpl) HandleEncrypt(c *fiber.Ctx) error {
 			"error": "Validation failed",
 		})
 	}
+	token := c.Locals("token").(string)
 
+	userData, err := h.userService.GetUserData(token)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 	// Execute use case
-	response, err := h.encryptionUseCase.Encrypt(&req)
+	response, err := h.encryptionUseCase.Encrypt(userData.ID, userData.EDEKPrivate, userData.EDEKPublic, &req)
 	if err != nil {
 		switch err.(type) {
 		case *errors.BadRequestError:

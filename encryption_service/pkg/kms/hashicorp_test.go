@@ -2,10 +2,10 @@ package kms
 
 import (
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
+	"encryption_microservice/internal/config"
 	"encryption_microservice/pkg/logger"
 
 	"github.com/hashicorp/vault/api"
@@ -37,31 +37,10 @@ func setupTestVault(t *testing.T) (*api.Client, string) {
 }
 
 func TestHashicorpKMS(t *testing.T) {
-	// Initialize logger
-	logger.InitLogger()
 
-	// Skip if not running integration tests
-	if testing.Short() {
-		t.Skip("Skipping integration test")
-	}
-
-	fmt.Println("\n=== Starting HashicorpKMS Tests ===")
-	vaultConfig := api.DefaultConfig()
-	vaultConfig.Address = "http://localhost:8200"
-
-	vaultClient, err := api.NewClient(vaultConfig)
-	if err != nil {
-		log.Fatalf("Failed to create Vault client: %v", err)
-	}
-
-	// Set Vault token
-	vaultClient.SetToken("hvs.hHZbjEiA7AIbVBToXd5gc6gM")
-	client, path := setupTestVault(t)
-
+	cfg, _ := config.LoadConfig()
 	// Initialize KMS service
-	kms := NewHashiCorpKMS(vaultClient, path)
-	require.NoError(t, err, "Failed to create HashicorpKMS instance")
-
+	kms := NewHashiCorpKMS(cfg)
 	// Test GenerateKEK
 	t.Run("GenerateKEK", func(t *testing.T) {
 		fmt.Println("\n--- Testing GenerateKEK ---")
@@ -157,11 +136,11 @@ func TestHashicorpKMS(t *testing.T) {
 
 	// Cleanup
 	t.Cleanup(func() {
-		// Unmount the transit secrets engine
-		err := client.Sys().Unmount(path)
-		if err != nil {
-			t.Logf("Failed to unmount transit secrets engine: %v", err)
-		}
-		logger.LogEvent("test", "CLEANUP_COMPLETE", "test", "success", "Unmounted transit secrets engine")
+		// // Unmount the transit secrets engine
+		// err := kms.Sys().Unmount(cfg.VaultPath)
+		// if err != nil {
+		// 	t.Logf("Failed to unmount transit secrets engine: %v", err)
+		// }
+		// logger.LogEvent("test", "CLEANUP_COMPLETE", "test", "success", "Unmounted transit secrets engine")
 	})
 }
