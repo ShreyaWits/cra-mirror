@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"context"
 	"encryption_microservice/internal/modules/encryption/api/dtos"
 	enums "encryption_microservice/internal/modules/encryption/api/enum"
 	encryptionengine "encryption_microservice/internal/modules/encryption/services/encryption_engine"
@@ -42,15 +43,15 @@ func (u *EncryptionUseCaseImpl) getDek(kekID string, edek string) ([]byte, *erro
 }
 
 // Encrypt implements the encryption use case
-func (u *EncryptionUseCaseImpl) Encrypt(userID string, edekPrivate, edekPublic string, req *dtos.EncryptRequest) (*dtos.EncryptResponse, *errors.CustomError) {
+func (u *EncryptionUseCaseImpl) Encrypt(context context.Context, userID string, edekPrivate, edekPublic string, req *dtos.EncryptRequest) (*dtos.EncryptResponse, *errors.CustomError) {
 	var (
 		DEKMap         = make(map[enums.KeyType][]byte)
 		retrievedFlags = make(map[enums.KeyType]bool)
-		encryptedItems []map[string]interface{}
+		encryptedItems []map[string]string
 	)
 
 	for _, item := range req.Data {
-		eType, ok := item["e_type"].(string)
+		eType, ok := item["e_type"]
 		isValid, keyType := enums.IsValidKeyType(eType)
 		if !ok || !isValid {
 			err := fmt.Errorf("e_type is missing or invalid")
@@ -88,8 +89,8 @@ func (u *EncryptionUseCaseImpl) Encrypt(userID string, edekPrivate, edekPublic s
 	return &dtos.EncryptResponse{Data: encryptedItems}, nil
 }
 
-func (u *EncryptionUseCaseImpl) encryptItemFields(item map[string]interface{}, dek []byte, prefix enums.KeyType) (map[string]interface{}, *errors.CustomError) {
-	encryptedItem := make(map[string]interface{})
+func (u *EncryptionUseCaseImpl) encryptItemFields(item map[string]string, dek []byte, prefix enums.KeyType) (map[string]string, *errors.CustomError) {
+	encryptedItem := make(map[string]string)
 
 	for key, value := range item {
 		if key == "e_type" {
@@ -107,15 +108,15 @@ func (u *EncryptionUseCaseImpl) encryptItemFields(item map[string]interface{}, d
 	return encryptedItem, nil
 }
 
-func (u *EncryptionUseCaseImpl) Decrypt(userID string, edekPrivate string, edekPublic string, req *dtos.DecryptRequest) (*dtos.DecryptResponse, *errors.CustomError) {
+func (u *EncryptionUseCaseImpl) Decrypt(context context.Context, userID string, edekPrivate string, edekPublic string, req *dtos.DecryptRequest) (*dtos.DecryptResponse, *errors.CustomError) {
 	var (
 		DEKMap         = make(map[enums.KeyType][]byte)
 		retrievedFlags = make(map[enums.KeyType]bool)
-		decryptedItems = make([]map[string]interface{}, 0, len(req.Data))
+		decryptedItems = make([]map[string]string, 0, len(req.Data))
 	)
 
 	for _, item := range req.Data {
-		decryptedItem := make(map[string]interface{})
+		decryptedItem := make(map[string]string)
 
 		for key, value := range item {
 			strVal := fmt.Sprintf("%v", value)
@@ -169,7 +170,7 @@ func (u *EncryptionUseCaseImpl) Decrypt(userID string, edekPrivate string, edekP
 }
 
 // GenerateEDEK implements the EDEK generation use case
-func (u *EncryptionUseCaseImpl) GenerateEDEK(userID string) (*dtos.GenerateEDEKResponse, *errors.CustomError) {
+func (u *EncryptionUseCaseImpl) GenerateEDEK(context context.Context, userID string) (*dtos.GenerateEDEKResponse, *errors.CustomError) {
 	// Helper function to generate, store KEK and return EDEK
 	generateEDEK := func(keyType enums.KeyType) (string, *errors.CustomError) {
 		// Generate DEK

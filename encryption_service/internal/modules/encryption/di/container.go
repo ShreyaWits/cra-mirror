@@ -1,7 +1,6 @@
 package di
 
 import (
-	"encryption_microservice/internal/app/routes"
 	"encryption_microservice/internal/config"
 
 	"encryption_microservice/internal/modules/encryption/api/handlers"
@@ -13,8 +12,6 @@ import (
 	"encryption_microservice/pkg/http"
 	"encryption_microservice/pkg/kms"
 	"encryption_microservice/pkg/logger"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 // Container holds all the dependencies for the application
@@ -32,7 +29,7 @@ type Container struct {
 	EncryptionUseCase usecases.EncryptionUseCase
 
 	// Handlers
-	EncryptionHandler handlers.EncryptionHandler
+	EncryptionHandler handlers.EncryptionHandlerImpl
 
 	// HttpClient
 	HttpClient http.HttpClient
@@ -68,13 +65,13 @@ func NewContainer() (*Container, error) {
 	container.EncryptionUseCase = usecases.NewEncryptionUseCase(container.KeyManager, container.EncryptionEngine)
 
 	// Initialize handlers
-	container.EncryptionHandler = handlers.NewEncryptionHandler(container.EncryptionUseCase, userService)
+	container.EncryptionHandler = *handlers.NewEncryptionHandler(container.EncryptionUseCase, userService)
 
 	return container, nil
 }
 
-// SetupRoutes sets up all the routes for the application
-func (c *Container) SetupRoutes(app *fiber.App) {
+// // SetupRoutes sets up all the routes for the application
+// func (c *Container) SetupRoutes(app *fiber.App) {
 
-	routes.SetupAPIRoutes(app, c.EncryptionHandler)
-}
+// 	routes.SetupAPIRoutes(app, c.EncryptionHandler)
+// }

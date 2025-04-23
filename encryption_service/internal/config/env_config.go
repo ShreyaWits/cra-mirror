@@ -19,6 +19,7 @@ type Config struct {
 	VaultAddr  string
 	VaultToken string
 	VaultPath  string
+	GrpcPort   string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -36,6 +37,7 @@ func LoadConfig() (*Config, error) {
 		VaultAddr:  getEnv("VAULT_ADDR", "https://localhost:8200"),
 		VaultToken: getEnv("VAULT_TOKEN", "root"),
 		VaultPath:  getEnv("VAULT_PATH", "transit"),
+		GrpcPort:   getEnv("GRPC_PORT", "50051"),
 	}
 
 	// Validate required Vault configuration
@@ -47,6 +49,9 @@ func LoadConfig() (*Config, error) {
 	}
 	if config.VaultPath == "" {
 		return nil, fmt.Errorf("VAULT_PATH environment variable is required")
+	}
+	if config.GrpcPort == "" {
+		return nil, fmt.Errorf("GRPC_PORT environment variable is required")
 	}
 
 	return config, nil
