@@ -1,8 +1,7 @@
 package handlers
 
 import (
-	"encryption_microservice/pkg/errors"
-	"encryption_microservice/pkg/logger"
+	"encryption_microservice/internal/modules/encryption/api/mapper"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,31 +20,16 @@ func (h *EncryptionHandlerImpl) HandleGenerateEDEK(c *fiber.Ctx) error {
 
 	// Execute use case
 	response, err := h.encryptionUseCase.GenerateEDEK(userData.ID)
-
-	//Fixme :Remove in Production as this will be executed by UserService
-	h.userService.UpdateUser(userData.ID, response.EDEKPrivate, response.EDEKPublic)
-
 	if err != nil {
-		switch err.(type) {
-		case *errors.BadRequestError:
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		case *errors.KeyManagementError:
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		case *errors.EncryptionError:
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		default:
-			logger.Error("Unexpected error during EDEK generation", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Internal server error",
-			})
-		}
+		return mapper.NewErrorResponse(c, err.Error(), fiber.StatusBadRequest, err.ErrorCode)
 	}
 
-	return c.JSON(response)
+	//Fixme :Remove in Production as this will be executed by UserService
+	err = h.userService.UpdateUser(userData.ID, response.EDEKPrivate, response.EDEKPublic)
+
+	if err != nil {
+		return mapper.NewErrorResponse(c, err.Error(), fiber.StatusBadRequest, err.ErrorCode)
+	}
+
+	return mapper.NewResponse(c, "EDEK Generated Successfully", int(fiber.StatusOK), "", response)
 }

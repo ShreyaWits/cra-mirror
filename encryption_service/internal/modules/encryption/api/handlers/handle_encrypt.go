@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encryption_microservice/internal/modules/encryption/api/dtos"
-	"encryption_microservice/pkg/errors"
+	"encryption_microservice/internal/modules/encryption/api/mapper"
 	"encryption_microservice/pkg/logger"
 
 	"github.com/go-playground/validator/v10"
@@ -29,31 +29,16 @@ func (h *EncryptionHandlerImpl) HandleEncrypt(c *fiber.Ctx) error {
 	}
 	token := c.Locals("token").(string)
 
-	userData, err := h.userService.GetUserData(token)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+	// Fetch user data and handle errors using the structured mapper
+	userData, userErr := h.userService.GetUserData(token)
+	if userErr != nil {
+		return mapper.NewErrorResponse(c, userErr.Error(), fiber.StatusBadRequest, userErr.ErrorCode)
 	}
-	// Execute use case
-	response, err := h.encryptionUseCase.Encrypt(userData.ID, userData.EDEKPrivate, userData.EDEKPublic, &req)
-	if err != nil {
-		switch err.(type) {
-		case *errors.BadRequestError:
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		case *errors.EncryptionError:
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		default:
-			logger.Error("Unexpected error during encryption", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Internal server error",
-			})
-		}
+	// Execute use case and handle errors
+	response, encErr := h.encryptionUseCase.Encrypt(userData.ID, userData.EDEKPrivate, userData.EDEKPublic, &req)
+	if encErr != nil {
+		return mapper.NewErrorResponse(c, encErr.Error(), fiber.StatusBadRequest, encErr.ErrorCode)
 	}
 
-	return c.JSON(response)
+	return mapper.NewResponse(c, "Encryption Succesful", int(fiber.StatusOK), "", response.Data)
 }

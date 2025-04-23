@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encryption_microservice/internal/modules/encryption/api/dtos"
-	"encryption_microservice/pkg/errors"
+	"encryption_microservice/internal/modules/encryption/api/mapper"
 	"encryption_microservice/pkg/logger"
 
 	"github.com/go-playground/validator/v10"
@@ -39,22 +39,8 @@ func (h *EncryptionHandlerImpl) HandleDecrypt(c *fiber.Ctx) error {
 	// Execute use case
 	response, err := h.encryptionUseCase.Decrypt(userData.ID, userData.EDEKPrivate, userData.EDEKPublic, &req)
 	if err != nil {
-		switch err.(type) {
-		case *errors.BadRequestError:
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		case *errors.EncryptionError:
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		default:
-			logger.Error("Unexpected error during decryption", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Internal server error",
-			})
-		}
+		return mapper.NewErrorResponse(c, err.Error(), fiber.StatusBadRequest, err.ErrorCode)
 	}
 
-	return c.JSON(response)
+	return mapper.NewResponse(c, "Decryption Succesful", int(fiber.StatusOK), "", response.Data)
 }

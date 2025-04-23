@@ -5,7 +5,9 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
+	"encryption_microservice/pkg/errors"
+	pkgErrors "encryption_microservice/pkg/errors"
+	"fmt"
 	"io"
 )
 
@@ -18,17 +20,16 @@ func NewEncryption() Encrypter {
 }
 
 // Encrypt encrypts a string using AES with CFB mode
-func (e *Encryption) Encrypt(data string, secretKey []byte) (string, error) {
-
+func (e *Encryption) Encrypt(data string, secretKey []byte) (string, *errors.CustomError) {
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {
-		return "", err
+		return "", pkgErrors.NewCustomError(pkgErrors.CRYPerrEncryptData, err)
 	}
 
 	// Create an initialization vector (IV)
 	iv := make([]byte, aes.BlockSize)
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
+		return "", pkgErrors.NewCustomError(pkgErrors.CRYPerrEncryptData, err)
 	}
 
 	// Encrypt the data
@@ -44,17 +45,17 @@ func (e *Encryption) Encrypt(data string, secretKey []byte) (string, error) {
 }
 
 // Decrypt decrypts an AES-encrypted string in CFB mode
-func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, error) {
+func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, *errors.CustomError) {
 	// key := []byte(secretKey)
 
 	// Decode the Base64-encoded ciphertext
 	ciphertext, err := base64.URLEncoding.DecodeString(encryptedData)
 	if err != nil {
-		return "", err
+		return "", pkgErrors.NewCustomError(pkgErrors.CRYPerrDecryptData, err)
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		return "", errors.New("ciphertext too short")
+		return "", pkgErrors.NewCustomError(pkgErrors.CRYPerrDecryptData, fmt.Errorf("ciphertext too short"))
 	}
 
 	// Extract IV and ciphertext
@@ -63,7 +64,7 @@ func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, er
 
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {
-		return "", err
+		return "", pkgErrors.NewCustomError(pkgErrors.CRYPerrDecryptData, err)
 	}
 
 	// Decrypt the data
@@ -74,17 +75,16 @@ func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, er
 }
 
 // EncryptBytes encrypts a byte slice using AES with CFB mode
-func (e *Encryption) EncryptBytes(data []byte, secretKey []byte) ([]byte, error) {
-
+func (e *Encryption) EncryptBytes(data []byte, secretKey []byte) ([]byte, *errors.CustomError) {
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {
-		return nil, err
+		return nil, pkgErrors.NewCustomError(pkgErrors.CRYPerrEncryptBytes, err)
 	}
 
 	// Create an initialization vector (IV)
 	iv := make([]byte, aes.BlockSize)
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
+		return nil, pkgErrors.NewCustomError(pkgErrors.CRYPerrEncryptBytes, err)
 	}
 
 	// Encrypt the data
@@ -97,10 +97,9 @@ func (e *Encryption) EncryptBytes(data []byte, secretKey []byte) ([]byte, error)
 }
 
 // DecryptBytes decrypts an AES-encrypted byte slice in CFB mode
-func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey []byte) ([]byte, error) {
-
+func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey []byte) ([]byte, *errors.CustomError) {
 	if len(encryptedData) < aes.BlockSize {
-		return nil, errors.New("ciphertext too short")
+		return nil, pkgErrors.NewCustomError(pkgErrors.CRYPerrDecryptBytes, fmt.Errorf("ciphertext too short"))
 	}
 
 	// Extract IV and ciphertext
@@ -109,7 +108,7 @@ func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey []byte) ([]byt
 
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {
-		return nil, err
+		return nil, pkgErrors.NewCustomError(pkgErrors.CRYPerrDecryptBytes, err)
 	}
 
 	// Decrypt the data

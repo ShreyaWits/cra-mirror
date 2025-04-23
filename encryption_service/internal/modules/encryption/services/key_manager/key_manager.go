@@ -17,40 +17,40 @@ func NewKeyManager(kms kms.KmsService) KeyManager {
 	}
 }
 
-func (k *KeyManagerImpl) GenerateKEK() ([]byte, error) {
+func (k *KeyManagerImpl) GenerateKEK() ([]byte, *errors.CustomError) {
 	kek := make([]byte, 32) // 256 bits for AES-256
 	if _, err := io.ReadFull(rand.Reader, kek); err != nil {
-		return nil, errors.NewEncryptionError("failed to generate KEK", err)
+		return nil, errors.NewCustomError(errors.KMGErrGenrateKEK, err)
 	}
 	return kek, nil
 }
 
-func (k *KeyManagerImpl) StoreKEK(keyID string, kek []byte) error {
+func (k *KeyManagerImpl) StoreKEK(keyID string, kek []byte) *errors.CustomError {
 	if err := k.kms.StoreKEK(keyID, kek); err != nil {
-		return errors.NewEncryptionError("failed to store KEK", err)
+		return err
 	}
 	return nil
 }
 
-func (k *KeyManagerImpl) RetrieveKEK(keyID string) ([]byte, error) {
+func (k *KeyManagerImpl) RetrieveKEK(keyID string) ([]byte, *errors.CustomError) {
 	kek, err := k.kms.RetrieveKEK(keyID)
 	if err != nil {
-		return nil, errors.NewEncryptionError("failed to retrieve KEK", err)
+		return nil, err
 	}
 	return kek, nil
 }
 
-func (k *KeyManagerImpl) DeleteKEK(keyID string) error {
+func (k *KeyManagerImpl) DeleteKEK(keyID string) *errors.CustomError {
 	if err := k.kms.DeleteKEK(keyID); err != nil {
-		return errors.NewEncryptionError("failed to delete KEK", err)
+		return err
 	}
 	return nil
 }
 
-func (k *KeyManagerImpl) ListKEKs() ([]string, error) {
+func (k *KeyManagerImpl) ListKEKs() ([]string, *errors.CustomError) {
 	keyIDs, err := k.kms.ListKEKs()
 	if err != nil {
-		return nil, errors.NewEncryptionError("failed to list KEKs", err)
+		return nil, err
 	}
 	return keyIDs, nil
 }
