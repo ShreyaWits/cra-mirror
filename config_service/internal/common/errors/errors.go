@@ -28,7 +28,7 @@ var Errors = map[string]string{
 func ThrowError(status int,code string) AppError {
 	msg, ok := Errors[code]
 	if !ok {
-		return AppError{500,"UNKNOWN", "Unknown error"}
+		return AppError{400,"UNKNOWN", "Unknown error"}
 	}
 	return AppError{status, code, msg}
 }
