@@ -16,7 +16,7 @@ func InitializeLinkRoutes(app *fiber.App, redis *database.RedisConfig, group fib
 
 	repo := repositories.NewGeneratedRepository(redis)
 
-	services := services.NewGenerateLinkService(repo)
+	services := services.NewGenerateLinkService(repo, redis)
 
 	handlers := handlers.NewGenerateLinkHandler(services)
 

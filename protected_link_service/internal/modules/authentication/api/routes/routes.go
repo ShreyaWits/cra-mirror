@@ -4,9 +4,9 @@ import (
 	"protected_link/internal/common/api/middlewares"
 
 	authHandler "protected_link/internal/modules/authentication/api/handlers"
+	"protected_link/internal/modules/authentication/models"
 	authRepository "protected_link/internal/modules/authentication/repositories"
 	authService "protected_link/internal/modules/authentication/services"
-	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
 
 	database "protected_link/pkg/redis"
 
@@ -23,6 +23,6 @@ func InitializeLinkRoutes(app *fiber.App, redis *database.RedisConfig, group fib
 
 	//middlewares.ValidateBodyDTO(&apiDtos.GenerateUrlRequest{})
 
-	group.Post("/verify-otp", middlewares.CommonRequestValidator(), middlewares.ValidateBodyDTO(&apiDtos.GenerateUrlRequest{}), handlers.VerifyOTPHandler)
+	group.Post("/verify-otp", middlewares.CommonRequestValidator(), middlewares.ValidateBodyDTO(&models.VerifyOTPRequest{}), handlers.VerifyOTPHandler)
 
 }

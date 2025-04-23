@@ -3,20 +3,24 @@ package services
 import (
 	"fmt"
 	commonDtos "protected_link/internal/common/api/dtos"
+	authRepository "protected_link/internal/modules/authentication/repositories"
 	srv "protected_link/internal/modules/authentication/services"
 	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
 	"protected_link/internal/modules/link_generation/repositories"
 	"protected_link/internal/modules/link_generation/utils"
+	database "protected_link/pkg/redis"
 )
 
 type GenerateLinkService struct {
-	repo *repositories.GeneratedRepository
+	repo  *repositories.GeneratedRepository
+	redis *database.RedisConfig
 }
 
 // NewGenerateLinkService initializes a new GenerateLinkService
-func NewGenerateLinkService(repo *repositories.GeneratedRepository) *GenerateLinkService {
+func NewGenerateLinkService(repo *repositories.GeneratedRepository, redis *database.RedisConfig) *GenerateLinkService {
 	return &GenerateLinkService{
-		repo: repo,
+		repo:  repo,
+		redis: redis,
 	}
 }
 
@@ -28,8 +32,6 @@ func (s *GenerateLinkService) GetExtractData(link *string) (*commonDtos.ApiRespo
 
 	result, _ := s.repo.GetTokenData(link)
 
-	print("dadaad", result.Data)
-
 	dto, err := utils.ConvertToGenerateUrlRequest(result.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert data: %w", err)
@@ -38,9 +40,11 @@ func (s *GenerateLinkService) GetExtractData(link *string) (*commonDtos.ApiRespo
 	// Check if OTP is required
 	if dto.OtpRequired {
 
-		initNotification := srv.NewAuthenticationService(nil)
+		repo := authRepository.NewOTPRepository(s.redis)
 
-		req, err := initNotification.SendOtp(*dto)
+		services := srv.NewAuthenticationService(repo)
+
+		req, err := services.SendOtp(*dto)
 
 		println("Generated OTP Check Request	:", req)
 		if err != nil {
