@@ -3,9 +3,10 @@ package grpc
 import (
 	"fmt"
 	"net"
+	"nps-reciept-service/internal/middleware"
 	"nps-reciept-service/internal/services"
 	"nps-reciept-service/internal/utils"
-	pb "nps-reciept-service/proto"
+	"nps-reciept-service/proto"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -34,7 +35,12 @@ func (s *GrpcServer) Start() error {
 
 	// Register services
 	claimServer := services.NewClaimServer()
-	pb.RegisterClaimServiceServer(s.server, claimServer)
+
+	// Create a new server with the interceptor
+	serverWithInterceptor := grpc.NewServer(grpc.UnaryInterceptor(middleware.ValidateClaimRequestInterceptor()))
+	proto.RegisterClaimServiceServer(serverWithInterceptor, claimServer)
+
+	s.server = serverWithInterceptor
 
 	// Enable reflection for tools like Postman
 	reflection.Register(s.server)
