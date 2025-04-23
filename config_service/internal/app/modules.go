@@ -1,6 +1,7 @@
 package app
 
 import (
+	"nps-config-service/internal/common/middleware"
 	"nps-config-service/internal/modules/config-manager/apis/routes"
 	"nps-config-service/internal/modules/config-manager/di"
 
@@ -15,9 +16,12 @@ func RegisterModules(app *fiber.App) {
 		panic("Failed to initialize Config module: " + err.Error())
 	}
 
-	api := app.Group("/api/v1/configs")
-	//Note: The order of registration matters. The first registered route will be of higher priority. that is why we register the webhook routes first
-	routes.RegisterWebHookRoutes(api, configHandler)
-	routes.RegisterConfigRoutes(api, configHandler)
+	api := app.Group("/api/v1/")
+
+	protected := api.Group("/config", middleware.JWTMiddleware())
+
+	routes.RegisterAdminRoutes(api, configHandler)
+	routes.RegisterConfigRoutes(protected, configHandler)
+	routes.RegisterWebHookRoutes(protected, configHandler)
 
 }

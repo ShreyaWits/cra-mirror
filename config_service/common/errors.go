@@ -1,6 +1,8 @@
 package common
 
 type AppError struct {
+	Success bool   `json:"success"`
+	Status  int    `json:"status"`
 	Code string `json:"errorCode"`
 	Msg  string `json:"errorMsg"`
 }
@@ -13,12 +15,20 @@ var Errors = map[string]string{
 	"CNF001": "Invalid config data",
 	"CNF002": "Config key not found",
 	"CNF003": "ETCD connection failed",
+	"CNF004": "Invalid request body",
+	"CNF005": "Admin Secret not configured in environment",
+	"CNF006": "Invalid password",
+	"CNF007": "JWT secret not configured in environment",
+	"AUTH001": "Authorization header missing",
+	"AUTH002": "Invalid authorization header format",
+	"AUTH003": "Invalid or expired token",
+	"CNF008": "Invalid username",
 }
 
-func ThrowError(code string) AppError {
+func ThrowError(status int,code string) AppError {
 	msg, ok := Errors[code]
 	if !ok {
-		return AppError{"UNKNOWN", "Unknown error"}
+		return AppError{false, 500,"UNKNOWN", "Unknown error"}
 	}
-	return AppError{code, msg}
+	return AppError{false, status, code, msg}
 }
