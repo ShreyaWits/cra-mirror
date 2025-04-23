@@ -6,5 +6,7 @@ type AdminDto struct {
 }
 
 type ResponseAdminDto struct {
+	Success bool   `json:"success"`
 	Token string `json:"token"`
+	RefreshToken string `json:"refreshToken"`
 }

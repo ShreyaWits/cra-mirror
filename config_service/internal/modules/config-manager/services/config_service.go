@@ -20,21 +20,35 @@ func NewConfigService(repo *repositories.ConfigRepository) *ConfigService {
 }
 
 func (s *ConfigService) AdminService(dto *dtos.AdminDto, secret string) (*dtos.ResponseAdminDto, error) {
-
-	// Create JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	// Create access token (1 hour expiry)
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"admin": true,
-		"exp":   time.Now().Add(time.Hour * 24).Unix(), // Token expires in 1 day
+		"exp":   time.Now().Add(time.Hour * 1).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(secret))
+	accessTokenString, err := accessToken.SignedString([]byte(secret))
+	if err != nil {
+		return nil, err
+	}
+	
+	refreshSecret := secret // fallback to same secret if not set
+
+	// Create refresh token (7 days expiry)
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"admin": true,
+		"exp":   time.Now().Add(time.Hour * 24 * 7).Unix(),
+	})
+
+	refreshTokenString, err := refreshToken.SignedString([]byte(refreshSecret))
 	if err != nil {
 		return nil, err
 	}
 
-	// Return the token in response DTO
+	// Return both tokens
 	return &dtos.ResponseAdminDto{
-		Token: tokenString,
+		Success: 	  true,
+		Token:        accessTokenString,
+		RefreshToken: refreshTokenString,
 	}, nil
 }
 

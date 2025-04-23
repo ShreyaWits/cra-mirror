@@ -7,8 +7,7 @@ import (
 )
 
 func (h *Handler) RegisterWebhook(c *fiber.Ctx) error {
-	// Implement the logic to register a webhook
-	// This is just a placeholder for the actual implementation
+
 	var configData dtos.RegisterWebhookRequest
 	if err := c.BodyParser(&configData); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

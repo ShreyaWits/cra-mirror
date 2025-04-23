@@ -2,7 +2,7 @@ package handler
 
 import (
 	"fmt"
-	"nps-config-service/common"
+	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services"
 	"os"
@@ -25,14 +25,20 @@ func (h *Handler) AdminHandler(c *fiber.Ctx) error {
 	if !ok{
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest,"CNF004"))
 	}
-	if contextData.Username != "admin" {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF008")) // Invalid username
-	}
 
 	// Load the admin secret from .env
 	adminSecret := os.Getenv("ADMIN_SECRET")
 	if adminSecret == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF005")) // Admin secret not configured
+	}
+
+	userName := os.Getenv("USERNAME")
+	if userName == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF009")) // Admin secret not configured
+	}
+
+	if contextData.Username != userName {
+		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF008")) // Invalid username
 	}
 
 	// Check if the password matches

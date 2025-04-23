@@ -1,7 +1,6 @@
-package common
+package errors
 
 type AppError struct {
-	Success bool   `json:"success"`
 	Status  int    `json:"status"`
 	Code string `json:"errorCode"`
 	Msg  string `json:"errorMsg"`
@@ -23,12 +22,13 @@ var Errors = map[string]string{
 	"AUTH002": "Invalid authorization header format",
 	"AUTH003": "Invalid or expired token",
 	"CNF008": "Invalid username",
+	"CNF009": "username not configured in environment",
 }
 
 func ThrowError(status int,code string) AppError {
 	msg, ok := Errors[code]
 	if !ok {
-		return AppError{false, 500,"UNKNOWN", "Unknown error"}
+		return AppError{500,"UNKNOWN", "Unknown error"}
 	}
-	return AppError{false, status, code, msg}
+	return AppError{status, code, msg}
 }

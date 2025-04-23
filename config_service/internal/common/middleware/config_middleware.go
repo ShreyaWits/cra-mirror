@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"nps-config-service/common"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"os"
 	"strings"
+	common "nps-config-service/internal/common/errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
