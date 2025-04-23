@@ -1,18 +1,32 @@
 package middleware
 
 import (
+	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"os"
 	"strings"
-	common "nps-config-service/internal/common/errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
 )
 
 // Generic Middleware to parse and validate request body
-func SetContextDataMiddleware(c *fiber.Ctx) error {
+func SetContextDataAdminMiddleware(c *fiber.Ctx) error {
 	var request dtos.AdminDto
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid request body",
+		})
+	}
+
+	c.Locals("contextData", &request)
+
+	return c.Next()
+}
+
+// Generic Middleware to parse and validate request body
+func SetContextDataMiddleware(c *fiber.Ctx) error {
+	var request map[string]interface{}
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid request body",

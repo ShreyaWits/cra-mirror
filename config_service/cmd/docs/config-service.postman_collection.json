@@ -1,56 +1,109 @@
 {
 	"info": {
-		"_postman_id": "d2b4b5af-2db4-4bf4-bd35-acf210c24c1f",
-		"name": "config-service",
+		"_postman_id": "20851eeb-5708-4865-9fce-9510bb2b70bc",
+		"name": "config-service Copy",
 		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
 		"_exporter_id": "38718678"
 	},
 	"item": [
 		{
-			"name": "register",
-			"protocolProfileBehavior": {
-				"disableBodyPruning": true
-			},
+			"name": "Admin-login",
 			"request": {
-				"method": "GET",
+				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"url\":\"locahost:5050\",\n    \"environment\":\"dev\",\n    \"serviceName\": \"withdrawal\"\n}",
+					"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"qwertyasdfgh\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
 						}
 					}
 				},
-				"url": "localhost:8080/register"
+				"url": "{{admin_url}}/admin/login"
 			},
 			"response": []
 		},
 		{
-			"name": "triggerUpdate",
+			"name": "Send-config",
 			"request": {
-				"method": "GET",
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{user_access_token}}"
+					}
+				},
+				"method": "PUT",
 				"header": [],
-				"url": ""
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"db_url\": \"postgres://user2:pass2@localhost:5432/db\",\n    \"retry_count\": 20,\n    \"timeout\": 2000,\n    \"domain\":\"admin\",\n    \"name\":\"config\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{app_url}}/develop/config"
 			},
 			"response": []
 		},
 		{
-			"name": "getConfig",
+			"name": "Get-config",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{user_access_token}}"
+					}
+				},
 				"method": "GET",
 				"header": [],
-				"url": ""
+				"url": "{{app_url}}/develop/config"
 			},
 			"response": []
 		},
 		{
-			"name": "postConfig",
+			"name": "Get-confiig-by-key",
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{user_access_token}}"
+					}
+				},
 				"method": "GET",
 				"header": [],
-				"url": ""
+				"url": "{{app_url}}/dev/config/name"
+			},
+			"response": []
+		},
+		{
+			"name": "register-webhook",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{user_access_token}}"
+					}
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"url\":\"http://host.docker.internal:5050\",\n    \"environment\":\"dev\",\n    \"serviceName\": \"config\",\n    \"method\":\"POST\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:4000/api/v1/config/webhook"
 			},
 			"response": []
 		}

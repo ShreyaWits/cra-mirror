@@ -8,21 +8,19 @@ import (
 
 func SendSuccess(c *fiber.Ctx, statusCode int, message string, data interface{}) {
 	response := dtos.SuccessResponse{
-		Success:    true,
 		StatusCode: statusCode,
 		Message:    message,
 		Data:       data,
 	}
-	c.JSON(response)
+	c.Status(statusCode).JSON(response)
 }
 
 // SendError sends a JSON error response
 func SendError(c *fiber.Ctx, statusCode int, message string, err interface{}) {
 	response := dtos.ErrorResponse{
-		Success:    false,
 		StatusCode: statusCode,
 		Message:    message,
 		Error:      err,
 	}
-	c.JSON(response)
+	c.Status(statusCode).JSON(response)
 }

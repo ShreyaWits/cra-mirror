@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	common "nps-config-service/internal/common/errors"
+	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services"
 	"nps-config-service/internal/modules/config-manager/utils"
-	"fmt"
-	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,8 +23,8 @@ func (h *Handler) AdminHandler(c *fiber.Ctx) error {
 	contextData, ok := c.Locals("contextData").(*dtos.AdminDto)
 	fmt.Print(contextData)
 
-	if !ok{
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest,"CNF004"))
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
 	}
 
 	// Load the admin secret from .env
@@ -55,7 +55,7 @@ func (h *Handler) AdminHandler(c *fiber.Ctx) error {
 
 	responseData, responseError := h.Service.AdminService(contextData, jwtSecret)
 
-	if responseError != nil{
+	if responseError != nil {
 		return responseError
 	}
 	return c.Status(fiber.StatusOK).JSON(responseData)
@@ -68,7 +68,8 @@ func (h *Handler) StoreConfigHandler(c *fiber.Ctx) error {
 	contextData := c.Locals("contextData")
 	configData, ok := contextData.(*map[string]any)
 	if !ok {
-		utils.SendError(c, fiber.StatusBadRequest, "Invalid config data", common.ThrowError(fiber.StatusBadRequest,"CNF001"))
+		err := common.ThrowError(fiber.StatusBadRequest, "CNF001")
+		utils.SendError(c, fiber.StatusBadRequest, "Invalid config data", err.Error())
 		return nil
 	}
 

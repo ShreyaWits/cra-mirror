@@ -8,5 +8,5 @@ import (
 )
 
 func RegisterAdminRoutes(router fiber.Router, h *handler.Handler) {
-	router.Post("/admin/login", middleware.SetContextDataMiddleware,h.AdminHandler)
+	router.Post("/admin/login", middleware.SetContextDataAdminMiddleware, h.AdminHandler)
 }
