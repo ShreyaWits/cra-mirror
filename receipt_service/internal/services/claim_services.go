@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	errorResponse "nps-reciept-service/common"
 	"nps-reciept-service/internal/config"
 	"nps-reciept-service/internal/utils"
+
 	pb "nps-reciept-service/proto"
 	"time"
 )
@@ -17,21 +19,39 @@ func NewClaimServer() *ClaimServer {
 }
 
 func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*pb.ClaimResponse, error) {
+	// Validate PRAN
+	if req.Pran == "" || len(req.Pran) != 12 {
+		utils.LogWarning("Validation failed: invalid PRAN", map[string]interface{}{
+			"pran": req.Pran,
+		})
+		return nil, errorResponse.SendError("CLM0001") // custom error code
+	}
+
+	// Missing date
+	if req.TransactionType == "" {
+		utils.LogWarning("Validation failed: missing date", nil)
+		return nil, errorResponse.SendError("CLM0002")
+	}
+
+	// Validate transaction_type
+	if req.TransactionType == "" {
+		utils.LogWarning("Validation failed: missing transaction type", nil)
+		return nil, errorResponse.SendError("CLM0003")
+	}
+
+	// Validate date_of_claim
 	date, err := time.Parse("2006-01-02", req.DateOfClaim)
 	if err != nil {
-		utils.LogError("Invalid date format", err, nil)
-		return nil, utils.SendError{
-			Status:     "error",
-			Message:    "Invalid date format",
-			ErrContent: err,
-		}
+		utils.LogError("Invalid date format", err, map[string]interface{}{
+			"date_of_claim": req.DateOfClaim,
+		})
+		return nil, errorResponse.SendError("CLM0004")
 	}
 
 	last4 := req.Pran[len(req.Pran)-4:]
 	datePart := date.Format("060102")
 
-	// Create a Redis key based only on the date to maintain daily counter
-	key := "claim:sequence:" + datePart
+	key := "claim:sequence:" + datePart + ":" + last4
 	utils.LogInfo("Generating sequence key", map[string]interface{}{
 		"key": key,
 	})
@@ -44,7 +64,7 @@ func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*
 		utils.LogError("Failed to increment Redis sequence", err, map[string]interface{}{
 			"key": key,
 		})
-		return nil, err
+		return nil, errorResponse.SendError("CLM0005")
 	}
 
 	// Set expiry for 24 hours only when the key is newly created
