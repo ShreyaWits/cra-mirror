@@ -7,5 +7,13 @@ import (
 )
 
 func RegisterWebHookRoutes(router fiber.Router, h *handler.Handler) {
-	router.Post("/register-webhook", h.RegisterWebhook)
+	router.Post("/webhook", h.RegisterWebhook)
+
+	// Get all webhooks for a specific environment/service
+	router.Get("/:environment/:service/webhooks", h.GetWebhooks)
+
+	// todo: Update a specific webhook (PATCH for partial updates)
+	// router.Patch("/webhook/:environment/:service", h.UpdateWebhook)
+
+	router.Delete("/:environment/:service/webhook", h.DeleteWebhook)
 }
