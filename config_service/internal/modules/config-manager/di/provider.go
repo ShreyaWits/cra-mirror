@@ -1,7 +1,6 @@
 package di
 
 import (
-	"fmt"
 	"nps-config-service/internal/configs"
 	handler "nps-config-service/internal/modules/config-manager/apis/handlers"
 	"nps-config-service/internal/modules/config-manager/repositories"
@@ -16,8 +15,6 @@ func InitHandler() (*handler.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("ETCD is running :  ", client)
 
 	// Create etcd client
 	etcdClient := etcdDB.NewEtcdClientImpl(client)
