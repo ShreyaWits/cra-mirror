@@ -16,8 +16,8 @@ func RegisterModules(app *fiber.App) {
 	}
 
 	api := app.Group("/api/v1/configs")
-
-	routes.RegisterConfigRoutes(api, configHandler)
+	//Note: The order of registration matters. The first registered route will be of higher priority. that is why we register the webhook routes first
 	routes.RegisterWebHookRoutes(api, configHandler)
+	routes.RegisterConfigRoutes(api, configHandler)
 
 }

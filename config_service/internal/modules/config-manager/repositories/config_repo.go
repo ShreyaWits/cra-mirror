@@ -227,3 +227,11 @@ func (r *ConfigRepository) Get(ctx context.Context, key string) (string, error) 
 
 	return string(resp.Kvs[0].Value), nil
 }
+func (r *ConfigRepository) Delete(ctx context.Context, key string) error {
+	_, err := r.EtcdClient.Client.Delete(ctx, key)
+	if err != nil {
+		log.Printf("Failed to delete key %s: %v", key, err)
+		return fmt.Errorf("failed to delete key %s: %w", key, err)
+	}
+	return nil
+}
