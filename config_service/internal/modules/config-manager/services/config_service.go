@@ -18,7 +18,7 @@ func NewConfigService(repo *repositories.ConfigRepository) *ConfigService {
 
 func (s *ConfigService) StoreConfigService(env string, service string, req map[string]interface{}) (interface{}, error) {
 
-	_, err := s.Repo.StoreConfig(env, service, req)
+	response, err := s.Repo.StoreConfig(env, service, req)
 
 	if err != nil {
 		fmt.Printf("failed to store %s: %v", env, err)
@@ -45,10 +45,7 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 		go s.NotifyWebhook(hook, req)
 	}
 
-	return map[string]interface{}{
-		"status":  200,
-		"message": "Config updated and webhook notification sent",
-	}, nil
+	return response, nil
 
 }
 

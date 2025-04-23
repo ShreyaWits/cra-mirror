@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"nps-config-service/common"
+	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/services"
+	"nps-config-service/internal/modules/config-manager/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -15,21 +16,26 @@ func NewHandler(service *services.ConfigService) *Handler {
 	return &Handler{Service: service}
 }
 
+// StoreConfigHandler handles the storing of configuration data
 func (h *Handler) StoreConfigHandler(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
-	var configData map[string]interface{}
-	if err := c.BodyParser(&configData); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError("CNF001"))
+	contextData := c.Locals("contextData")
+	configData, ok := contextData.(*map[string]any)
+	if !ok {
+		utils.SendError(c, fiber.StatusBadRequest, "Invalid config data", common.ThrowError("CNF001"))
+		return nil
 	}
 
-	responseData, responseError := h.Service.StoreConfigService(environment, serviceName, configData)
-
+	responseData, responseError := h.Service.StoreConfigService(environment, serviceName, *configData)
 	if responseError != nil {
-		return responseError
+		utils.SendError(c, fiber.StatusInternalServerError, "Failed to store config", responseError.Error())
+		return nil
 	}
-	return c.JSON(responseData)
+
+	utils.SendSuccess(c, fiber.StatusOK, "Config stored successfully", responseData)
+	return nil
 }
 
 func (h *Handler) GetfullConfig(c *fiber.Ctx) error {
@@ -38,12 +44,12 @@ func (h *Handler) GetfullConfig(c *fiber.Ctx) error {
 
 	config, err := h.Service.GetConfigService(serviceName, environment)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		utils.SendError(c, fiber.StatusInternalServerError, "Failed to fetch config", err.Error())
+		return nil
 	}
 
-	return c.JSON(config)
+	utils.SendSuccess(c, fiber.StatusOK, "Config fetched successfully", config)
+	return nil
 }
 
 func (h *Handler) GetByValue(c *fiber.Ctx) error {
@@ -53,14 +59,12 @@ func (h *Handler) GetByValue(c *fiber.Ctx) error {
 
 	value, err := h.Service.GetConfigValueService(serviceName, environment, key)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		utils.SendError(c, fiber.StatusInternalServerError, "Failed to get config value", err.Error())
+		return nil
 	}
 
-	return c.JSON(fiber.Map{
-		key: value,
-	})
+	utils.SendSuccess(c, fiber.StatusOK, "Value fetched successfully", fiber.Map{key: value})
+	return nil
 }
 
 func (h *Handler) GetByMetadata(c *fiber.Ctx) error {
@@ -69,10 +73,10 @@ func (h *Handler) GetByMetadata(c *fiber.Ctx) error {
 
 	metadata, err := h.Service.GetConfigMetadataService(serviceName, environment)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		utils.SendError(c, fiber.StatusInternalServerError, "Failed to fetch metadata", err.Error())
+		return nil
 	}
 
-	return c.JSON(metadata)
+	utils.SendSuccess(c, fiber.StatusOK, "Metadata fetched successfully", metadata)
+	return nil
 }
