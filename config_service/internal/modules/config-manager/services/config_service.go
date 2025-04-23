@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/repositories"
+	"time"
+
+	"github.com/golang-jwt/jwt"
 )
 
 type ConfigService struct {
@@ -15,6 +18,40 @@ type ConfigService struct {
 func NewConfigService(repo *repositories.ConfigRepository) *ConfigService {
 	return &ConfigService{Repo: repo}
 }
+
+func (s *ConfigService) AdminService(dto *dtos.AdminDto, secret string) (*dtos.ResponseAdminDto, error) {
+	// Create access token (1 hour expiry)
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"admin": true,
+		"exp":   time.Now().Add(time.Hour * 1).Unix(),
+	})
+
+	accessTokenString, err := accessToken.SignedString([]byte(secret))
+	if err != nil {
+		return nil, err
+	}
+	
+	refreshSecret := secret // fallback to same secret if not set
+
+	// Create refresh token (7 days expiry)
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"admin": true,
+		"exp":   time.Now().Add(time.Hour * 24 * 7).Unix(),
+	})
+
+	refreshTokenString, err := refreshToken.SignedString([]byte(refreshSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	// Return both tokens
+	return &dtos.ResponseAdminDto{
+		Success: 	  true,
+		Token:        accessTokenString,
+		RefreshToken: refreshTokenString,
+	}, nil
+}
+
 
 func (s *ConfigService) StoreConfigService(env string, service string, req map[string]interface{}) (interface{}, error) {
 
