@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	"encryption_microservice/pkg/errors"
 	"encryption_microservice/pkg/http"
 	"fmt"
 	"os"
@@ -66,10 +67,10 @@ func saveUsers(users []User) error {
 }
 
 // GetUserData retrieves a user by "token" (simulated as ID). If not found, it creates one.
-func (s *MockFileUserService) GetUserData(token string) (*User, error) {
+func (s *MockFileUserService) GetUserData(token string) (*User, *errors.CustomError) {
 	users, err := loadUsers()
 	if err != nil {
-		return nil, err
+		return nil, errors.NewCustomError(errors.USRErrFetchUserData, err)
 	}
 
 	for _, user := range users {
@@ -89,34 +90,37 @@ func (s *MockFileUserService) GetUserData(token string) (*User, error) {
 
 	users = append(users, *newUser)
 	if err := saveUsers(users); err != nil {
-		return nil, fmt.Errorf("failed to create new user: %w", err)
+		return nil, errors.NewCustomError(errors.USRErrCreateUser, err)
 	}
 
 	return newUser, nil
 }
 
 // CreateUser adds a new user
-func (s *MockFileUserService) CreateUser(token string, newUser *User) error {
+func (s *MockFileUserService) CreateUser(token string, newUser *User) *errors.CustomError {
 	users, err := loadUsers()
 	if err != nil {
-		return err
+		return errors.NewCustomError(errors.USRErrFetchUserData, err)
 	}
 
 	for _, user := range users {
 		if user.ID == newUser.ID {
-			return fmt.Errorf("user with ID %s already exists", newUser.ID)
+			return errors.NewCustomError(errors.USRErrCreateUser, fmt.Errorf("user with ID %s already exists", newUser.ID))
 		}
 	}
 
 	users = append(users, *newUser)
-	return saveUsers(users)
+	if err := saveUsers(users); err != nil {
+		return errors.NewCustomError(errors.USRErrCreateUser, err)
+	}
+	return nil
 }
 
 // DeleteUser removes a user by ID
-func (s *MockFileUserService) DeleteUser(token, userID string) error {
+func (s *MockFileUserService) DeleteUser(token, userID string) *errors.CustomError {
 	users, err := loadUsers()
 	if err != nil {
-		return err
+		return errors.NewCustomError(errors.USRErrFetchUserData, err)
 	}
 
 	newUsers := make([]User, 0, len(users))
@@ -130,17 +134,20 @@ func (s *MockFileUserService) DeleteUser(token, userID string) error {
 	}
 
 	if !found {
-		return fmt.Errorf("user with ID %s not found", userID)
+		return errors.NewCustomError(errors.USRErrDeleteUser, fmt.Errorf("user with ID %s not found", userID))
 	}
 
-	return saveUsers(newUsers)
+	if err := saveUsers(newUsers); err != nil {
+		return errors.NewCustomError(errors.USRErrDeleteUser, err)
+	}
+	return nil
 }
 
 // UpdateUser updates the EDEKPrivate, EDEKPublic, and Name of the user by ID
-func (s *MockFileUserService) UpdateUser(userID, edekPrivate, edekPublic string) error {
+func (s *MockFileUserService) UpdateUser(userID, edekPrivate, edekPublic string) *errors.CustomError {
 	users, err := loadUsers()
 	if err != nil {
-		return err
+		return errors.NewCustomError(errors.USRErrFetchUserData, err)
 	}
 
 	var updated bool
@@ -154,8 +161,11 @@ func (s *MockFileUserService) UpdateUser(userID, edekPrivate, edekPublic string)
 	}
 
 	if !updated {
-		return fmt.Errorf("user with ID %s not found", userID)
+		return errors.NewCustomError(errors.USRErrUpdateUser, fmt.Errorf("user with ID %s not found", userID))
 	}
 
-	return saveUsers(users)
+	if err := saveUsers(users); err != nil {
+		return errors.NewCustomError(errors.USRErrUpdateUser, err)
+	}
+	return nil
 }

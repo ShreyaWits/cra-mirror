@@ -2,6 +2,8 @@ package user
 
 import (
 	"encoding/json"
+	"encryption_microservice/pkg/errors"
+	pkgErrors "encryption_microservice/pkg/errors"
 	"encryption_microservice/pkg/http"
 	"fmt"
 )
@@ -31,7 +33,10 @@ type User struct {
 }
 
 // GetUserData fetches user data by user ID
-func (s *UserServiceStruct) GetUserData(token string) (*User, error) {
+func (s *UserServiceStruct) GetUserData(token string) (*User, *errors.CustomError) {
+	if token == "" {
+		return nil, errors.NewCustomError(errors.USRErrTokenRequired, fmt.Errorf("token is required"))
+	}
 	url := fmt.Sprintf("%s/users", s.baseURL)
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -40,20 +45,23 @@ func (s *UserServiceStruct) GetUserData(token string) (*User, error) {
 	// Make the GET request
 	response, err := s.httpClient.Get(url, headers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch user data: %w", err)
+		return nil, pkgErrors.NewCustomError(pkgErrors.USRErrFetchUserData, err)
 	}
 
 	// Parse the response
 	var user User
 	if err := json.Unmarshal(response, &user); err != nil {
-		return nil, fmt.Errorf("failed to parse user data: %w", err)
+		return nil, pkgErrors.NewCustomError(pkgErrors.USRErrParseUserData, err)
 	}
 
 	return &user, nil
 }
 
 // CreateUser creates a new user
-func (s *UserServiceStruct) CreateUser(token string, user *User) error {
+func (s *UserServiceStruct) CreateUser(token string, user *User) *errors.CustomError {
+	if token == "" {
+		return errors.NewCustomError(errors.USRErrTokenRequired, fmt.Errorf("token is required"))
+	}
 	url := fmt.Sprintf("%s/users", s.baseURL)
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -62,14 +70,17 @@ func (s *UserServiceStruct) CreateUser(token string, user *User) error {
 	// Make the POST request
 	_, err := s.httpClient.Post(url, user, headers)
 	if err != nil {
-		return fmt.Errorf("failed to create user: %w", err)
+		return pkgErrors.NewCustomError(pkgErrors.USRErrCreateUser, err)
 	}
 
 	return nil
 }
 
 // DeleteUser deletes a user by user ID
-func (s *UserServiceStruct) DeleteUser(token, userID string) error {
+func (s *UserServiceStruct) DeleteUser(token, userID string) *errors.CustomError {
+	if token == "" {
+		return errors.NewCustomError(errors.USRErrTokenRequired, fmt.Errorf("token is required"))
+	}
 	url := fmt.Sprintf("%s/users/%s", s.baseURL, userID)
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -79,17 +90,18 @@ func (s *UserServiceStruct) DeleteUser(token, userID string) error {
 	// Since HTTPClientInterface doesn't have a Delete method, we can use Post with an empty payload
 	_, err := s.httpClient.Post(url, nil, headers)
 	if err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
+		return pkgErrors.NewCustomError(pkgErrors.USRErrDeleteUser, err)
 	}
 
 	return nil
 }
 
 // UpdateUser updates the EDEKPrivate, EDEKPublic, and Name of the user by ID
-func (s *UserServiceStruct) UpdateUser(userID, edekPrivate, edekPublic string) error {
+func (s *UserServiceStruct) UpdateUser(userID, edekPrivate, edekPublic string) *errors.CustomError {
+
 	users, err := loadUsers()
 	if err != nil {
-		return err
+		return pkgErrors.NewCustomError(pkgErrors.USRErrFetchUserData, err)
 	}
 
 	var updated bool
@@ -103,8 +115,11 @@ func (s *UserServiceStruct) UpdateUser(userID, edekPrivate, edekPublic string) e
 	}
 
 	if !updated {
-		return fmt.Errorf("user with ID %s not found", userID)
+		return pkgErrors.NewCustomError(pkgErrors.USRErrUpdateUser, fmt.Errorf("user with ID %s not found", userID))
 	}
 
-	return saveUsers(users)
+	if err := saveUsers(users); err != nil {
+		return pkgErrors.NewCustomError(pkgErrors.USRErrUpdateUser, err)
+	}
+	return nil
 }

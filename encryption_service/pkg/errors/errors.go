@@ -2,6 +2,33 @@ package errors
 
 import "fmt"
 
+type CustomError struct {
+	ErrorCode string
+	Err       error
+}
+
+func (e *CustomError) Error() string {
+	if e == nil {
+		return ""
+	}
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return e.Err.Error()
+}
+
+func (e *CustomError) ErrObj() error {
+	return e.Err
+}
+
+// NewEncryptionError creates a new EncryptionError
+func NewCustomError(message string, err error) *CustomError {
+	return &CustomError{
+		ErrorCode: message,
+		Err:       err,
+	}
+}
+
 // EncryptionError represents an error that occurred during encryption operations
 type EncryptionError struct {
 	Message string

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"encryption_microservice/internal/modules/encryption/api/mapper"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 )
@@ -22,25 +24,25 @@ func ValidateParams[T any]() fiber.Handler {
 
 		// Parse request body
 		if err := c.BodyParser(&dto); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+			return mapper.NewErrorResponse(c, err.Error(), int(fiber.StatusBadRequest), "")
 
 		}
 
 		// Extract query parameters
 		if err := c.QueryParser(&dto); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+			return mapper.NewErrorResponse(c, err.Error(), int(fiber.StatusBadRequest), "")
 
 		}
 
 		// Extract path parameters
 		if err := c.ParamsParser(&dto); err != nil {
 
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+			return mapper.NewErrorResponse(c, err.Error(), int(fiber.StatusBadRequest), "")
 		}
 		var validate = validator.New()
 		// Validate the DTO
 		if err := validate.Struct(dto); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+			return mapper.NewErrorResponse(c, err.Error(), int(fiber.StatusBadRequest), "")
 		}
 
 		// Store the validated DTO in the context

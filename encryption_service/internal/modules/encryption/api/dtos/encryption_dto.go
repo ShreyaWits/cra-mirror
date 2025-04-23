@@ -25,3 +25,5 @@ type GenerateEDEKResponse struct {
 	EDEKPrivate string `json:"edekPrivate"`
 	EDEKPublic  string `json:"edekPublic"`
 }
+
+
