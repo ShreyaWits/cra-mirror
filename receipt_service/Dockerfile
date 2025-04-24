@@ -24,7 +24,7 @@
     
     # Copy the binary from the builder stage
     COPY --from=builder /app/main /app/main
-    COPY .env /app/.env
+    
     RUN ls -la /app
     
     # Expose the port the app listens on
