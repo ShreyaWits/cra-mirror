@@ -2,8 +2,10 @@ package errorResponse
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ErrorResponse struct {
@@ -21,10 +23,11 @@ var errorMap = map[string]string{
 	"CLM0003": "Validation failed: missing transaction type",
 	"CLM0004": "Invalid date format",
 	"CLM0005": "Failed to increment Redis sequence",
-	"CLM0006": "invalid date format",
+	"CLM0006": "Invalid request type",
+	"CLM0007": "Validation failed: missing PRAN",
 }
 
-func SendError(code string) error {
+func SendError(code string, errorCode ...codes.Code) error {
 	msg, exists := errorMap[code]
 	if !exists {
 		code = "UNKNOWN"
@@ -37,5 +40,12 @@ func SendError(code string) error {
 	}
 
 	jsonBytes, _ := json.Marshal(errObj)
-	return errors.New(string(jsonBytes))
+
+	// Use provided gRPC code if available, otherwise default to Internal
+	grpcCode := codes.Internal
+	if len(errorCode) > 0 {
+		grpcCode = errorCode[0]
+	}
+
+	return status.Error(grpcCode, string(jsonBytes))
 }
