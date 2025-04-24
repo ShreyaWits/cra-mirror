@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SendSuccess(c *fiber.Ctx, statusCode int, message string, data interface{}) {
+func SendSuccess(c *fiber.Ctx, statusCode int, message string, data any) {
 	response := dtos.SuccessResponse{
 		StatusCode: statusCode,
 		Message:    message,
@@ -16,7 +16,7 @@ func SendSuccess(c *fiber.Ctx, statusCode int, message string, data interface{})
 }
 
 // SendError sends a JSON error response
-func SendError(c *fiber.Ctx, statusCode int, message string, err interface{}) {
+func SendError(c *fiber.Ctx, statusCode int, message string, err any) {
 	response := dtos.ErrorResponse{
 		StatusCode: statusCode,
 		Message:    message,
