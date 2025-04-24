@@ -3,24 +3,32 @@ package services
 import (
 	"context"
 	claimErrorResponse "nps-reciept-service/common"
-	"nps-reciept-service/internal/config"
 	"nps-reciept-service/internal/utils"
 
 	pb "nps-reciept-service/proto"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
+type RedisClient interface {
+	Incr(ctx context.Context, key string) *redis.IntCmd
+	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
+}
 type ClaimServer struct {
 	pb.UnimplementedClaimServiceServer
+	redisClient RedisClient
 }
 
-func NewClaimServer() *ClaimServer {
-	return &ClaimServer{}
+func NewClaimServer(client RedisClient) *ClaimServer {
+	return &ClaimServer{
+		redisClient: client,
+	}
 }
 
 func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*pb.ClaimResponse, error) {
 	// Validate PRAN
-	if  len(req.Pran) != 12 {
+	if len(req.Pran) != 12 {
 		utils.LogWarning("Validation failed: invalid PRAN", map[string]interface{}{
 			"pran": req.Pran,
 		})
@@ -44,7 +52,7 @@ func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*
 		"key": key,
 	})
 
-	redisClient := config.GetRedisClient()
+	redisClient := s.redisClient
 
 	// Increment the sequence number in Redis
 	sequence, err := redisClient.Incr(ctx, key).Result()
