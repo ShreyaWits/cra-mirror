@@ -2,6 +2,7 @@ package user_test
 
 import (
 	"encryption_microservice/internal/modules/encryption/services/user"
+	"encryption_microservice/pkg/errors"
 	"os"
 	"testing"
 
@@ -110,4 +111,60 @@ func TestUpdateUser_UpdatesFields(t *testing.T) {
 	assert.Nil(t, err2)
 	assert.Equal(t, "private-edek", u.EDEKPrivate)
 	assert.Equal(t, "public-edek", u.EDEKPublic)
+}
+
+func TestGetUserData_ErrorIfTokenEmpty(t *testing.T) {
+	setup(t)
+	svc := &user.MockFileUserService{}
+	u, err := svc.GetUserData("")
+	assert.Nil(t, u)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), errors.USRErrTokenRequired)
+}
+
+func TestCreateUser_Succeeds(t *testing.T) {
+	setup(t)
+	svc := &user.MockFileUserService{}
+	token := "newUser"
+	newUser := &user.User{
+		ID:    token,
+		Name:  "New Name",
+		Email: "new@example.com",
+	}
+	err := svc.CreateUser(token, newUser)
+	assert.Nil(t, err)
+	u, err2 := svc.GetUserData(token)
+	assert.Nil(t, err2)
+	assert.Equal(t, "New Name", u.Name)
+	assert.Equal(t, "new@example.com", u.Email)
+}
+
+func TestDeleteUser_ErrorIfNotFound(t *testing.T) {
+	setup(t)
+	svc := &user.MockFileUserService{}
+	err := svc.DeleteUser("token", "nonexistent")
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), errors.USRErrDeleteUser)
+}
+
+func TestUpdateUser_ErrorIfNotFound(t *testing.T) {
+	setup(t)
+	svc := &user.MockFileUserService{}
+	err := svc.UpdateUser("nonexistent", "p", "q")
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), errors.USRErrUpdateUser)
+}
+
+func TestGetUserData_ErrorIfCorruptedFile(t *testing.T) {
+	setup(t)
+	// Write invalid JSON to users.json
+	err := os.WriteFile(testFile, []byte("not a valid json"), 0644)
+	if err != nil {
+		t.Fatalf("failed to write invalid data: %v", err)
+	}
+	svc := &user.MockFileUserService{}
+	u, err2 := svc.GetUserData("token123")
+	assert.Nil(t, u)
+	assert.NotNil(t, err2)
+	assert.Contains(t, err2.Error(), errors.USRErrFetchUserData)
 }
