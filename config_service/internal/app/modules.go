@@ -2,36 +2,28 @@ package app
 
 import (
 	"nps-config-service/internal/common/middleware"
-	handler "nps-config-service/internal/modules/config-manager/apis/handlers"
 	"nps-config-service/internal/modules/config-manager/apis/routes"
 
 	"nps-config-service/internal/modules/config-manager/di"
-	"nps-config-service/internal/modules/config-manager/services"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func RegisterModules(app *fiber.App) {
-	// Dependency injection
+	container, err := di.NewContainer()
+	if err != nil {
+		panic("Failed to initialize container: " + err.Error())
+	}
+
+	adminHandler, configHandler, webhookHandler, err := di.InitHandlers(container)
+	if err != nil {
+		panic("Failed to initialize handlers: " + err.Error())
+	}
+
 	api := app.Group("/api/v1/")
 	protected := api.Group("/config", middleware.JWTMiddleware())
 
-	// Initialize shared dependencies only once
-	deps, err := di.InitSharedDependencies()
-	if err != nil {
-		panic("Failed to initialize shared dependencies: " + err.Error())
-	}
-
-	// Webhook handler using shared webhook service
-	webhookHandler := handler.NewWebhookHandler(deps.WebhookService)
 	routes.RegisterWebHookRoutes(protected, webhookHandler)
-
-	// Config handler using shared repo and webhook service
-	configService := services.NewConfigService(deps.Repo, deps.WebhookService)
-	configHandler := handler.NewConfigHandler(configService)
-
-	adminService := services.NewAdminService(deps.Repo)
-	adminHandler := handler.NewAdminHandler(adminService)
 	routes.RegisterAdminRoutes(api, adminHandler)
 	routes.RegisterConfigRoutes(protected, configHandler)
 }

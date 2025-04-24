@@ -6,75 +6,46 @@ import (
 	"nps-config-service/internal/modules/config-manager/repositories"
 	"nps-config-service/internal/modules/config-manager/services"
 	etcdDB "nps-config-service/pkg/etcd"
-	"sync"
 )
 
-type SharedDependencies struct {
-	Repo           repositories.IConfigRepo
-	WebhookService services.IWebhookService
+func InitHandlers(container *Container) (*handler.AdminHandler, *handler.ConfigHandler, *handler.WebhookHandler, error) {
+	adminHandler := handler.NewAdminHandler(container.AdminService)
+	configHandler := handler.NewConfigHandler(container.ConfigService)
+	webhookHandler := handler.NewWebhookHandler(container.WebhookService)
+	return adminHandler,configHandler, webhookHandler, nil
 }
 
-var (
-	sharedDeps     *SharedDependencies
-	sharedDepsOnce sync.Once
-	sharedDepsErr  error
-)
-
-func InitSharedDependencies() (*SharedDependencies, error) {
-	sharedDepsOnce.Do(func() {
-		client, err := etcdDB.InitEtcdDB(configs.AppConfig.EtcdEndpoint)
-		if err != nil {
-			sharedDepsErr = err
-			return
-		}
-
-		etcdClient := etcdDB.NewEtcdClientImpl(client)
-		repo := repositories.NewConfigRepository(*etcdClient)
-		webhookService := services.NewWebhookService(repo)
-
-		sharedDeps = &SharedDependencies{
-			Repo:           repo,
-			WebhookService: webhookService,
-		}
-	})
-
-	return sharedDeps, sharedDepsErr
+type Container struct {
+	ConfigRepo     repositories.IConfigRepo
+	AdminService    *services.AdminService
+	WebhookService *services.WebhookService
+	ConfigService  *services.ConfigService
 }
-func InitConfigHandler() (*handler.ConfigHandler, error) {
 
-	// trigger ETCD
+func NewContainer() (*Container, error) {
+	container := &Container{}
+
+	// Load config
 	client, err := etcdDB.InitEtcdDB(configs.AppConfig.EtcdEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create etcd client
 	etcdClient := etcdDB.NewEtcdClientImpl(client)
 
-	// Inject into repository
-	repo := repositories.NewConfigRepository(*etcdClient)
+	// Repository layer
+	configRepo := repositories.NewConfigRepository(*etcdClient)
+	container.ConfigRepo = configRepo
 
-	// Inject into service
-	serviceWebhook := services.NewWebhookService(repo)
-	service := services.NewConfigService(repo, serviceWebhook)
+	// Service layer
+	adminService := services.NewAdminService(configRepo)
+	container.AdminService = adminService.(*services.AdminService)
 
-	return handler.NewConfigHandler(service), nil
-}
-func InitWebhookHandler() (*handler.WebhookHandler, error) {
-	// trigger ETCD
-	client, err := etcdDB.InitEtcdDB(configs.AppConfig.EtcdEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	webhookService := services.NewWebhookService(configRepo)
+	container.WebhookService = webhookService.(*services.WebhookService)
 
-	// Create etcd client
-	etcdClient := etcdDB.NewEtcdClientImpl(client)
+	configService := services.NewConfigService(configRepo, webhookService)
+	container.ConfigService = configService.(*services.ConfigService)
 
-	// Inject into repository
-	repo := repositories.NewConfigRepository(*etcdClient)
-
-	// Inject into service
-	service := services.NewWebhookService(repo)
-
-	return handler.NewWebhookHandler(service), nil
+	return container, nil
 }
