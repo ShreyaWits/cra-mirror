@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterConfigRoutes(router fiber.Router, h *handler.Handler) {
+func RegisterConfigRoutes(router fiber.Router, h *handler.ConfigHandler) {
 	router.Put("/:environment/:service", h.StoreConfigHandler)
 	router.Get("/:environment/:service", h.GetfullConfig)
 	router.Get("/:environment/:service/:key", h.GetByValue)

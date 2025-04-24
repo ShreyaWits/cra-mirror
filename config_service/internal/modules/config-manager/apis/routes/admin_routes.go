@@ -7,6 +7,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterAdminRoutes(router fiber.Router, h *handler.Handler) {
+func RegisterAdminRoutes(router fiber.Router, h *handler.ConfigHandler) {
 	router.Post("/admin/login", middleware.SetContextDataMiddleware,h.AdminHandler)
 }

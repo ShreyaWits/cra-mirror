@@ -2,11 +2,19 @@ package handler
 
 import (
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
+	"nps-config-service/internal/modules/config-manager/services"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func (h *Handler) RegisterWebhook(c *fiber.Ctx) error {
+type WebhookHandler struct {
+	Service services.IWebhookService
+}
+
+func NewWebhookHandler(service services.IWebhookService) *WebhookHandler {
+	return &WebhookHandler{Service: service}
+}
+func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
 
 	var configData dtos.RegisterWebhookRequest
 	if err := c.BodyParser(&configData); err != nil {
@@ -22,10 +30,9 @@ func (h *Handler) RegisterWebhook(c *fiber.Ctx) error {
 	}
 	return c.JSON(res)
 }
-func (h *Handler) GetWebhooks(c *fiber.Ctx) error {
+func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error {
 	env := c.Params("environment")
 	service := c.Params("service")
-
 	res, err := h.Service.GetWebhooks(env, service)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -34,7 +41,7 @@ func (h *Handler) GetWebhooks(c *fiber.Ctx) error {
 	}
 	return c.JSON(res)
 }
-func (h *Handler) DeleteWebhook(c *fiber.Ctx) error {
+func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 	env := c.Params("environment")
 	service := c.Params("service")
 
