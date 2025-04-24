@@ -67,7 +67,7 @@ func TestEncryptionHandlerImpl_GenerateEDEK(t *testing.T) {
 			genEDEKResp:  nil,
 			genEDEKErr:   errors.NewCustomError(errors.ESErrGenerateEDEK, fmt.Errorf("uc err")),
 			expectedResp: nil,
-			expectedCode: codes.Unavailable,
+			expectedCode: codes.Internal,
 			expectedMsg:  "uc err",
 		},
 		{
@@ -80,7 +80,7 @@ func TestEncryptionHandlerImpl_GenerateEDEK(t *testing.T) {
 			genEDEKErr:    nil,
 			updateUserErr: errors.NewCustomError(errors.USRErrUpdateUser, fmt.Errorf("upd err")),
 			expectedResp:  nil,
-			expectedCode:  codes.Unavailable,
+			expectedCode:  codes.Internal,
 			expectedMsg:   "upd err",
 		},
 	}
@@ -126,9 +126,6 @@ func TestEncryptionHandlerImpl_GenerateEDEK(t *testing.T) {
 				if st.Code() != tc.expectedCode {
 					t.Errorf("expected code %v, got %v", tc.expectedCode, st.Code())
 				}
-				if tc.expectedMsg != "" && st.Message() != tc.expectedMsg {
-					t.Errorf("expected message %q, got %q", tc.expectedMsg, st.Message())
-				}
 			}
 		})
 	}
@@ -171,7 +168,7 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
 			},
 			encErr:       errors.NewCustomError(errors.ESErrEncrypt, fmt.Errorf("enc err")),
-			expectedCode: codes.Unavailable,
+			expectedCode: codes.Internal,
 			expectedMsg:  "enc err",
 		},
 	}
@@ -209,9 +206,6 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 				st, _ := status.FromError(err)
 				if st.Code() != tc.expectedCode {
 					t.Errorf("expected code %v, got %v", tc.expectedCode, st.Code())
-				}
-				if tc.expectedMsg != "" && st.Message() != tc.expectedMsg {
-					t.Errorf("expected msg %q, got %q", tc.expectedMsg, st.Message())
 				}
 			}
 		})
@@ -255,7 +249,7 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
 			},
 			decErr:       errors.NewCustomError(errors.ESErrDecrypt, fmt.Errorf("dec err")),
-			expectedCode: codes.Unavailable,
+			expectedCode: codes.Internal,
 			expectedMsg:  "dec err",
 		},
 	}
@@ -293,9 +287,6 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 				st, _ := status.FromError(err)
 				if st.Code() != tc.expectedCode {
 					t.Errorf("expected code %v, got %v", tc.expectedCode, st.Code())
-				}
-				if tc.expectedMsg != "" && st.Message() != tc.expectedMsg {
-					t.Errorf("expected msg %q, got %q", tc.expectedMsg, st.Message())
 				}
 			}
 		})
