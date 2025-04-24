@@ -42,37 +42,18 @@ func NewHashiCorpKMS(cfg *config.Config) KmsService {
 	}
 }
 
-// GenerateKEK generates a new Key Encryption Key using Vault's transit engine
-func (h *HashiCorpKMS) GenerateKEK() ([]byte, *errors.CustomError) {
-	// Generate a new key using Vault's transit engine
-	path := filepath.Join(h.transitPath, "keys", "kek")
-	data := map[string]interface{}{
-		"type": "aes256-gcm96",
-	}
+// NewHashiCorpKMS creates a new instance of HashiCorpKMS
+func NewTestHashiCorpKMS(client *api.Client, path string) KmsService {
 
-	_, err := h.client.Logical().WriteWithContext(context.Background(), path, data)
-	if err != nil {
-		return nil, errors.NewCustomError(errors.KMSerrGenerateKEK, err)
+	return &HashiCorpKMS{
+		client:      client,
+		transitPath: path,
 	}
+}
 
-	// Generate a random key using Vault's transit engine
-	path = filepath.Join(h.transitPath, "datakey", "plaintext", "kek")
-	secret, err := h.client.Logical().WriteWithContext(context.Background(), path, nil)
-	if err != nil {
-		return nil, errors.NewCustomError(errors.KMSerrRandomKey, err)
-	}
-
-	plaintext, ok := secret.Data["plaintext"].(string)
-	if !ok {
-		return nil, errors.NewCustomError(errors.KMSerrRandomKey, fmt.Errorf("invalid response format from Vault"))
-	}
-
-	key, err := base64.StdEncoding.DecodeString(plaintext)
-	if err != nil {
-		return nil, errors.NewCustomError(errors.KMSerrRandomKey, err)
-	}
-
-	return key, nil
+// NewHashiCorpKMSWithClient creates a HashiCorpKMS using the provided Vault client and transit path, for testing purposes.
+func NewHashiCorpKMSWithClient(client *api.Client, transitPath string) KmsService {
+	return &HashiCorpKMS{client: client, transitPath: transitPath}
 }
 
 // StoreKEK stores a Key Encryption Key in Vault's KV engine
@@ -83,6 +64,7 @@ func (h *HashiCorpKMS) StoreKEK(kekID string, kek []byte) *errors.CustomError {
 		"data": map[string]interface{}{
 			"key": keyBase64,
 		},
+		"deletion_allowed": true,
 	}
 	_, err := h.client.Logical().WriteWithContext(context.Background(), path, data)
 	if err != nil {
@@ -119,39 +101,6 @@ func (h *HashiCorpKMS) RetrieveKEK(kekID string) ([]byte, *errors.CustomError) {
 	}
 
 	return decoded, nil
-}
-
-// DeleteKEK deletes a Key Encryption Key from Vault
-func (h *HashiCorpKMS) DeleteKEK(kekID string) *errors.CustomError {
-	// Delete the key from Vault's transit engine
-	path := filepath.Join(h.transitPath, "keys", kekID)
-	_, err := h.client.Logical().DeleteWithContext(context.Background(), path)
-	if err != nil {
-		return errors.NewCustomError(errors.KMSerrDeleteKEK, err)
-	}
-
-	return nil
-}
-
-// ListKEKs lists all Key Encryption Keys
-func (h *HashiCorpKMS) ListKEKs() ([]string, *errors.CustomError) {
-	// List all keys in the transit engine
-	path := filepath.Join(h.transitPath, "keys")
-	secret, err := h.client.Logical().ListWithContext(context.Background(), path)
-	if err != nil {
-		return nil, errors.NewCustomError(errors.KMSerrListKEKs, err)
-	}
-
-	var keys []string
-	if secret != nil && secret.Data != nil {
-		if keyList, ok := secret.Data["keys"].([]interface{}); ok {
-			for _, key := range keyList {
-				keys = append(keys, key.(string))
-			}
-		}
-	}
-
-	return keys, nil
 }
 
 // Encrypt encrypts data using a Key Encryption Key
