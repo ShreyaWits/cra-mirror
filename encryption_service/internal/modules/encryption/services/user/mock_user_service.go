@@ -68,6 +68,9 @@ func saveUsers(users []User) error {
 
 // GetUserData retrieves a user by "token" (simulated as ID). If not found, it creates one.
 func (s *MockFileUserService) GetUserData(token string) (*User, *errors.CustomError) {
+	if token == "" {
+		return nil, errors.NewCustomError(errors.USRErrTokenRequired, fmt.Errorf("token is required"))
+	}
 	users, err := loadUsers()
 	if err != nil {
 		return nil, errors.NewCustomError(errors.USRErrFetchUserData, err)
@@ -98,6 +101,7 @@ func (s *MockFileUserService) GetUserData(token string) (*User, *errors.CustomEr
 
 // CreateUser adds a new user
 func (s *MockFileUserService) CreateUser(token string, newUser *User) *errors.CustomError {
+
 	users, err := loadUsers()
 	if err != nil {
 		return errors.NewCustomError(errors.USRErrFetchUserData, err)

@@ -1,16 +1,15 @@
 package handlers
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"context"
+	pb "encryption_microservice/internal/common/proto_gen"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 type EncryptionHandler interface {
-	// HandleEncrypt handles the encryption request
-	HandleEncrypt(c *fiber.Ctx) error
-
-	// HandleDecrypt handles the decryption request
-	HandleDecrypt(c *fiber.Ctx) error
-
-	// HandleGenerateEDEK handles the EDEK generation request
-	HandleGenerateEDEK(c *fiber.Ctx) error
-
+	Decrypt(ctx context.Context, req *pb.DecryptRequest) (*pb.DecryptResponse, error)
+	Encrypt(ctx context.Context, req *pb.EncryptDataRequest) (*pb.EncryptDataResponse, error)
+	GenerateEDEK(ctx context.Context, req *pb.GenerateEDEKRequest) (*pb.GenerateEDEKResponse, error)
 	HandleHealth(c *fiber.Ctx) error
 }
