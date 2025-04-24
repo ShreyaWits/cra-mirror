@@ -15,3 +15,10 @@ type UserService interface {
 
 	UpdateUser(userID, edekPrivate, edekPublic string) *errors.CustomError
 }
+type User struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	EDEKPrivate string `json:"edekPrivate"`
+	EDEKPublic  string `json:"edekPublic"`
+}

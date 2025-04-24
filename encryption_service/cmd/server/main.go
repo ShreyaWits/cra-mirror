@@ -2,10 +2,14 @@ package main
 
 import (
 	"log"
+	"net"
 
 	"encryption_microservice/internal/modules/encryption/di"
 
-	"github.com/gofiber/fiber/v2"
+	pb "encryption_microservice/internal/common/proto_gen"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -16,14 +20,20 @@ func main() {
 		log.Fatalf("Failed to initialize container: %v", err)
 	}
 
-	// Initialize Fiber app
-	app := fiber.New()
+	grpcServer := grpc.NewServer()
 
-	// Setup routes
-	container.SetupRoutes(app)
-
-	log.Printf("Starting server on port %s", container.Config.ServerPort)
-	if err := app.Listen(":" + container.Config.ServerPort); err != nil {
-		log.Fatalf("Server failed: %v", err)
+	lis, err := net.Listen("tcp", ":"+container.Config.GrpcPort)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
 	}
+
+	pb.RegisterEncryptionServiceServer(grpcServer, &container.EncryptionHandler)
+	// Register reflection service on gRPC server (optional but useful for tools like grpcurl)
+	reflection.Register(grpcServer)
+
+	log.Println("gRPC server is running on port 50051...")
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
+
 }

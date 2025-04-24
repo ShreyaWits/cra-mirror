@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	pb "encryption_microservice/internal/common/proto_gen"
 	"encryption_microservice/internal/modules/encryption/services/user"
 	usecases "encryption_microservice/internal/modules/encryption/usecases/encryption"
 )
 
 // EncryptionHandlerImpl implements the EncryptionHandler interface
 type EncryptionHandlerImpl struct {
+	pb.UnimplementedEncryptionServiceServer
 	encryptionUseCase usecases.EncryptionUseCase
 	userService       user.UserService
 }

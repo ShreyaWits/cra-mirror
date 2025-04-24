@@ -8,11 +8,9 @@ type CustomError struct {
 }
 
 func (e *CustomError) Error() string {
-	if e == nil {
-		return ""
-	}
+
 	if e.Err != nil {
-		return e.Err.Error()
+		return e.ErrorCode + ": " + e.Err.Error()
 	}
 	return e.Err.Error()
 }
