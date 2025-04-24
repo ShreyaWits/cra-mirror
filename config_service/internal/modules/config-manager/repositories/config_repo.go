@@ -18,7 +18,18 @@ type ConfigRepository struct {
 	EtcdClient etcdDB.EtcdClientImpl // ✅ Injected interface
 }
 
-func NewConfigRepository(etcdClient etcdDB.EtcdClientImpl) *ConfigRepository {
+type IConfigRepo interface {
+	StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error)
+	GetConfig(serviceName, environment string) (map[string]interface{}, error)
+	GetAllKeys(prefix string) (map[string]string, error)
+	GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error)
+	GetConfigValue(serviceName, environment, key string) (interface{}, error)
+	Set(ctx context.Context, key string, data string, ttl time.Duration) error
+	Get(ctx context.Context, key string) (string, error)
+	Delete(ctx context.Context, key string) error
+}
+
+func NewConfigRepository(etcdClient etcdDB.EtcdClientImpl) IConfigRepo {
 	return &ConfigRepository{EtcdClient: etcdClient}
 }
 

@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterWebHookRoutes(router fiber.Router, h *handler.Handler) {
+func RegisterWebHookRoutes(router fiber.Router, h *handler.WebhookHandler) {
 	router.Post("/webhook", middleware.SetContextDataMiddleware, h.RegisterWebhook)
 
 	// Get all webhooks for a specific environment/service

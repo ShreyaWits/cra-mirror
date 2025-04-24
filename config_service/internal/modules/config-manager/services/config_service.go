@@ -12,11 +12,20 @@ import (
 )
 
 type ConfigService struct {
-	Repo *repositories.ConfigRepository
+	Repo           repositories.IConfigRepo
+	WebhookService IWebhookService
 }
 
-func NewConfigService(repo *repositories.ConfigRepository) *ConfigService {
-	return &ConfigService{Repo: repo}
+type IConfigService interface {
+	AdminService(dto *dtos.AdminDto, secret string) (*dtos.ResponseAdminDto, error)
+	StoreConfigService(env string, service string, req map[string]interface{}) (interface{}, error)
+	GetConfigService(service string, env string) (interface{}, error)
+	GetConfigValueService(serviceName string, env string, key string) (interface{}, error)
+	GetConfigMetadataService(serviceName string, env string) (interface{}, error)
+}
+
+func NewConfigService(repo repositories.IConfigRepo, webHook IWebhookService) IConfigService {
+	return &ConfigService{Repo: repo, WebhookService: webHook}
 }
 
 func (s *ConfigService) AdminService(dto *dtos.AdminDto, secret string) (*dtos.ResponseAdminDto, error) {
@@ -46,7 +55,7 @@ func (s *ConfigService) AdminService(dto *dtos.AdminDto, secret string) (*dtos.R
 
 	// Return both tokens
 	return &dtos.ResponseAdminDto{
-		Success: 	  true,
+		Success:      true,
 		Token:        accessTokenString,
 		RefreshToken: refreshTokenString,
 	}, nil
@@ -79,7 +88,7 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 	// Notify the webhook asynchronously
 	for _, hook := range hooks {
 		//TODO: ERROR HANDLING
-		go s.NotifyWebhook(hook, req)
+		go s.WebhookService.NotifyWebhook(hook, req)
 	}
 
 	return response, nil
