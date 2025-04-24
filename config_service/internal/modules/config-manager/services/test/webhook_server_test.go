@@ -77,7 +77,7 @@ func TestGetWebhooks(t *testing.T) {
 
 func TestDeleteWebhook(t *testing.T) {
 	mockRepo := new(mocks.MockRepository)
-	configService :=  &services.WebhookService{Repo: mockRepo}
+	configService := &services.WebhookService{Repo: mockRepo}
 
 	// Test data
 	env := "prod"

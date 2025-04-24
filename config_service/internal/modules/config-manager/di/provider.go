@@ -40,6 +40,7 @@ func InitSharedDependencies() (*SharedDependencies, error) {
 
 	return sharedDeps, sharedDepsErr
 }
+
 func InitConfigHandler() (*handler.ConfigHandler, error) {
 
 	// trigger ETCD
@@ -60,6 +61,7 @@ func InitConfigHandler() (*handler.ConfigHandler, error) {
 
 	return handler.NewConfigHandler(service), nil
 }
+
 func InitWebhookHandler() (*handler.WebhookHandler, error) {
 	// trigger ETCD
 	client, err := etcdDB.InitEtcdDB(configs.AppConfig.EtcdEndpoint)

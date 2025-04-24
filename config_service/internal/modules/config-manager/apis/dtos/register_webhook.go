@@ -6,3 +6,11 @@ type RegisterWebhookRequest struct {
 	ServiceName string `json:"serviceName"`
 	Method      string `json:"method"`
 }
+
+func NewErrorResponse(statusCode int, message, err string) map[string]interface{} {
+	return map[string]interface{}{
+		"status_code": statusCode,
+		"message":     message,
+		"error":       err,
+	}
+}
