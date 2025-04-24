@@ -3,10 +3,16 @@ package repositories
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	common "nps-config-service/internal/common/errors"
+	"nps-config-service/internal/configs/db"
 	"nps-config-service/internal/modules/config-manager/models"
 	etcdDB "nps-config-service/pkg/etcd"
+
+	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"strconv"
 	"time"
@@ -27,6 +33,8 @@ type IConfigRepo interface {
 	Set(ctx context.Context, key string, data string, ttl time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
 	Delete(ctx context.Context, key string) error
+	CreateAdmin(admin *models.Admin) (*models.Admin,error)
+	GetAdminByCredentials(username, password string) (*models.Admin, error)
 }
 
 func NewConfigRepository(etcdClient etcdDB.EtcdClientImpl) IConfigRepo {
@@ -245,4 +253,34 @@ func (r *ConfigRepository) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("failed to delete key %s: %w", key, err)
 	}
 	return nil
+}
+
+func (r *ConfigRepository)CreateAdmin(admin *models.Admin) (*models.Admin,error) {
+	// Check if user with the same email already exists
+	var existingUser models.Admin
+	if err := db.DB.Where("user_name = ?", admin.UserName).First(&existingUser).Error; err == nil {
+		return nil, common.ThrowError(fiber.StatusConflict, "ADMIN001") // User already exists
+	}
+
+	// Create new user using GORM
+	if err := db.DB.Create(admin).Error; err != nil {
+		return nil, err
+	}
+
+	return admin, nil
+}
+
+func (r *ConfigRepository) GetAdminByCredentials(username, password string) (*models.Admin, error) {
+	var admin models.Admin
+
+	// Find user by username and password
+	err := db.DB.Where("user_name = ? AND password = ?", username, password).First(&admin).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002") // Admin not found
+		}
+		return nil, err 
+	}
+
+	return &admin, nil
 }

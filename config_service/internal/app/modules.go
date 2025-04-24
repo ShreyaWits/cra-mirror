@@ -1,6 +1,7 @@
 package app
 
 import (
+	"nps-config-service/internal/common/middleware"
 	handler "nps-config-service/internal/modules/config-manager/apis/handlers"
 	"nps-config-service/internal/modules/config-manager/apis/routes"
 
@@ -13,7 +14,7 @@ import (
 func RegisterModules(app *fiber.App) {
 	// Dependency injection
 	api := app.Group("/api/v1/")
-	protected := api.Group("/config")
+	protected := api.Group("/config", middleware.JWTMiddleware())
 
 	// Initialize shared dependencies only once
 	deps, err := di.InitSharedDependencies()
@@ -29,6 +30,8 @@ func RegisterModules(app *fiber.App) {
 	configService := services.NewConfigService(deps.Repo, deps.WebhookService)
 	configHandler := handler.NewConfigHandler(configService)
 
-	routes.RegisterAdminRoutes(api, configHandler)
+	adminService := services.NewAdminService(deps.Repo)
+	adminHandler := handler.NewAdminHandler(adminService)
+	routes.RegisterAdminRoutes(api, adminHandler)
 	routes.RegisterConfigRoutes(protected, configHandler)
 }

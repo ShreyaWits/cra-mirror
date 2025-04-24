@@ -23,6 +23,13 @@ var Errors = map[string]string{
 	"AUTH003": "Invalid or expired token",
 	"CNF008": "Invalid username",
 	"CNF009": "username not configured in environment",
+	"CNF010": "Invalid secret key",
+	"CNF011": "Database connection failed",
+	"CNF012": "username (email) should not be blank",
+	"CNF013": "password should not be blank",
+	"CNF014": "secret should not be blank",
+	"ADMIN001": "Admin user already exists",
+	"ADMIN002": "Admin user not found",
 }
 
 func ThrowError(status int,code string) AppError {
