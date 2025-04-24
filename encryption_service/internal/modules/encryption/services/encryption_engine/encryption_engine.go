@@ -68,10 +68,9 @@ func (e *EncryptionEngineImpl) DecryptDEK(edek string, kek []byte) ([]byte, *err
 	if err != nil {
 		return nil, errors.NewCustomError(errors.ENGErrDecryptDEK, err)
 	}
-	decryptedData, errr := e.crypto.DecryptBytes(decryptedEDEK, kek)
-	if errr != nil {
-		return nil, errors.NewCustomError(errors.ENGErrDecryptDEK, errr)
+	if decryptedData, err := e.crypto.DecryptBytes(decryptedEDEK, kek); err != nil {
+		return nil, errors.NewCustomError(errors.ENGErrDecryptDEK, err)
+	} else {
+		return decryptedData, nil
 	}
-
-	return decryptedData, nil
 }

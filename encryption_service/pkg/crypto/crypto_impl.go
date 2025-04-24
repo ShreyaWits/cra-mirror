@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
-	"encryption_microservice/pkg/errors"
 	pkgErrors "encryption_microservice/pkg/errors"
 	"fmt"
 	"io"
@@ -20,7 +19,7 @@ func NewEncryption() Encrypter {
 }
 
 // Encrypt encrypts a string using AES with CFB mode
-func (e *Encryption) Encrypt(data string, secretKey []byte) (string, *errors.CustomError) {
+func (e *Encryption) Encrypt(data string, secretKey []byte) (string, *pkgErrors.CustomError) {
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return "", pkgErrors.NewCustomError(pkgErrors.CRYPerrEncryptData, err)
@@ -45,7 +44,7 @@ func (e *Encryption) Encrypt(data string, secretKey []byte) (string, *errors.Cus
 }
 
 // Decrypt decrypts an AES-encrypted string in CFB mode
-func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, *errors.CustomError) {
+func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, *pkgErrors.CustomError) {
 	// key := []byte(secretKey)
 
 	// Decode the Base64-encoded ciphertext
@@ -75,7 +74,7 @@ func (e *Encryption) Decrypt(encryptedData string, secretKey []byte) (string, *e
 }
 
 // EncryptBytes encrypts a byte slice using AES with CFB mode
-func (e *Encryption) EncryptBytes(data []byte, secretKey []byte) ([]byte, *errors.CustomError) {
+func (e *Encryption) EncryptBytes(data []byte, secretKey []byte) ([]byte, *pkgErrors.CustomError) {
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return nil, pkgErrors.NewCustomError(pkgErrors.CRYPerrEncryptBytes, err)
@@ -97,7 +96,7 @@ func (e *Encryption) EncryptBytes(data []byte, secretKey []byte) ([]byte, *error
 }
 
 // DecryptBytes decrypts an AES-encrypted byte slice in CFB mode
-func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey []byte) ([]byte, *errors.CustomError) {
+func (e *Encryption) DecryptBytes(encryptedData []byte, secretKey []byte) ([]byte, *pkgErrors.CustomError) {
 	if len(encryptedData) < aes.BlockSize {
 		return nil, pkgErrors.NewCustomError(pkgErrors.CRYPerrDecryptBytes, fmt.Errorf("ciphertext too short"))
 	}
