@@ -1,4 +1,4 @@
-package errors
+package common
 
 type AppError struct {
 	Status  int    `json:"status"`
