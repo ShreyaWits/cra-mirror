@@ -10,7 +10,6 @@ import (
 
 	"encryption_microservice/internal/config"
 	"encryption_microservice/pkg/errors"
-	"encryption_microservice/pkg/logger"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -39,15 +38,6 @@ func NewHashiCorpKMS(cfg *config.Config) KmsService {
 	return &HashiCorpKMS{
 		client:      vaultClient,
 		transitPath: cfg.VaultPath,
-	}
-}
-
-// NewHashiCorpKMS creates a new instance of HashiCorpKMS
-func NewTestHashiCorpKMS(client *api.Client, path string) KmsService {
-
-	return &HashiCorpKMS{
-		client:      client,
-		transitPath: path,
 	}
 }
 
@@ -98,53 +88,6 @@ func (h *HashiCorpKMS) RetrieveKEK(kekID string) ([]byte, *errors.CustomError) {
 	decoded, err := base64.StdEncoding.DecodeString(plaintext)
 	if err != nil {
 		return nil, errors.NewCustomError(errors.KMSerrRetrieveKEK, err)
-	}
-
-	return decoded, nil
-}
-
-// Encrypt encrypts data using a Key Encryption Key
-func (h *HashiCorpKMS) Encrypt(kekID string, data []byte) ([]byte, *errors.CustomError) {
-	path := fmt.Sprintf("%s/encrypt/%s", h.transitPath, kekID)
-	requestData := map[string]interface{}{
-		"plaintext": base64.StdEncoding.EncodeToString(data),
-	}
-
-	secret, err := h.client.Logical().Write(path, requestData)
-	if err != nil {
-		logger.Error("Failed to encrypt data with Vault", err)
-		return nil, errors.NewCustomError(errors.KMSerrEncryptData, err)
-	}
-
-	ciphertext, ok := secret.Data["ciphertext"].(string)
-	if !ok {
-		return nil, errors.NewCustomError(errors.KMSerrEncryptData, fmt.Errorf("invalid ciphertext format from Vault"))
-	}
-
-	return []byte(ciphertext), nil
-}
-
-// Decrypt decrypts data using a Key Encryption Key
-func (h *HashiCorpKMS) Decrypt(kekID string, ciphertext []byte) ([]byte, *errors.CustomError) {
-	path := fmt.Sprintf("%s/decrypt/%s", h.transitPath, kekID)
-	requestData := map[string]interface{}{
-		"ciphertext": string(ciphertext),
-	}
-
-	secret, err := h.client.Logical().Write(path, requestData)
-	if err != nil {
-		logger.Error("Failed to decrypt data with Vault", err)
-		return nil, errors.NewCustomError(errors.KMSerrDecryptData, err)
-	}
-
-	plaintext, ok := secret.Data["plaintext"].(string)
-	if !ok {
-		return nil, errors.NewCustomError(errors.KMSerrDecryptData, fmt.Errorf("invalid plaintext format from Vault"))
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(plaintext)
-	if err != nil {
-		return nil, errors.NewCustomError(errors.KMSerrDecryptData, err)
 	}
 
 	return decoded, nil

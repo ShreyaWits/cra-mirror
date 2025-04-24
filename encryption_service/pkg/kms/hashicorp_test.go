@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"encryption_microservice/internal/config"
 	"encryption_microservice/pkg/logger"
 
 	"github.com/hashicorp/vault/api"
@@ -23,7 +24,7 @@ func setupTestVault(t *testing.T) (*api.Client, string) {
 	require.Nil(t, err, "Failed to create Vault client")
 
 	// Set the root token (for dev server)
-	client.SetToken("hvs.7x1S4d9VmhWWOXQkKwJaVN6u")
+	client.SetToken("hvs.b5KPZLHoCGv7Dl8Dg7p4HbdW")
 
 	// Enable the transit secrets engine
 	path := "transit"
@@ -48,8 +49,11 @@ func TestHashicorpKMS(t *testing.T) {
 	fmt.Println("\n=== Starting HashicorpKMS Tests ===")
 	client, path := setupTestVault(t)
 
+	config, _ := config.LoadConfig()
 	// Initialize KMS service using test-only constructor
+	NewHashiCorpKMS(config)
 	kms := NewHashiCorpKMSWithClient(client, path)
+
 	require.NotNil(t, kms, "Failed to initialize HashiCorpKMS")
 
 	// Test StoreKEK
