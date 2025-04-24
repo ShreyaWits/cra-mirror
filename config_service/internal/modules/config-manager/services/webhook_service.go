@@ -9,9 +9,16 @@ import (
 	"net/http"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/repositories"
+	"time"
 
 	customErr "nps-config-service/internal/common/errors"
 	"strings"
+)
+
+const (
+	maxRetries     = 3
+	retryDelay     = 2 * time.Second
+	requestTimeout = 5 * time.Second
 )
 
 type WebhookService struct {
@@ -79,16 +86,7 @@ func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
 	ctx := context.Background()
 
-	webHook, err := s.Repo.Get(ctx, key)
-	if err != nil {
-		return "", fmt.Errorf("webhook not found for %s/%s", env, service)
-	}
-
-	var hooks []dtos.RegisterWebhookRequest
-	if err := json.Unmarshal([]byte(webHook), &hooks); err != nil {
-		return "", fmt.Errorf("failed to parse existing webhooks: %v", err)
-	}
-
+	hooks, err := s.GetWebhooks(env, service)
 	updated := make([]dtos.RegisterWebhookRequest, 0)
 	found := false
 	for _, h := range hooks {
@@ -118,25 +116,41 @@ func (s *WebhookService) DeleteAllWebhooks(env, service string) error {
 	return s.Repo.Delete(ctx, key)
 }
 func (s *WebhookService) NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{}) {
-	body, _ := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]interface{}{
 		"values":      data,
 		"method":      hook.Method,
 		"environment": hook.Environment,
 		"serviceName": hook.ServiceName,
 	})
-
+	if err != nil {
+		log.Printf("Failed to marshal webhook payload: %v", err)
+		return
+	}
 	// fullURL := strings.TrimRight(hook.URL, "/")
 	fullURL := fmt.Sprintf("%s/%s/%s", strings.TrimRight(hook.URL, "/"), hook.Environment, hook.ServiceName)
 	if !strings.HasPrefix(fullURL, "http://") && !strings.HasPrefix(fullURL, "https://") {
 		fullURL = "http://" + fullURL
 	}
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		client := http.Client{Timeout: requestTimeout}
+		resp, err := client.Post(fullURL, "application/json", bytes.NewBuffer(body))
 
-	resp, err := http.Post(fullURL, "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		log.Printf("Failed to notify %s: %v", fullURL, err)
-		return
+		if err != nil {
+			log.Printf("Attempt %d: Failed to notify %s: %v", attempt, fullURL, err)
+		} else {
+			defer resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				log.Printf("Webhook to %s succeeded with status: %s", fullURL, resp.Status)
+				return
+			}
+			log.Printf("Attempt %d: Webhook to %s failed with status: %s", attempt, fullURL, resp.Status)
+		}
+
+		// Wait before retrying
+		if attempt < maxRetries {
+			time.Sleep(retryDelay)
+		}
 	}
-	defer resp.Body.Close()
 
-	log.Printf("Webhook to %s responded with status: %s", fullURL, resp.Status)
+	log.Printf("All attempts to notify webhook %s failed after %d retries", fullURL, maxRetries)
 }
