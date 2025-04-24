@@ -115,7 +115,7 @@ func TestDeleteAllWebhooks(t *testing.T) {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
 
 	// Test success case
-	mockRepo.On("Delete", mock.Anything, key).Return(nil)
+	mockRepo.On("Delete", mock.Anything, key).Return(nil).Once()
 
 	err := configService.DeleteAllWebhooks(env, service)
 	assert.Nil(t, err)

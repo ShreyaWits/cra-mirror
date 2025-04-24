@@ -31,3 +31,6 @@ Thumbs.db
 .env
 .env.*
 go.sum
+
+scripts
+/cmd/server/__debug_bin*
