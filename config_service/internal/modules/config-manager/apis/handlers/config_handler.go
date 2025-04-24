@@ -11,15 +11,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type Handler struct {
-	Service *services.ConfigService
+type ConfigHandler struct {
+	Service services.IConfigService
 }
 
-func NewHandler(service *services.ConfigService) *Handler {
-	return &Handler{Service: service}
+func NewConfigHandler(service services.IConfigService) *ConfigHandler {
+	return &ConfigHandler{Service: service}
 }
 
-func (h *Handler) AdminHandler(c *fiber.Ctx) error {
+func (h *ConfigHandler) AdminHandler(c *fiber.Ctx) error {
 	contextData, ok := c.Locals("contextData").(*dtos.AdminDto)
 	fmt.Print(contextData)
 
@@ -61,7 +61,7 @@ func (h *Handler) AdminHandler(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(responseData)
 }
 
-func (h *Handler) StoreConfigHandler(c *fiber.Ctx) error {
+func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
@@ -83,7 +83,7 @@ func (h *Handler) StoreConfigHandler(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h *Handler) GetfullConfig(c *fiber.Ctx) error {
+func (h *ConfigHandler) GetfullConfig(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
@@ -97,7 +97,7 @@ func (h *Handler) GetfullConfig(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h *Handler) GetByValue(c *fiber.Ctx) error {
+func (h *ConfigHandler) GetByValue(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 	key := c.Params("key")
@@ -112,7 +112,7 @@ func (h *Handler) GetByValue(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h *Handler) GetByMetadata(c *fiber.Ctx) error {
+func (h *ConfigHandler) GetByMetadata(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 

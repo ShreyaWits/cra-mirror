@@ -5,11 +5,19 @@ import (
 	"nps-config-service/internal/modules/config-manager/utils"
 
 	customErr "nps-config-service/internal/common/errors"
+	"nps-config-service/internal/modules/config-manager/services"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func (h *Handler) RegisterWebhook(c *fiber.Ctx) error {
+type WebhookHandler struct {
+	Service services.IWebhookService
+}
+
+func NewWebhookHandler(service services.IWebhookService) *WebhookHandler {
+	return &WebhookHandler{Service: service}
+}
+func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
 	contextData := c.Locals("contextData")
 	bodyMap, ok := contextData.(*map[string]any)
 	if !ok {
@@ -37,10 +45,9 @@ func (h *Handler) RegisterWebhook(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h *Handler) GetWebhooks(c *fiber.Ctx) error {
+func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error {
 	env := c.Params("environment")
 	service := c.Params("service")
-
 	res, err := h.Service.GetWebhooks(env, service)
 	if err != nil {
 		utils.SendError(c, fiber.StatusNotFound, "Failed to retrieve webhooks", err.Error())
@@ -50,8 +57,7 @@ func (h *Handler) GetWebhooks(c *fiber.Ctx) error {
 	utils.SendSuccess(c, fiber.StatusOK, "Webhooks retrieved successfully", res)
 	return nil
 }
-
-func (h *Handler) DeleteWebhook(c *fiber.Ctx) error {
+func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 	env := c.Params("environment")
 	service := c.Params("service")
 
