@@ -52,3 +52,14 @@ func (m *MockRepository) GetConfigValue(serviceName, environment, key string) (i
 	args := m.Called(serviceName, environment, key)
 	return args.Get(0), args.Error(1)
 }
+
+// Mock implementation of CreateAdmin
+func (m *MockRepository) CreateAdmin(*models.Admin) (*models.Admin, error) {
+	args := m.Called()
+	return args.Get(0).(*models.Admin), args.Error(1)
+}
+
+func (m *MockRepository) GetAdminByCredentials(string, string) (*models.Admin, error) {
+	args := m.Called()
+	return args.Get(0).(*models.Admin), args.Error(1)
+}
