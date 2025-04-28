@@ -1,43 +1,66 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"protected_link/cmd/initializer"
 	router "protected_link/internal/app"
 	"protected_link/internal/common/api/middlewares"
-	configEnv "protected_link/internal/configs"
-	database "protected_link/pkg/redis"
+	"syscall"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
 	app := fiber.New()
-	println("Hello World", app)
+	log.Println("🚀 Starting the server...")
 
 	app.Use(middlewares.RecoveryMiddleware())
 
-	cfg, err := configEnv.LoadConfig()
-	db, eror := database.ConnectRedis(cfg)
-
-	if err != nil {
-		println("Error loading config:", err)
+	// Initialize Redis and other dependencies
+	cfg, db := initializer.InitialSetup()
+	if db == nil {
+		log.Println("❌ Failed to initialize Redis. Shutting down gracefully.")
+		if err := app.Shutdown(); err != nil {
+			log.Fatalf("❌ Error shutting down server: %v", err)
+		}
+		os.Exit(1)
 	}
 
-	if eror != nil {
-		println("Error db loading config:", err)
-	}
 	router.SetupRoutes(db, app)
 
-	port := cfg.ServerPort
-	if port == "" {
-		port = "9000"
+	// Start the server in a goroutine
+	go func() {
+		port := cfg.ServerPort
+		if port == "" {
+			port = "9000"
+		}
+		if err := app.Listen(":" + port); err != nil {
+			log.Fatalf("❌ Failed to start server: %v", err)
+		}
+	}()
+
+	// Graceful shutdown on interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	<-quit
+	log.Println("🔻 Shutting down server...")
+
+	// Shutdown Fiber app
+	if err := app.Shutdown(); err != nil {
+		log.Fatalf("❌ Error shutting down server: %v", err)
 	}
 
-	// Start the Fiber server
-	log.Printf("🚀 Server starting on port %s...", port)
-	err = app.Listen(fmt.Sprintf(":%s", "8080"))
-	if err != nil {
-		log.Fatalf("❌ Failed to start server: %v", err)
+	// Close Redis connection
+	if db != nil && db.Client != nil {
+		if err := db.Client.Close(); err != nil {
+			log.Printf("❌ Error closing Redis connection: %v", err)
+		} else {
+			log.Println("✅ Redis connection closed.")
+		}
 	}
+
+	log.Println("✅ Server shut down gracefully.")
 }

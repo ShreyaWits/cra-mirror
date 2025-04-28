@@ -4,6 +4,7 @@ import (
 	"protected_link/internal/common/api/middlewares"
 	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
 	"protected_link/internal/modules/link_generation/apis/handlers"
+	middleware "protected_link/internal/modules/link_generation/apis/middlewares"
 	"protected_link/internal/modules/link_generation/repositories"
 	"protected_link/internal/modules/link_generation/services"
 
@@ -20,7 +21,10 @@ func InitializeLinkRoutes(app *fiber.App, redis *database.RedisConfig, group fib
 
 	handlers := handlers.NewGenerateLinkHandler(services)
 
-	group.Post("/generate-link", middlewares.CommonRequestValidator(), middlewares.ValidateBodyDTO(&apiDtos.GenerateUrlRequest{}), middlewares.ValidateBodyDTO(&apiDtos.GenerateUrlRequest{}), handlers.GetProtectedURL)
+	group.Post("/generate-link", middlewares.CommonRequestValidator(), middlewares.ValidateBodyDTO(func() interface{} {
+		return &apiDtos.GenerateUrlRequest{}
+	}), middleware.ValidateDTOKeys(), handlers.CreateSecureURL)
 
 	app.Get("", middlewares.CommonRequestValidator(), handlers.GetExtractData)
+	app.Delete("", middlewares.CommonRequestValidator(), handlers.DeleteGeneratedLink)
 }

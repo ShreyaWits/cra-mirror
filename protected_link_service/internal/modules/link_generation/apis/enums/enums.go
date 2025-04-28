@@ -18,23 +18,6 @@ func GetValidRequestTypes() []string {
 	}
 }
 
-// ModelType enum using string values
-type ModelType string
-
-const (
-	ModelTypeJWT    ModelType = "jwt"
-	ModelTypeDB     ModelType = "db"
-	ModelTypeHybrid ModelType = "hybrid"
-)
-
-// GetValidModelTypes returns the list of valid ModelType values
-func GetValidModelTypes() []string {
-	return []string{
-		string(ModelTypeJWT),
-		string(ModelTypeDB),
-		string(ModelTypeHybrid),
-	}
-}
 
 type ChannelType string
 

@@ -21,8 +21,10 @@ func InitializeLinkRoutes(app *fiber.App, redis *database.RedisConfig, group fib
 
 	handlers := authHandler.NewAuthHandler(services)
 
-	//middlewares.ValidateBodyDTO(&apiDtos.GenerateUrlRequest{})
+	//middlewares.ValidateBodyDTO(&models.VerifyOTPRequest{}),
 
-	group.Post("/verify-otp", middlewares.CommonRequestValidator(), middlewares.ValidateBodyDTO(&models.VerifyOTPRequest{}), handlers.VerifyOTPHandler)
+	group.Post("/verify-otp", middlewares.CommonRequestValidator(), middlewares.ValidateBodyDTO(func() interface{} {
+		return &models.VerifyOTPRequest{}
+	}), handlers.VerifyOTPHandler)
 
 }

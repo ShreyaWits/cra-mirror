@@ -2,6 +2,7 @@ package kafkaService
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"protected_link/internal/modules/authentication/models"
@@ -17,13 +18,19 @@ func NewNotifierService(producer *kafka.KafkaProducer) *NotifierService {
 }
 
 func (ns *NotifierService) SendNotification(payload models.MessagePayload, topic string) error {
+
+	fmt.Println("Sending message to Kafka topic:", topic)
 	msgBytes, err := json.Marshal(payload)
 	if err != nil {
-		log.Println("Failed to marshal payload:", err)
+		fmt.Println("Failed to marshal message payload:", err)
 		return err
 	}
 
+	fmt.Println("Sending message to Kafka topic:", topic)
+	fmt.Println("Message payload:", string(msgBytes))
+
 	err = ns.Producer.SendMessage(topic, msgBytes)
+
 	if err != nil {
 		log.Println("Failed to send message to Kafka:", err)
 		return err

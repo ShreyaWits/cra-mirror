@@ -28,9 +28,17 @@ func (s *GenerateLinkService) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest)
 	return s.repo.SaveGeneratedLink(dto)
 }
 
+func (s *GenerateLinkService) DeleteGeneratedLink(link string) (*commonDtos.ApiResponseDto, error) {
+	return s.repo.DeleteShortCode(link)
+}
+
 func (s *GenerateLinkService) GetExtractData(link *string) (*commonDtos.ApiResponseDto, error) {
 
-	result, _ := s.repo.GetTokenData(link)
+	result, error := s.repo.GetTokenData(link)
+
+	if error != nil {
+		return nil, fmt.Errorf("failed to retrieve token data: %w", error)
+	}
 
 	dto, err := utils.ConvertToGenerateUrlRequest(result.Data)
 	if err != nil {
@@ -46,7 +54,6 @@ func (s *GenerateLinkService) GetExtractData(link *string) (*commonDtos.ApiRespo
 
 		req, err := services.SendOtp(*dto)
 
-		println("Generated OTP Check Request	:", req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate OTP: %w", err)
 		}
@@ -54,5 +61,5 @@ func (s *GenerateLinkService) GetExtractData(link *string) (*commonDtos.ApiRespo
 		return req, nil
 	}
 
-	return s.repo.GetTokenData(link)
+	return result, nil
 }

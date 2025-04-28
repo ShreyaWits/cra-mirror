@@ -25,6 +25,7 @@ func NewJwtCreation() (*JwtCreation, error) {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
+
 	secret := strings.TrimSpace(cfg.JWTSecret) // in case there are spaces/newlines
 
 	if len(secret) != 32 {

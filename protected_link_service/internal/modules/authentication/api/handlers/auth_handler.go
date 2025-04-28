@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"net/http"
-	commonDtos "protected_link/internal/common/api/dtos"
-	authModels "protected_link/internal/modules/authentication/models"
+	"protected_link/internal/modules/authentication/models"
 	authService "protected_link/internal/modules/authentication/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,24 +20,19 @@ func NewAuthHandler(authService *authService.AuthenticationService) *AuthHandler
 }
 
 func (h *AuthHandler) VerifyOTPHandler(c *fiber.Ctx) error {
-	body := new(authModels.VerifyOTPRequest)
-	if err := c.BodyParser(body); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(commonDtos.ApiResponseDto{
-			Success: false,
-			Message: "Invalid request payload",
-			Data:    err.Error(),
-		})
-	}
+
+	body := c.Locals("validatedBody").(*models.VerifyOTPRequest)
 
 	//Call the service layer to verify the OTP
 	response, err := h.authService.VerifyOTP(body)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(commonDtos.ApiResponseDto{
-			Success: false,
-			Message: "OTP verification failed",
-			Data:    err.Error(),
-		})
+		return c.Status(http.StatusUnauthorized).JSON(err)
 	}
+
+	if !response.Success {
+		return c.Status(http.StatusUnauthorized).JSON(response)
+	}
+	// If OTP verification is successful, return the response
 
 	return c.Status(http.StatusOK).JSON(response)
 }

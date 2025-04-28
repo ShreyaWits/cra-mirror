@@ -26,11 +26,8 @@ func (s *AuthenticationService) SendOtp(request apiDtos.GenerateUrlRequest) (*co
 	otp := otpService.GenerateOTP() // Generate a 6-digit OTP
 	// Set the expiration time for the OTP
 
-	println("Generated OTP Check ait:", otp)
+	fmt.Printf("🔐 OTP for user [%s]: %s\n", request.UserID, otp)
 
-	if s.otpRepo == nil {
-		return nil, fmt.Errorf("OTP repository is not initialized")
-	}
 	res, err := s.otpRepo.SendOtp(request, otp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save OTP: %w", err)
@@ -39,13 +36,9 @@ func (s *AuthenticationService) SendOtp(request apiDtos.GenerateUrlRequest) (*co
 }
 
 func (s *AuthenticationService) VerifyOTP(request *models.VerifyOTPRequest) (*commonDtos.ApiResponseDto, error) {
-	result, err := s.otpRepo.VerifyOtp(request.UserID, request.OTP)
+	result, err := s.otpRepo.VerifyOtp(request)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve OTP: %w", err)
-	}
-
-	if result.Message == "" {
-		return nil, fmt.Errorf("OTP expired or not found")
+		return nil, err
 	}
 
 	return result, nil

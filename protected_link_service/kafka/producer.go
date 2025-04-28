@@ -25,17 +25,24 @@ func NewKafkaProducer(brokers []string) (*KafkaProducer, error) {
 }
 
 func (kp *KafkaProducer) SendMessage(topic string, message []byte) error {
+
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.ByteEncoder(message),
 	}
 
-	partition, offset, err := kp.Producer.SendMessage(msg)
-	if err != nil {
-		return err
+
+
+	if kp.Producer != nil {
+		partition, offset, err := kp.Producer.SendMessage(msg)
+	
+		if err != nil {
+			return err
+		}
+		log.Printf("Sent to topic %s [partition: %d, offset: %d]", topic, partition, offset)
+		// handle result
 	}
 
-	log.Printf("Sent to topic %s [partition: %d, offset: %d]", topic, partition, offset)
 	return nil
 }
 

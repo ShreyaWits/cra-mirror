@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	commonDtos "protected_link/internal/common/api/dtos"
+	"protected_link/internal/common/constants"
+	"protected_link/internal/common/utils"
 
 	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
 	enum "protected_link/internal/modules/link_generation/apis/enums"
@@ -21,6 +23,10 @@ func ValidateDTOKeys() fiber.Handler {
 
 		validate := validator.New()
 		requestBody := c.Locals("validatedBody").(*apiDtos.GenerateUrlRequest)
+
+		if requestBody.ExpireIn == "" {
+			requestBody.ExpireIn = "24h"
+		}
 		var errorMessages []models.FieldErrorResponseDTO
 
 		requetTypeOk := ValidateRequestType(requestBody.RequestType)
@@ -28,16 +34,7 @@ func ValidateDTOKeys() fiber.Handler {
 		if !requetTypeOk {
 			errorMessages = append(errorMessages, models.FieldErrorResponseDTO{
 				Field:        "request_type",
-				ErrorMessage: fmt.Sprintf("Invalid value: should be one of [%s]", strings.Join(enum.GetValidRequestTypes(), ", ")),
-				ErrorCode:    "InvalidRequestType",
-			})
-		}
-
-		ok := ValidateModelType(requestBody.ModelType)
-		if !ok {
-			errorMessages = append(errorMessages, models.FieldErrorResponseDTO{
-				Field:        "model_type",
-				ErrorMessage: fmt.Sprintf("Invalid value: should be one of [%s]", strings.Join(enum.GetValidModelTypes(), ", ")),
+				ErrorMessage: fmt.Sprintf("%s [%s]", utils.GetMessage(string(constants.InvalidValueShouldBeOneOfList)), strings.Join(enum.GetValidRequestTypes(), ", ")),
 				ErrorCode:    "InvalidRequestType",
 			})
 		}
@@ -46,7 +43,7 @@ func ValidateDTOKeys() fiber.Handler {
 		if !channel {
 			errorMessages = append(errorMessages, models.FieldErrorResponseDTO{
 				Field:        "channel_type",
-				ErrorMessage: fmt.Sprintf("Invalid value: should be one of [%s]", strings.Join(enum.GetChannelTypes(), ", ")),
+				ErrorMessage: fmt.Sprintf("%s [%s]", utils.GetMessage(string(constants.InvalidValueShouldBeOneOfList)), strings.Join(enum.GetChannelTypes(), ", ")),
 				ErrorCode:    "InvalidRequestType",
 			})
 		}
@@ -108,19 +105,14 @@ func ExtractValidationErrors[T any](dto T, err error) []models.FieldErrorRespons
 		case "requesttype":
 			errorMessages = append(errorMessages, models.FieldErrorResponseDTO{
 				Field:        jsonKey,
-				ErrorMessage: fmt.Sprintf("Invalid value: should be one of [%s]", strings.Join(enum.GetValidRequestTypes(), ", ")),
+				ErrorMessage: fmt.Sprintf("%s [%s]", utils.GetMessage(string(constants.InvalidValueShouldBeOneOfList)), strings.Join(enum.GetValidRequestTypes(), ", ")),
 				ErrorCode:    "InvalidRequestType",
 			})
-		case "modeltype":
-			errorMessages = append(errorMessages, models.FieldErrorResponseDTO{
-				Field:        jsonKey,
-				ErrorMessage: fmt.Sprintf("Invalid value: should be one of [%s]", strings.Join(enum.GetValidModelTypes(), ", ")),
-				ErrorCode:    "InvalidModelType",
-			})
+
 		default:
 			errorMessages = append(errorMessages, models.FieldErrorResponseDTO{
 				Field:        jsonKey,
-				ErrorMessage: fmt.Sprintf("Validation failed for '%s'", err.Tag()),
+				ErrorMessage: fmt.Sprintf("%s '%s'", utils.GetMessage(string(constants.ValidationFailedFor)), err.Tag()),
 				ErrorCode:    "ValidationFailed",
 			})
 		}
@@ -182,7 +174,7 @@ func ValidateRequestType(value string) bool {
 
 // ✅ Custom validator for ModelType
 func ValidateModelType(value string) bool {
-	for _, valid := range enum.GetValidModelTypes() {
+	for _, valid := range enum.GetChannelTypes() {
 		if value == valid {
 			return true
 		}

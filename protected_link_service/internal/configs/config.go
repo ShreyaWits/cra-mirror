@@ -12,14 +12,17 @@ type Config struct {
 	ServerPort string
 
 	// Database settings
-	DBHost         string
-	DBPort         string
-	DBUser         string
-	DBPassword     string
-	DBName         string
-	DBSSLMode      string
-	JWTSecret      string
-	RedirectionURL string
+	DBHost           string
+	DBPort           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	DBSSLMode        string
+	JWTSecret        string
+	RedirectionURL   string
+	Kafka_Broker_Url string
+	KafkaProducer    string
+	AppEnv           string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -29,16 +32,16 @@ func LoadConfig() (*Config, error) {
 
 	// Default values
 	config := &Config{
-		ServerPort: getEnv("PORT", "9090"),
-
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "sarbjeet"),
-		DBPassword: getEnv("DB_PASSWORD", "sarb"),
-		DBName:     getEnv("DB_NAME", "nps"),
-		DBSSLMode:  getEnv("DB_SSL_MODE", "require"),
-		JWTSecret:  getEnv("JWT_SECRET", "secret"),
-		RedirectionURL: getEnv("REDIRECTION_URL", "http://localhost:9090"),
+		ServerPort:       getEnv("PORT", "9090"),
+		DBHost:           getEnv("DB_HOST", "localhost"),
+		DBPort:           getEnv("DB_PORT", "6379"),
+		DBUser:           getEnv("DB_USER", "sarbjeet"),
+		DBPassword:       getEnv("DB_PASSWORD", "sarb"),
+		KafkaProducer:    getEnv("KAFKA_PRODUCER_TOPIC", "send_notification"),
+		AppEnv:           getEnv("APP_ENV", "local"),
+		Kafka_Broker_Url: getEnv("KAFKA_BROKER_URL", "localhost:9092"),
+		JWTSecret:        getEnv("JWT_SECRET", "mySuperSecureKey1234567890@GoLan"),
+		RedirectionURL:   getEnv("REDIRECTION_URL", "http://localhost:8080"),
 	}
 
 	return config, nil

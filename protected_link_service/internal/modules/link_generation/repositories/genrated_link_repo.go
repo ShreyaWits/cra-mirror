@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	commonDtos "protected_link/internal/common/api/dtos"
+	"protected_link/internal/common/constants"
 	configEnv "protected_link/internal/configs"
 
 	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
 	"protected_link/internal/modules/link_generation/models"
 	"protected_link/internal/modules/link_generation/utils"
 
+	messageUtility "protected_link/internal/common/utils"
 	"protected_link/pkg/jwt"
 	database "protected_link/pkg/redis"
 	"time"
@@ -37,7 +39,9 @@ func NewGeneratedRepository(redis *database.RedisConfig) *GeneratedRepository {
 func (g *GeneratedRepository) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest) (*commonDtos.ApiResponseDto, error) {
 	// Encrypt the DTO to generate a token
 	token, err := g.jwtService.Encrypt(dto)
+
 	if err != nil {
+		fmt.Println("🔒 Encrypting DTO:", err)
 		return nil, fmt.Errorf("failed to encrypt DTO: %w", err)
 	}
 
@@ -53,6 +57,7 @@ func (g *GeneratedRepository) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest)
 	// Save the token to Redis with TTL
 	err = g.redis.Client.Set(g.redis.Ctx, shortCode, token, duration).Err()
 	if err != nil {
+		fmt.Println("🔒 Saving token in Redis:", err)
 		return nil, fmt.Errorf("failed to save token in Redis: %w", err)
 	}
 
@@ -61,7 +66,7 @@ func (g *GeneratedRepository) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest)
 
 	return &commonDtos.ApiResponseDto{
 		Success: true,
-		Message: "Protected link generated successfully",
+		Message: messageUtility.GetMessage(string(constants.ProtectedLinkGeneratedSuccessfully)),
 		Data: &models.ProtectedLinkResponse{
 			URL: shortURL,
 		},
@@ -71,25 +76,28 @@ func (g *GeneratedRepository) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest)
 func (g *GeneratedRepository) GetOriginalToken(shortCode string) (string, error) {
 	token, err := g.redis.Client.Get(g.redis.Ctx, shortCode).Result()
 	if err != nil {
+
+		println("🔒 Fetching token from Redis for shortCode:", err)
 		if err == redis.Nil {
-			return "", fmt.Errorf("⏰ link is expired or does not exist")
+			println("🔒 Fetching token from Redis for shortCode: sadadsadsads", err)
+			return "", fmt.Errorf("%s", messageUtility.GetMessage(string(constants.RequestLinkExpiredTitle)))
 		}
 		return "", err
 	}
 
 	// Clean up: delete the token from Redis after first use
-	if err := g.redis.Client.Del(g.redis.Ctx, shortCode).Err(); err != nil {
-		fmt.Println("⚠️ Failed to delete key after use:", err)
-	}
+	// Defer deletion after return
 
 	return token, nil
 }
 
 func (g *GeneratedRepository) GetTokenData(link *string) (*commonDtos.ApiResponseDto, error) {
 	// Get encrypted token from Redis using the short link
+
 	encryptedToken, err := g.GetOriginalToken(*link)
 	if err != nil {
-		return nil, err
+
+		return nil, fmt.Errorf("error retrieving token: %w", err)
 	}
 
 	// Decrypt the token
@@ -104,9 +112,29 @@ func (g *GeneratedRepository) GetTokenData(link *string) (*commonDtos.ApiRespons
 		return nil, fmt.Errorf("failed to unmarshal decrypted payload: %w", err)
 	}
 
+	///Check if OTP is required
+	if delErr := g.redis.Client.Del(g.redis.Ctx, *link).Err(); delErr != nil {
+		fmt.Println("⚠️ Failed to delete key after use:", delErr)
+	}
+
 	return &commonDtos.ApiResponseDto{
 		Success: true,
-		Message: "Data fetched successfully",
+		Message: messageUtility.GetMessage(string(constants.DataFetchedSuccessfully)),
 		Data:    dto.Data,
+	}, nil
+}
+
+func (g *GeneratedRepository) DeleteShortCode(shortCode string) (*commonDtos.ApiResponseDto, error) {
+	err := g.redis.Client.Del(g.redis.Ctx, shortCode).Err()
+	if err != nil {
+		return nil, fmt.Errorf("❌ failed to delete shortcode from Redis: %w", err)
+	}
+
+	return &commonDtos.ApiResponseDto{
+		Success: true,
+		Message: messageUtility.GetMessage(string(constants.ProtectedLinkDeletedSuccessfully)),
+		Data: &models.ProtectedLinkResponse{
+			URL: shortCode,
+		},
 	}, nil
 }
