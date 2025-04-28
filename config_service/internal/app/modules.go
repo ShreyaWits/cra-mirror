@@ -2,7 +2,6 @@ package app
 
 import (
 	"nps-config-service/internal/common/middleware"
-	handler "nps-config-service/internal/modules/config-manager/apis/handlers"
 	"nps-config-service/internal/modules/config-manager/apis/routes"
 
 	"nps-config-service/internal/modules/config-manager/di"

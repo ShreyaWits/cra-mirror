@@ -1,21 +1,11 @@
 package mocks
 
 import (
-	"nps-config-service/internal/modules/config-manager/apis/dtos"
-
 	"github.com/stretchr/testify/mock"
 )
 
 type MockConfigService struct {
 	mock.Mock
-}
-
-func (m *MockConfigService) AdminService(dto *dtos.AdminDto, secret string) (*dtos.ResponseAdminDto, error) {
-	args := m.Called(dto, secret)
-	if args.Error(1) != nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*dtos.ResponseAdminDto), nil
 }
 
 func (m *MockConfigService) StoreConfigService(env string, service string, req map[string]interface{}) (interface{}, error) {
