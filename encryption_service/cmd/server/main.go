@@ -31,7 +31,7 @@ func main() {
 	// Register reflection service on gRPC server (optional but useful for tools like grpcurl)
 	reflection.Register(grpcServer)
 
-	log.Println("gRPC server is running on port 50051...")
+	log.Printf("gRPC server is running on port %s...\n", container.Config.GrpcPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
