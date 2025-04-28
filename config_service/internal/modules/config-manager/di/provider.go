@@ -8,14 +8,16 @@ import (
 	etcdDB "nps-config-service/pkg/etcd"
 )
 
-func InitHandlers(container *Container) (*handler.ConfigHandler, *handler.WebhookHandler, error) {
+func InitHandlers(container *Container) (*handler.AdminHandler, *handler.ConfigHandler, *handler.WebhookHandler, error) {
+	adminHandler := handler.NewAdminHandler(container.AdminService)
 	configHandler := handler.NewConfigHandler(container.ConfigService)
 	webhookHandler := handler.NewWebhookHandler(container.WebhookService)
-	return configHandler, webhookHandler, nil
+	return adminHandler,configHandler, webhookHandler, nil
 }
 
 type Container struct {
 	ConfigRepo     repositories.IConfigRepo
+	AdminService    *services.AdminService
 	WebhookService *services.WebhookService
 	ConfigService  *services.ConfigService
 }
@@ -36,6 +38,9 @@ func NewContainer() (*Container, error) {
 	container.ConfigRepo = configRepo
 
 	// Service layer
+	adminService := services.NewAdminService(configRepo)
+	container.AdminService = adminService.(*services.AdminService)
+
 	webhookService := services.NewWebhookService(configRepo)
 	container.WebhookService = webhookService.(*services.WebhookService)
 

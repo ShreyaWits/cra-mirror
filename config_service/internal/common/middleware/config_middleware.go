@@ -2,7 +2,6 @@ package middleware
 
 import (
 	common "nps-config-service/internal/common/errors"
-	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"os"
 	"strings"
 
@@ -11,8 +10,8 @@ import (
 )
 
 // Generic Middleware to parse and validate request body
-func SetContextDataAdminMiddleware(c *fiber.Ctx) error {
-	var request dtos.AdminDto
+func SetContextDataMiddleware[T any](c *fiber.Ctx) error {
+	var request T
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid request body",
@@ -25,18 +24,18 @@ func SetContextDataAdminMiddleware(c *fiber.Ctx) error {
 }
 
 // Generic Middleware to parse and validate request body
-func SetContextDataMiddleware(c *fiber.Ctx) error {
-	var request map[string]interface{}
-	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid request body",
-		})
-	}
+// func SetContextDataMiddleware(c *fiber.Ctx) error {
+// 	var request map[string]interface{}
+// 	if err := c.BodyParser(&request); err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "Invalid request body",
+// 		})
+// 	}
 
-	c.Locals("contextData", &request)
+// 	c.Locals("contextData", &request)
 
-	return c.Next()
-}
+// 	return c.Next()
+// }
 
 func JWTMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {

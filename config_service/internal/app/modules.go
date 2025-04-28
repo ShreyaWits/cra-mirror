@@ -16,7 +16,7 @@ func RegisterModules(app *fiber.App) {
 		panic("Failed to initialize container: " + err.Error())
 	}
 
-	configHandler, webhookHandler, err := di.InitHandlers(container)
+	adminHandler, configHandler, webhookHandler, err := di.InitHandlers(container)
 	if err != nil {
 		panic("Failed to initialize handlers: " + err.Error())
 	}
@@ -25,6 +25,6 @@ func RegisterModules(app *fiber.App) {
 	protected := api.Group("/config", middleware.JWTMiddleware())
 
 	routes.RegisterWebHookRoutes(protected, webhookHandler)
-	routes.RegisterAdminRoutes(api, configHandler)
+	routes.RegisterAdminRoutes(api, adminHandler)
 	routes.RegisterConfigRoutes(protected, configHandler)
 }

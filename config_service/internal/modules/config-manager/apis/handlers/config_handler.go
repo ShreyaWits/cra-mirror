@@ -1,12 +1,9 @@
 package handler
 
 import (
-	"fmt"
 	common "nps-config-service/internal/common/errors"
-	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services"
 	"nps-config-service/internal/modules/config-manager/utils"
-	"os"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -19,47 +16,37 @@ func NewConfigHandler(service services.IConfigService) *ConfigHandler {
 	return &ConfigHandler{Service: service}
 }
 
-func (h *ConfigHandler) AdminHandler(c *fiber.Ctx) error {
-	contextData, ok := c.Locals("contextData").(*dtos.AdminDto)
-	fmt.Print(contextData)
+// func (h *ConfigHandler) AdminHandler(c *fiber.Ctx) error {
+// 	contextData, ok := c.Locals("contextData").(*dtos.AdminDto)
+// 	fmt.Print(contextData)
 
-	if !ok {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
-	}
+// 	if !ok {
+// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
+// 	}
 
-	// Load the admin secret from .env
-	adminSecret := os.Getenv("ADMIN_SECRET")
-	if adminSecret == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF005")) // Admin secret not configured
-	}
+// 	// Load the admin secret from .env
+// 	adminSecret := os.Getenv("ADMIN_SECRET")
+// 	if adminSecret == "" {
+// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF005")) // Admin secret not configured
+// 	}
 
-	userName := os.Getenv("USERNAME")
-	if userName == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF009")) // Admin secret not configured
-	}
+// 	if contextData.Secret != adminSecret {
+// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF010")) // Invalid secret
+// 	}
 
-	if contextData.Username != userName {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF008")) // Invalid username
-	}
+// 	// Load JWT secret
+// 	jwtSecret := os.Getenv("JWT_SECRET")
+// 	if jwtSecret == "" {
+// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF007"))
+// 	}
 
-	// Check if the password matches
-	if contextData.Password != adminSecret {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF006")) // Invalid password
-	}
+// 	responseData, responseError := h.Service.AdminService(contextData, jwtSecret)
 
-	// Load JWT secret
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF007"))
-	}
-
-	responseData, responseError := h.Service.AdminService(contextData, jwtSecret)
-
-	if responseError != nil {
-		return responseError
-	}
-	return c.Status(fiber.StatusOK).JSON(responseData)
-}
+// 	if responseError != nil {
+// 		return responseError
+// 	}
+// 	return c.Status(fiber.StatusOK).JSON(responseData)
+// }
 
 func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 	environment := c.Params("environment")
