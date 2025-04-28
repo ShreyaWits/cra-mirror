@@ -18,7 +18,6 @@ func NewAdminHandler(service services.IAdminService) *AdminHandler {
 	return &AdminHandler{Service: service}
 }
 
-
 func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
 	contextData, ok := c.Locals("contextData").(*dtos.AdminSignupDto)
 
@@ -62,7 +61,7 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 	if contextData.Username == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004")) // Username is required
 	}
-	
+
 	if contextData.Password == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004")) // Password is required
 	}

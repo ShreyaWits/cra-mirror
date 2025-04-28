@@ -33,7 +33,7 @@ type IConfigRepo interface {
 	Set(ctx context.Context, key string, data string, ttl time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
 	Delete(ctx context.Context, key string) error
-	CreateAdmin(admin *models.Admin) (*models.Admin,error)
+	CreateAdmin(admin *models.Admin) (*models.Admin, error)
 	GetAdminByCredentials(username, password string) (*models.Admin, error)
 }
 
@@ -255,7 +255,7 @@ func (r *ConfigRepository) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func (r *ConfigRepository)CreateAdmin(admin *models.Admin) (*models.Admin,error) {
+func (r *ConfigRepository) CreateAdmin(admin *models.Admin) (*models.Admin, error) {
 	// Check if user with the same email already exists
 	var existingUser models.Admin
 	if err := db.DB.Where("user_name = ?", admin.UserName).First(&existingUser).Error; err == nil {
@@ -279,7 +279,7 @@ func (r *ConfigRepository) GetAdminByCredentials(username, password string) (*mo
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002") // Admin not found
 		}
-		return nil, err 
+		return nil, err
 	}
 
 	return &admin, nil

@@ -13,6 +13,8 @@ import (
 
 	customErr "nps-config-service/internal/common/errors"
 	"strings"
+
+	"github.com/stretchr/testify/mock"
 )
 
 const (
@@ -23,6 +25,10 @@ const (
 
 type WebhookService struct {
 	Repo repositories.IConfigRepo
+}
+
+func (s *WebhookService) On(param1 string, argument mock.AnythingOfTypeArgument, req map[string]interface{}) {
+	panic("unimplemented")
 }
 
 type IWebhookService interface {

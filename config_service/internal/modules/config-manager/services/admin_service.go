@@ -10,7 +10,7 @@ import (
 )
 
 type AdminService struct {
-	Repo           repositories.IConfigRepo
+	Repo repositories.IConfigRepo
 }
 
 type IAdminService interface {
@@ -21,7 +21,6 @@ type IAdminService interface {
 func NewAdminService(repo repositories.IConfigRepo) IAdminService {
 	return &AdminService{Repo: repo}
 }
-
 
 func (s *AdminService) CreateAdminService(req *dtos.AdminSignupDto) (*dtos.ResponseAdminSignupDto, error) {
 
@@ -34,9 +33,9 @@ func (s *AdminService) CreateAdminService(req *dtos.AdminSignupDto) (*dtos.Respo
 		return nil, err
 	}
 	return &dtos.ResponseAdminSignupDto{
-		Success: 	  true,
-		Message: 	  "Admin created successfully",
-		AdminId: 	  createAdmin.UserName,
+		Success: true,
+		Message: "Admin created successfully",
+		AdminId: createAdmin.UserName,
 	}, nil
 }
 func (s *AdminService) FetchAdminService(req *dtos.AdminLoginDto, secret string) (*dtos.ResponseAdminDto, error) {
@@ -50,7 +49,7 @@ func (s *AdminService) FetchAdminService(req *dtos.AdminLoginDto, secret string)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	refreshSecret := secret // fallback to same secret if not set
 
 	// Create refresh token (7 days expiry)
@@ -76,9 +75,9 @@ func (s *AdminService) FetchAdminService(req *dtos.AdminLoginDto, secret string)
 
 	// Return both tokens
 	return &dtos.ResponseAdminDto{
-		Success: 	  true,
-		Message: 	  "Admin created successfully",
-		AdminId: 	  createAdmin.UserName,
+		Success:      true,
+		Message:      "Admin created successfully",
+		AdminId:      createAdmin.UserName,
 		Token:        accessTokenString,
 		RefreshToken: refreshTokenString,
 	}, nil
