@@ -3,6 +3,7 @@ package grpc
 import (
 	"fmt"
 	"net"
+	"nps-reciept-service/internal/config"
 	"nps-reciept-service/internal/middleware"
 	"nps-reciept-service/internal/services"
 	"nps-reciept-service/internal/utils"
@@ -34,7 +35,7 @@ func (s *GrpcServer) Start() error {
 	}
 
 	// Register services
-	claimServer := services.NewClaimServer()
+	claimServer := services.NewClaimServer(config.GetRedisClient())
 
 	// Create a new server with the interceptor
 	serverWithInterceptor := grpc.NewServer(grpc.UnaryInterceptor(middleware.ValidateClaimRequestInterceptor()))
