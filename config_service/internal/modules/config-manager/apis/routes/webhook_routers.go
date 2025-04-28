@@ -8,7 +8,7 @@ import (
 )
 
 func RegisterWebHookRoutes(router fiber.Router, h *handler.WebhookHandler) {
-	router.Post("/webhook", middleware.SetContextDataMiddleware, h.RegisterWebhook)
+	router.Post("/webhook", middleware.SetContextDataMiddleware[map[string]interface{}], h.RegisterWebhook)
 
 	// Get all webhooks for a specific environment/service
 	router.Get("/:environment/:service/webhooks", h.GetWebhooks)
@@ -16,5 +16,5 @@ func RegisterWebHookRoutes(router fiber.Router, h *handler.WebhookHandler) {
 	// todo: Update a specific webhook (PATCH for partial updates)
 	// router.Patch("/webhook/:environment/:service", h.UpdateWebhook)
 
-	router.Delete("/:environment/:service/webhook", middleware.SetContextDataMiddleware, h.DeleteWebhook)
+	router.Delete("/:environment/:service/webhook", middleware.SetContextDataMiddleware[map[string]interface{}], h.DeleteWebhook)
 }
