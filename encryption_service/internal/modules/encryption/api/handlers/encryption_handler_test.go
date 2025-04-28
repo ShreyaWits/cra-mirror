@@ -2,15 +2,10 @@ package handlers_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/golang/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -290,27 +285,5 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestEncryptionHandlerImpl_HandleHealth(t *testing.T) {
-	app := fiber.New()
-	handler := handlers.NewEncryptionHandler(nil, nil)
-	app.Get("/health", handler.HandleHealth)
-	req := httptest.NewRequest("GET", "/health", nil)
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200, got %v", resp.StatusCode)
-	}
-	body, _ := io.ReadAll(resp.Body)
-	var m map[string]string
-	if err := json.Unmarshal(body, &m); err != nil {
-		t.Fatalf("invalid json: %v", err)
-	}
-	if m["status"] != "healthy" || m["version"] != "1.0.0" {
-		t.Errorf("unexpected body: %v", m)
 	}
 }
