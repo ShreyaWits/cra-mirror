@@ -58,46 +58,83 @@ project-name/
   ```
 
 ### Encryption Operations
-- `POST /encrypt` - Encrypt data
+--
+
+- `GRPC /HealthCheck` - Check Service Health
+  ```json
+
+  Response:
+  {
+    "status":"OK"
+  }
+  ```
+
+- `GRPC /Encrypt` - Encrypt data
   ```json
   Request:
   {
     "data": [
-      {"passwords":"xxxxx", "type":"public"},
-      {"accountNumber":"xxxxx", "type":"private"},
-      ]
+      {"fields" :
+         {"passwords":"xxxxx", "e_type":"public"},
+      },
+      {"fields" :
+         {"accountNumber":"xxxxx", "e_type":"private"},
+      },
+   
+   ]
   }
   
   Response:
   {
     "data": [
-      {"passwords":"public_xxyxy"},
-      {"accountNumber":"private_xxyxy"},
+       {"fields" :
+         {"passwords":"public_xxyxy"},
+       },
+          {"fields" :{
+         {"accountNumber":"private_xxyxy"},
+          }
+       }
       ],
   }
   ```
 
-- `POST /decrypt` - Decrypt data
+- `GRPC /Decrypt` - Decrypt data
   ```json
   Request:
    {
+      "token":"test token",
     "data": [
-      {"passwords":"public_xxyxy"},
-      {"accountNumber":"private_xxyxy"},
+         {"fields" :
+             {"passwords":"public_xxyxy"},
+         },
+         {"fields" :
+            {"accountNumber":"private_xxyxy"},
+         }
+        
       ]
   }
 
   Response:
     {
+     "token":"test token",
     "data": [
+         {"fields" :
       {"passwords":"xxxxx"},
-      {"accountNumber":"xxxxx"},
+         },
+          {"fields" :
+            {"accountNumber":"xxxxx"},}
       ]
   }
   ```
 
-- `GET /generate-edek` - Generate Encrypted DEK
+- `GRPC /GenerateEDEK` - Generate Encrypted DEK
   ```json
+
+  Request:
+  {
+   "token":"test token"
+   }
+
   Response:
   {
     "edekPrivate": "base64 encoded encrypted data key",
@@ -111,7 +148,7 @@ The service can be configured using environment variables:
 
 ```env
 # Server Configuration
-PORT=8080
+PORT=50051
 ENV=development
 ```
 
@@ -214,28 +251,29 @@ VAULT_PATH=transit
 5. Return decrypted data
 
 ### Generation Flow
-1. **ETE (End-to-End) Key Generation**
-   - Generate a random DEK_ETE using secure random number generation
-   - Retrieve KEK_ETE from KMS
-   - Encrypt DEK_ETE with KEK_ETE to create EDEK_ETE
-   - Store EDEK_ETE in user service
-   - Clear DEK_ETE from memory
+1. **private (End-to-End) Key Generation**
+   - Generate a random DEK_private using secure random number generation
+   - Retrieve KEK_private from KMS
+   - Encrypt DEK_private with KEK_private to create EDEK_private
+   - Store EDEK_private in user service
+   - Clear DEK_private from memory
 
-2. **Shared Key Generation**
-   - Generate a random DEK_SHARED using secure random number generation
-   - Retrieve KEK_SHARED from KMS
-   - Encrypt DEK_SHARED with KEK_SHARED to create EDEK_SHARED
-   - Store EDEK_SHARED in user service
-   - Clear DEK_SHARED from memory
+2. **public Key Generation**
+   - Generate a random DEK_public using secure random number generation
+   - Retrieve KEK_public from KMS
+   - Encrypt DEK_public with KEK_public to create EDEK_public
+   - Store EDEK_public in user service
+   - Clear DEK_public from memory
 
 3. **Key Usage**
-   - ETE keys are used for sensitive data like passwords
-   - Shared keys are used for data that needs to be accessible by multiple parties
-   - Each data field is prefixed with its type (ete_ or shared_) for identification
+   - private keys are used for sensitive data like passwords
+   - public keys are used for data that needs to be accessible by multiple parties
+   - Each data field is prefixed with its type (private_ or public_) for identification
 
-4. **Key Management**
-   - EDEK_ETE is only accessible by the end user
-   - EDEK_SHARED is accessible by authorized parties
+4. **Key Generation**
+   - `GenerateKEK`: Creates a new Key Encryption Key (KEK)
+   - Supports different key types based on role (private or public)
+
 
 ### Key Management System (KMS) Implementation
 
@@ -246,34 +284,29 @@ type KmsService interface {
     GenerateKEK(ctx context.Context) ([]byte, error)
     StoreKEK(ctx context.Context, kekID string, kek []byte, role string) error
     RetrieveKEK(ctx context.Context, kekID string, role string) ([]byte, error)
-    DeleteKEK(ctx context.Context, kekID string, role string) error
+    DelprivateKEK(ctx context.Context, kekID string, role string) error
     ListKEKs(ctx context.Context, role string) ([]string, error)
 }
 ```
 
 #### KMS Operations
 
-1. **Key Generation**
-   - `GenerateKEK`: Creates a new Key Encryption Key (KEK)
-   - Supports different key types based on role (ETE or Shared)
 
-2. **Key Storage**
+1. **Key Storage**
    - `StoreKEK`: Securely stores KEKs with role-based access control
    - Keys are stored with associated metadata and role information
 
-3. **Key Retrieval**
+2. **Key Retrieval**
    - `RetrieveKEK`: Retrieves KEKs based on ID and role
    - Implements role-based access control for key retrieval
 
-4. **Key Management**
-   - `DeleteKEK`: Securely removes KEKs from the system
-   - `ListKEKs`: Lists all KEKs for a specific role
+
 
 #### Role-Based Access Control
 
 The KMS implementation supports two main roles:
-- `ete`: For end-to-end encryption keys
-- `shared`: For shared encryption keys
+- `private`: For end-to-end encryption keys
+- `public`: For public encryption keys
 
 Each operation is role-aware and ensures proper access control based on the key's role.
 
@@ -284,3 +317,4 @@ MIT License
 ## Support
 
 For support and questions, please contact the development team.
+

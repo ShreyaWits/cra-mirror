@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	EncryptionService_HealthCheck_FullMethodName  = "/encryption_microservice.EncryptionService/HealthCheck"
 	EncryptionService_Encrypt_FullMethodName      = "/encryption_microservice.EncryptionService/Encrypt"
 	EncryptionService_GenerateEDEK_FullMethodName = "/encryption_microservice.EncryptionService/GenerateEDEK"
 	EncryptionService_Decrypt_FullMethodName      = "/encryption_microservice.EncryptionService/Decrypt"
@@ -28,6 +29,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type EncryptionServiceClient interface {
+	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
 	Encrypt(ctx context.Context, in *EncryptDataRequest, opts ...grpc.CallOption) (*EncryptDataResponse, error)
 	GenerateEDEK(ctx context.Context, in *GenerateEDEKRequest, opts ...grpc.CallOption) (*GenerateEDEKResponse, error)
 	Decrypt(ctx context.Context, in *DecryptRequest, opts ...grpc.CallOption) (*DecryptResponse, error)
@@ -39,6 +41,16 @@ type encryptionServiceClient struct {
 
 func NewEncryptionServiceClient(cc grpc.ClientConnInterface) EncryptionServiceClient {
 	return &encryptionServiceClient{cc}
+}
+
+func (c *encryptionServiceClient) HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HealthCheckResponse)
+	err := c.cc.Invoke(ctx, EncryptionService_HealthCheck_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *encryptionServiceClient) Encrypt(ctx context.Context, in *EncryptDataRequest, opts ...grpc.CallOption) (*EncryptDataResponse, error) {
@@ -75,6 +87,7 @@ func (c *encryptionServiceClient) Decrypt(ctx context.Context, in *DecryptReques
 // All implementations must embed UnimplementedEncryptionServiceServer
 // for forward compatibility.
 type EncryptionServiceServer interface {
+	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
 	Encrypt(context.Context, *EncryptDataRequest) (*EncryptDataResponse, error)
 	GenerateEDEK(context.Context, *GenerateEDEKRequest) (*GenerateEDEKResponse, error)
 	Decrypt(context.Context, *DecryptRequest) (*DecryptResponse, error)
@@ -88,6 +101,9 @@ type EncryptionServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedEncryptionServiceServer struct{}
 
+func (UnimplementedEncryptionServiceServer) HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HealthCheck not implemented")
+}
 func (UnimplementedEncryptionServiceServer) Encrypt(context.Context, *EncryptDataRequest) (*EncryptDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Encrypt not implemented")
 }
@@ -116,6 +132,24 @@ func RegisterEncryptionServiceServer(s grpc.ServiceRegistrar, srv EncryptionServ
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&EncryptionService_ServiceDesc, srv)
+}
+
+func _EncryptionService_HealthCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HealthCheckRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EncryptionServiceServer).HealthCheck(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EncryptionService_HealthCheck_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EncryptionServiceServer).HealthCheck(ctx, req.(*HealthCheckRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _EncryptionService_Encrypt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -179,6 +213,10 @@ var EncryptionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "encryption_microservice.EncryptionService",
 	HandlerType: (*EncryptionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "HealthCheck",
+			Handler:    _EncryptionService_HealthCheck_Handler,
+		},
 		{
 			MethodName: "Encrypt",
 			Handler:    _EncryptionService_Encrypt_Handler,

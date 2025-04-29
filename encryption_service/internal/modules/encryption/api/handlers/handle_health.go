@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"context"
+	pb "encryption_microservice/internal/common/proto_gen"
 )
 
 // HandleHealth handles the health check request
-func (h *EncryptionHandlerImpl) HandleHealth(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{
-		"status":  "healthy",
-		"version": "1.0.0",
-	})
+func (h *EncryptionHandlerImpl) HealthCheck(c context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
+	return &pb.HealthCheckResponse{
+		HealthStatus: "OK",
+	}, nil
 }

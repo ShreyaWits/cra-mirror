@@ -35,7 +35,15 @@ message GenerateEDEKResponse {
 	  string EDEKPublic = 2;
 }
 
+message HealthCheckResponse {
+  	string HealthStatus = 1;
+}
+
+message HealthCheckRequest {}
+
+
 service EncryptionService {
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
   rpc Encrypt(EncryptDataRequest) returns (EncryptDataResponse);
   rpc GenerateEDEK(GenerateEDEKRequest) returns (GenerateEDEKResponse);
   rpc Decrypt(DecryptRequest) returns (DecryptResponse);

@@ -24,7 +24,7 @@ func setupTestVault(t *testing.T) (*api.Client, string) {
 	require.Nil(t, err, "Failed to create Vault client")
 
 	// Set the root token (for dev server)
-	client.SetToken("hvs.b5KPZLHoCGv7Dl8Dg7p4HbdW")
+	client.SetToken("hvs.MlbuTDJ6DqdtgnFNuiOmNKej")
 
 	// Enable the transit secrets engine
 	path := "transit"

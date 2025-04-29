@@ -353,6 +353,86 @@ func (x *GenerateEDEKResponse) GetEDEKPublic() string {
 	return ""
 }
 
+type HealthCheckResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HealthStatus  string                 `protobuf:"bytes,1,opt,name=HealthStatus,proto3" json:"HealthStatus,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthCheckResponse) Reset() {
+	*x = HealthCheckResponse{}
+	mi := &file_encryption_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthCheckResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthCheckResponse) ProtoMessage() {}
+
+func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_encryption_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
+func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
+	return file_encryption_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *HealthCheckResponse) GetHealthStatus() string {
+	if x != nil {
+		return x.HealthStatus
+	}
+	return ""
+}
+
+type HealthCheckRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthCheckRequest) Reset() {
+	*x = HealthCheckRequest{}
+	mi := &file_encryption_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthCheckRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthCheckRequest) ProtoMessage() {}
+
+func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_encryption_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
+func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
+	return file_encryption_proto_rawDescGZIP(), []int{8}
+}
+
 var File_encryption_proto protoreflect.FileDescriptor
 
 const file_encryption_proto_rawDesc = "" +
@@ -379,8 +459,12 @@ const file_encryption_proto_rawDesc = "" +
 	"\vEDEKPrivate\x18\x01 \x01(\tR\vEDEKPrivate\x12\x1e\n" +
 	"\n" +
 	"EDEKPublic\x18\x02 \x01(\tR\n" +
-	"EDEKPublic2\xc4\x02\n" +
-	"\x11EncryptionService\x12d\n" +
+	"EDEKPublic\"9\n" +
+	"\x13HealthCheckResponse\x12\"\n" +
+	"\fHealthStatus\x18\x01 \x01(\tR\fHealthStatus\"\x14\n" +
+	"\x12HealthCheckRequest2\xae\x03\n" +
+	"\x11EncryptionService\x12h\n" +
+	"\vHealthCheck\x12+.encryption_microservice.HealthCheckRequest\x1a,.encryption_microservice.HealthCheckResponse\x12d\n" +
 	"\aEncrypt\x12+.encryption_microservice.EncryptDataRequest\x1a,.encryption_microservice.EncryptDataResponse\x12k\n" +
 	"\fGenerateEDEK\x12,.encryption_microservice.GenerateEDEKRequest\x1a-.encryption_microservice.GenerateEDEKResponse\x12\\\n" +
 	"\aDecrypt\x12'.encryption_microservice.DecryptRequest\x1a(.encryption_microservice.DecryptResponseB:Z8../../../encryption_microservice;encryption_microserviceb\x06proto3"
@@ -397,7 +481,7 @@ func file_encryption_proto_rawDescGZIP() []byte {
 	return file_encryption_proto_rawDescData
 }
 
-var file_encryption_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_encryption_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_encryption_proto_goTypes = []any{
 	(*EncryptDataResponse)(nil),  // 0: encryption_microservice.EncryptDataResponse
 	(*EncryptDataRequest)(nil),   // 1: encryption_microservice.EncryptDataRequest
@@ -406,22 +490,26 @@ var file_encryption_proto_goTypes = []any{
 	(*DecryptResponse)(nil),      // 4: encryption_microservice.DecryptResponse
 	(*GenerateEDEKRequest)(nil),  // 5: encryption_microservice.GenerateEDEKRequest
 	(*GenerateEDEKResponse)(nil), // 6: encryption_microservice.GenerateEDEKResponse
-	nil,                          // 7: encryption_microservice.Data.FieldsEntry
+	(*HealthCheckResponse)(nil),  // 7: encryption_microservice.HealthCheckResponse
+	(*HealthCheckRequest)(nil),   // 8: encryption_microservice.HealthCheckRequest
+	nil,                          // 9: encryption_microservice.Data.FieldsEntry
 }
 var file_encryption_proto_depIdxs = []int32{
 	2, // 0: encryption_microservice.EncryptDataResponse.data:type_name -> encryption_microservice.Data
 	2, // 1: encryption_microservice.EncryptDataRequest.data:type_name -> encryption_microservice.Data
-	7, // 2: encryption_microservice.Data.fields:type_name -> encryption_microservice.Data.FieldsEntry
+	9, // 2: encryption_microservice.Data.fields:type_name -> encryption_microservice.Data.FieldsEntry
 	2, // 3: encryption_microservice.DecryptRequest.data:type_name -> encryption_microservice.Data
 	2, // 4: encryption_microservice.DecryptResponse.data:type_name -> encryption_microservice.Data
-	1, // 5: encryption_microservice.EncryptionService.Encrypt:input_type -> encryption_microservice.EncryptDataRequest
-	5, // 6: encryption_microservice.EncryptionService.GenerateEDEK:input_type -> encryption_microservice.GenerateEDEKRequest
-	3, // 7: encryption_microservice.EncryptionService.Decrypt:input_type -> encryption_microservice.DecryptRequest
-	0, // 8: encryption_microservice.EncryptionService.Encrypt:output_type -> encryption_microservice.EncryptDataResponse
-	6, // 9: encryption_microservice.EncryptionService.GenerateEDEK:output_type -> encryption_microservice.GenerateEDEKResponse
-	4, // 10: encryption_microservice.EncryptionService.Decrypt:output_type -> encryption_microservice.DecryptResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
+	8, // 5: encryption_microservice.EncryptionService.HealthCheck:input_type -> encryption_microservice.HealthCheckRequest
+	1, // 6: encryption_microservice.EncryptionService.Encrypt:input_type -> encryption_microservice.EncryptDataRequest
+	5, // 7: encryption_microservice.EncryptionService.GenerateEDEK:input_type -> encryption_microservice.GenerateEDEKRequest
+	3, // 8: encryption_microservice.EncryptionService.Decrypt:input_type -> encryption_microservice.DecryptRequest
+	7, // 9: encryption_microservice.EncryptionService.HealthCheck:output_type -> encryption_microservice.HealthCheckResponse
+	0, // 10: encryption_microservice.EncryptionService.Encrypt:output_type -> encryption_microservice.EncryptDataResponse
+	6, // 11: encryption_microservice.EncryptionService.GenerateEDEK:output_type -> encryption_microservice.GenerateEDEKResponse
+	4, // 12: encryption_microservice.EncryptionService.Decrypt:output_type -> encryption_microservice.DecryptResponse
+	9, // [9:13] is the sub-list for method output_type
+	5, // [5:9] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
 	5, // [5:5] is the sub-list for extension extendee
 	0, // [0:5] is the sub-list for field type_name
@@ -438,7 +526,7 @@ func file_encryption_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_encryption_proto_rawDesc), len(file_encryption_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
