@@ -142,6 +142,7 @@ func (u *EncryptionUseCaseImpl) Decrypt(context context.Context, userID string, 
 				}
 
 				dek, err = u.getDek(kekID, edek)
+
 				if err != nil {
 					logger.Error(fmt.Sprintf("Failed to retrieve %v DEK", keyType), err.ErrObj())
 					return nil, err

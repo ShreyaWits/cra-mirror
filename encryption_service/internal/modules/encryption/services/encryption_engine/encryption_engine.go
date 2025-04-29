@@ -62,6 +62,8 @@ func (e *EncryptionEngineImpl) EncryptDEK(dek []byte, kek []byte) (string, *erro
 }
 
 func (e *EncryptionEngineImpl) DecryptDEK(edek string, kek []byte) ([]byte, *errors.CustomError) {
+
+	
 	// Encrypt the DEK with KEK
 	decryptedEDEK, err :=
 		base64.StdEncoding.DecodeString(edek)

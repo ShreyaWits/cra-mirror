@@ -5,6 +5,8 @@ import (
 	pb "encryption_microservice/internal/common/proto_gen"
 	"encryption_microservice/internal/modules/encryption/api/dtos"
 	"encryption_microservice/internal/modules/encryption/api/mapper"
+	"encryption_microservice/pkg/logger"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -12,18 +14,33 @@ import (
 
 // HandleDecrypt handles the decryption request
 func (h *EncryptionHandlerImpl) Decrypt(ctx context.Context, req *pb.DecryptRequest) (*pb.DecryptResponse, error) {
-
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("Fatal Error", fmt.Errorf("%v", r))
+			status.Error(codes.Internal, fmt.Sprintf("%v", r))
+		}
+	}()
 	token := req.Token
 
 	userData, customErr := h.userService.GetUserData(token)
 	if customErr != nil {
 		return nil, status.Error(codes.Unauthenticated, customErr.Error())
 	}
-
+	var keyId string
+	if req.UserId == nil || *req.UserId == "" {
+		keyId = userData.ID
+	} else {
+		userData, customErr = h.userService.GetUserData(*req.UserId)
+		if customErr != nil {
+			return nil, status.Error(codes.Unauthenticated, customErr.Error())
+		}
+		keyId = userData.ID
+	}
+	fmt.Println("*******Key Decrypt", keyId)
 	mappedRequest := mapper.ConvertFromStructPB(req.Data)
 	decryptRequest := &dtos.DecryptRequest{Data: mappedRequest}
 
-	response, customErr := h.encryptionUseCase.Decrypt(ctx, userData.ID, userData.EDEKPrivate, userData.EDEKPublic, decryptRequest)
+	response, customErr := h.encryptionUseCase.Decrypt(ctx, keyId, userData.EDEKPrivate, userData.EDEKPublic, decryptRequest)
 	if customErr != nil {
 		return nil, status.Error(codes.Internal, customErr.Error())
 	}

@@ -20,8 +20,8 @@ message Data {
 
 message DecryptRequest { 
   repeated Data data = 1;
-    string token = 2;
-    optional string userId = 3;
+  string token = 2;
+  optional string userId = 3;
 }
 
 message DecryptResponse { 
