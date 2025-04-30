@@ -73,7 +73,8 @@ project-name/
   ```json
   Request:
   {
-    "data": [
+   "token":"test token",
+   "data": [
       {"fields" :
          {"passwords":"xxxxx", "e_type":"public"},
       },
@@ -102,8 +103,9 @@ project-name/
   ```json
   Request:
    {
-      "token":"test token",
-    "data": [
+   "token":"test token",
+   "userId":"userId",
+   "data": [
          {"fields" :
              {"passwords":"public_xxyxy"},
          },
@@ -116,7 +118,6 @@ project-name/
 
   Response:
     {
-     "token":"test token",
     "data": [
          {"fields" :
       {"passwords":"xxxxx"},
@@ -281,11 +282,8 @@ The KMS package provides a flexible interface for key management operations. It 
 
 ```go
 type KmsService interface {
-    GenerateKEK(ctx context.Context) ([]byte, error)
     StoreKEK(ctx context.Context, kekID string, kek []byte, role string) error
     RetrieveKEK(ctx context.Context, kekID string, role string) ([]byte, error)
-    DelprivateKEK(ctx context.Context, kekID string, role string) error
-    ListKEKs(ctx context.Context, role string) ([]string, error)
 }
 ```
 

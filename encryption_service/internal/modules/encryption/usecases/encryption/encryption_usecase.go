@@ -33,7 +33,6 @@ func (u *EncryptionUseCaseImpl) getDek(kekID string, edek string) ([]byte, *erro
 		logger.Error("Failed to retrieve private KEK", err.ErrObj())
 		return nil, err
 	}
-	fmt.Println("Keys to Decrypt ", edek, kek)
 	dek, err := u.encryptionEngine.DecryptDEK(edek, kek)
 	if err != nil {
 		logger.Error("Failed to retrieve DEK", err.ErrObj())
@@ -142,6 +141,7 @@ func (u *EncryptionUseCaseImpl) Decrypt(context context.Context, userID string, 
 				}
 
 				dek, err = u.getDek(kekID, edek)
+
 				if err != nil {
 					logger.Error(fmt.Sprintf("Failed to retrieve %v DEK", keyType), err.ErrObj())
 					return nil, err

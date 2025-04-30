@@ -69,6 +69,7 @@ type EncryptDataRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Data          []*Data                `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
 	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	UserId        *string                `protobuf:"bytes,3,opt,name=userId,proto3,oneof" json:"userId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -113,6 +114,13 @@ func (x *EncryptDataRequest) GetData() []*Data {
 func (x *EncryptDataRequest) GetToken() string {
 	if x != nil {
 		return x.Token
+	}
+	return ""
+}
+
+func (x *EncryptDataRequest) GetUserId() string {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
 	}
 	return ""
 }
@@ -165,6 +173,7 @@ type DecryptRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Data          []*Data                `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
 	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	UserId        *string                `protobuf:"bytes,3,opt,name=userId,proto3,oneof" json:"userId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -209,6 +218,13 @@ func (x *DecryptRequest) GetData() []*Data {
 func (x *DecryptRequest) GetToken() string {
 	if x != nil {
 		return x.Token
+	}
+	return ""
+}
+
+func (x *DecryptRequest) GetUserId() string {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
 	}
 	return ""
 }
@@ -439,18 +455,22 @@ const file_encryption_proto_rawDesc = "" +
 	"\n" +
 	"\x10encryption.proto\x12\x17encryption_microservice\"H\n" +
 	"\x13EncryptDataResponse\x121\n" +
-	"\x04data\x18\x01 \x03(\v2\x1d.encryption_microservice.DataR\x04data\"]\n" +
+	"\x04data\x18\x01 \x03(\v2\x1d.encryption_microservice.DataR\x04data\"\x85\x01\n" +
 	"\x12EncryptDataRequest\x121\n" +
 	"\x04data\x18\x01 \x03(\v2\x1d.encryption_microservice.DataR\x04data\x12\x14\n" +
-	"\x05token\x18\x02 \x01(\tR\x05token\"\x84\x01\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1b\n" +
+	"\x06userId\x18\x03 \x01(\tH\x00R\x06userId\x88\x01\x01B\t\n" +
+	"\a_userId\"\x84\x01\n" +
 	"\x04Data\x12A\n" +
 	"\x06fields\x18\x01 \x03(\v2).encryption_microservice.Data.FieldsEntryR\x06fields\x1a9\n" +
 	"\vFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"Y\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x81\x01\n" +
 	"\x0eDecryptRequest\x121\n" +
 	"\x04data\x18\x01 \x03(\v2\x1d.encryption_microservice.DataR\x04data\x12\x14\n" +
-	"\x05token\x18\x02 \x01(\tR\x05token\"D\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1b\n" +
+	"\x06userId\x18\x03 \x01(\tH\x00R\x06userId\x88\x01\x01B\t\n" +
+	"\a_userId\"D\n" +
 	"\x0fDecryptResponse\x121\n" +
 	"\x04data\x18\x01 \x03(\v2\x1d.encryption_microservice.DataR\x04data\"+\n" +
 	"\x13GenerateEDEKRequest\x12\x14\n" +
@@ -520,6 +540,8 @@ func file_encryption_proto_init() {
 	if File_encryption_proto != nil {
 		return
 	}
+	file_encryption_proto_msgTypes[1].OneofWrappers = []any{}
+	file_encryption_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
