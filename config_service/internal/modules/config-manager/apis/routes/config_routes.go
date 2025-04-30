@@ -10,6 +10,6 @@ import (
 func RegisterConfigRoutes(router fiber.Router, h *handler.ConfigHandler) {
 	router.Put("/:environment/:service", middleware.SetContextDataMiddleware[map[string]any], h.StoreConfigHandler)
 	router.Get("/:environment/:service", h.GetfullConfig)
-	router.Get("/:environment/:service/:key", h.GetByValue)
 	router.Get("/:environment/:service/metadata", h.GetByMetadata)
+	router.Get("/:environment/:service/:key", h.GetByValue)
 }

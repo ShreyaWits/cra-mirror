@@ -4,9 +4,8 @@ import (
 	"errors"
 	customErr "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
-	mocks_handler "nps-config-service/internal/modules/config-manager/services/mocks"
 	"testing"
-
+	mocks_service "nps-config-service/internal/modules/config-manager/services/mocks"
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
@@ -47,7 +46,7 @@ func setupFiberWithHandler(h *WebhookHandler) *fiber.App {
 // --- TESTS ---
 
 func TestRegisterWebhook_Success(t *testing.T) {
-	mockService := new(mocks_handler.MockWebhookService)
+	mockService := new(mocks_service.MockWebhookService)
 	handler := NewWebhookHandler(mockService)
 	app := setupFiberWithHandler(handler)
 
@@ -72,7 +71,7 @@ func TestRegisterWebhook_Success(t *testing.T) {
 }
 
 func TestRegisterWebhook_ConflictError(t *testing.T) {
-	mockService := new(mocks_handler.MockWebhookService)
+	mockService := new(mocks_service.MockWebhookService)
 	handler := NewWebhookHandler(mockService)
 	app := setupFiberWithHandler(handler)
 
@@ -96,7 +95,7 @@ func TestRegisterWebhook_ConflictError(t *testing.T) {
 }
 
 func TestGetWebhooks_Success(t *testing.T) {
-	mockService := new(mocks_handler.MockWebhookService)
+	mockService := new(mocks_service.MockWebhookService)
 	handler := NewWebhookHandler(mockService)
 	app := setupFiberWithHandler(handler)
 
@@ -119,7 +118,7 @@ func TestGetWebhooks_Success(t *testing.T) {
 }
 
 func TestGetWebhooks_NotFound(t *testing.T) {
-	mockService := new(mocks_handler.MockWebhookService)
+	mockService := new(mocks_service.MockWebhookService)
 	handler := NewWebhookHandler(mockService)
 	app := setupFiberWithHandler(handler)
 
@@ -135,7 +134,7 @@ func TestGetWebhooks_NotFound(t *testing.T) {
 }
 
 func TestDeleteWebhook_Success(t *testing.T) {
-	mockService := new(mocks_handler.MockWebhookService)
+	mockService := new(mocks_service.MockWebhookService)
 	handler := NewWebhookHandler(mockService)
 	app := setupFiberWithHandler(handler)
 
@@ -159,7 +158,7 @@ func TestDeleteWebhook_Success(t *testing.T) {
 }
 
 func TestDeleteWebhook_NotFound(t *testing.T) {
-	mockService := new(mocks_handler.MockWebhookService)
+	mockService := new(mocks_service.MockWebhookService)
 	handler := NewWebhookHandler(mockService)
 	app := setupFiberWithHandler(handler)
 

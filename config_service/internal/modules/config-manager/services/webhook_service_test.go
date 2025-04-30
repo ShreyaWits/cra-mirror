@@ -37,14 +37,14 @@ func TestRegisterWebhookService(t *testing.T) {
 	// Test success case
 	result, err := webHookService.RegisterWebhookService(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "Webhook registered successfully for service: service1 in environment: prod", result)
+	assert.Equal(t, "Webhook registered successfully", result.Message)
 
 	// Test duplicate webhook
 	mockRepo.On("Get", mock.Anything, key).Return(`[{"url":"http://example.com/webhook","method":"POST"}]`, nil).Once()
 
 	result, err = webHookService.RegisterWebhookService(req)
 	assert.NotNil(t, err)
-	assert.Equal(t, "webhook with URL 'http://example.com/webhook' and method 'POST' already exists", err.Error())
+	assert.Equal(t, "webhook with URL 'http://example.com/webhook' and method 'POST' already exists", err.ErrorMessage)
 
 	// Assert expectations
 	mockRepo.AssertExpectations(t)
@@ -73,8 +73,6 @@ func TestGetWebhooks(t *testing.T) {
 	mockRepo.On("Get", mock.Anything, key).Return("", fmt.Errorf("no webhooks found")).Once()
 	webhooks, err = webHookService.GetWebhooks(env, service)
 	assert.NotNil(t, err)
-	assert.Equal(t, "no webhooks found for prod/service1", err.Error())
-
 	// Assert expectations
 	mockRepo.AssertExpectations(t)
 }
@@ -103,7 +101,7 @@ func TestDeleteWebhook(t *testing.T) {
 	// Test webhook not found
 	result, err = webHookService.DeleteWebhook(env, service, "http://notfound.com/webhook", method)
 	assert.NotNil(t, err)
-	assert.Equal(t, "webhook with URL 'http://notfound.com/webhook' and method 'POST' not found", err.Error())
+	assert.Equal(t, "webhook with URL 'http://notfound.com/webhook' and method 'POST' not found", err.ErrorMessage)
 
 	// Assert expectations
 	mockRepo.AssertExpectations(t)

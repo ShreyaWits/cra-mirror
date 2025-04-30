@@ -6,18 +6,20 @@ import (
 	"nps-config-service/internal/modules/config-manager/repositories"
 	"nps-config-service/internal/modules/config-manager/services"
 	etcdDB "nps-config-service/pkg/etcd"
+	workflows "nps-config-service/pkg/temporal"
+	"os"
 )
 
 func InitHandlers(container *Container) (*handler.AdminHandler, *handler.ConfigHandler, *handler.WebhookHandler, error) {
 	adminHandler := handler.NewAdminHandler(container.AdminService)
 	configHandler := handler.NewConfigHandler(container.ConfigService)
 	webhookHandler := handler.NewWebhookHandler(container.WebhookService)
-	return adminHandler,configHandler, webhookHandler, nil
+	return adminHandler, configHandler, webhookHandler, nil
 }
 
 type Container struct {
 	ConfigRepo     repositories.IConfigRepo
-	AdminService    *services.AdminService
+	AdminService   *services.AdminService
 	WebhookService *services.WebhookService
 	ConfigService  *services.ConfigService
 }
@@ -32,9 +34,10 @@ func NewContainer() (*Container, error) {
 	}
 
 	etcdClient := etcdDB.NewEtcdClientImpl(client)
-
+	temporalUrl := os.Getenv("TEMPORAL_ENDPOINT")
+	temporalClient, err := workflows.InitTemporal(temporalUrl)
 	// Repository layer
-	configRepo := repositories.NewConfigRepository(*etcdClient)
+	configRepo := repositories.NewConfigRepository(etcdClient)
 	container.ConfigRepo = configRepo
 
 	// Service layer
@@ -44,7 +47,8 @@ func NewContainer() (*Container, error) {
 	webhookService := services.NewWebhookService(configRepo)
 	container.WebhookService = webhookService.(*services.WebhookService)
 
-	configService := services.NewConfigService(configRepo, webhookService)
+	// defer c.Close()
+	configService := services.NewConfigService(configRepo, webhookService, *temporalClient)
 	container.ConfigService = configService.(*services.ConfigService)
 
 	return container, nil

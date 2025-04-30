@@ -30,11 +30,11 @@ func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 
 	responseData, responseError := h.Service.StoreConfigService(environment, serviceName, *configData)
 	if responseError != nil {
-		utils.SendError(c, fiber.StatusInternalServerError, "Failed to store config", responseError.Error())
+		utils.SendError(c, fiber.StatusInternalServerError, "Failed to store config", responseError.ErrorMessage)
 		return nil
 	}
 
-	utils.SendSuccess(c, fiber.StatusOK, "Config stored successfully", responseData)
+	utils.SendSuccess(c, fiber.StatusOK, "Config stored successfully", responseData.Data)
 	return nil
 }
 

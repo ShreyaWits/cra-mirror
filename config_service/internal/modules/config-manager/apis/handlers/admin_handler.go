@@ -45,7 +45,7 @@ func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
 
 	responseData, responseError := h.Service.CreateAdminService(contextData)
 	if responseError != nil {
-		return responseError
+		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "ADMIN001")) // Failed to create admin
 	}
 	return c.Status(fiber.StatusOK).JSON(responseData)
 }
