@@ -92,7 +92,7 @@ func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[strin
 	// app.InitEtcdDB()
 	// defer app.Client.Close()
 
-	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
+		baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
 	log.Printf("Getting all config for base key: %s", baseKey)
 
 	// Get all keys under the base key
