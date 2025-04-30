@@ -12,11 +12,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (h *EncryptionHandlerImpl) Encrypt(ctx context.Context, req *pb.EncryptDataRequest) (*pb.EncryptDataResponse, error) {
+func (h *EncryptionHandlerImpl) Encrypt(ctx context.Context, req *pb.EncryptDataRequest) (resp *pb.EncryptDataResponse, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("Failed to retrieve private KEK", fmt.Errorf("%v", r))
-			status.Error(codes.Internal, fmt.Sprintf("%v", r))
+			logger.Error("Fatal Error", fmt.Errorf("%v", r))
+			resp = nil
+			err = status.Error(codes.Internal, fmt.Sprintf("%v", r))
 		}
 	}()
 

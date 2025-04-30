@@ -169,7 +169,7 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 			expectedMsg:  "enc err",
 		},
 		{
-			name:  "success",
+			name:  "userid success",
 			token: "tkn",
 			getUserDataFunc: func(string) (*user.User, *errors.CustomError) {
 				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
@@ -196,6 +196,16 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 			expectedMsg:  "enc err",
 			userId:       &[]string{"valid"}[0],
 		},
+		{
+			name:  "panic",
+			token: "tkn",
+			getUserDataFunc: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
+			},
+			encErr:       errors.NewCustomError(errors.ESErrEncrypt, fmt.Errorf("enc err")),
+			expectedCode: codes.Internal,
+			expectedMsg:  "enc err",
+		},
 	}
 
 	for _, tc := range tests {
@@ -206,9 +216,15 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 			mockUsecase := mocks.NewMockEncryptionUseCase(ctrl)
 			mockUserSvc := mocks.NewMockUserService(ctrl)
 			ud, ue := tc.getUserDataFunc(tc.token)
-			mockUserSvc.EXPECT().GetUserData(tc.token).Return(ud, ue)
+
+			if tc.name == "panic" {
+				mockUserSvc.EXPECT().GetUserData(tc.token).Do(func(token string) {
+					panic("panic")
+				}).Return(nil, nil)
+			} else {
+				mockUserSvc.EXPECT().GetUserData(tc.token).Return(ud, ue)
+			}
 			if tc.userId != nil {
-				fmt.Println("jkdsajfkjasdklfjldf")
 				ud2, ue2 := tc.getUserDataFunc2(*tc.userId)
 				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(ud2, ue2)
 				if ue2 == nil {
@@ -217,7 +233,7 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 						Return(tc.encResp, tc.encErr)
 				}
 			} else {
-				if ue == nil {
+				if ue == nil && tc.name != "panic" {
 					mockUsecase.EXPECT().
 						Encrypt(gomock.Any(), ud.ID, ud.EDEKPrivate, ud.EDEKPublic, gomock.Any()).
 						Return(tc.encResp, tc.encErr)
@@ -319,6 +335,16 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 			expectedCode: codes.Unauthenticated,
 			expectedMsg:  "dec err",
 		},
+		{
+			name:  "panic",
+			token: "tkn",
+			getUserDataFunc: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
+			},
+			decErr:       errors.NewCustomError(errors.ESErrDecrypt, fmt.Errorf("dec err")),
+			expectedCode: codes.Internal,
+			expectedMsg:  "dec err",
+		},
 	}
 
 	for _, tc := range tests {
@@ -329,7 +355,14 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 			mockUsecase := mocks.NewMockEncryptionUseCase(ctrl)
 			mockUserSvc := mocks.NewMockUserService(ctrl)
 			ud, ue := tc.getUserDataFunc(tc.token)
-			mockUserSvc.EXPECT().GetUserData(tc.token).Return(ud, ue)
+			if tc.name == "panic" {
+				mockUserSvc.EXPECT().GetUserData(tc.token).Do(func(token string) {
+					panic("panic")
+				}).Return(nil, nil)
+			} else {
+				mockUserSvc.EXPECT().GetUserData(tc.token).Return(ud, ue)
+			}
+
 			if tc.userId != nil {
 				ud2, ue2 := tc.getUserDataFunc2(*tc.userId)
 				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(ud2, ue2)
@@ -339,7 +372,7 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 						Return(tc.decResp, tc.decErr)
 				}
 			} else {
-				if ue == nil {
+				if ue == nil && tc.name != "panic" {
 					mockUsecase.EXPECT().
 						Decrypt(gomock.Any(), ud.ID, ud.EDEKPrivate, ud.EDEKPublic, gomock.Any()).
 						Return(tc.decResp, tc.decErr)
@@ -356,6 +389,53 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 				got := mapper.ConvertFromStructPB(resp.GetData())
 				if !reflect.DeepEqual(tc.expectedData, got) {
 					t.Errorf("expected %v, got %v", tc.expectedData, got)
+				}
+			} else {
+				if err == nil {
+					t.Fatalf("expected error, got none")
+				}
+				st, _ := status.FromError(err)
+				if st.Code() != tc.expectedCode {
+					t.Errorf("expected code %v, got %v", tc.expectedCode, st.Code())
+				}
+			}
+		})
+	}
+}
+
+func TestEncryptionHandlerImpl_Health(t *testing.T) {
+	tests := []struct {
+		name             string
+		decResp          *dtos.DecryptResponse
+		decErr           *errors.CustomError
+		expectedData     []map[string]string
+		expectedCode     codes.Code
+		expectedMsg      string
+		getUserDataFunc2 func(string) (*user.User, *errors.CustomError)
+		userId           *string
+	}{
+		{
+			name:         "success",
+			decResp:      &dtos.DecryptResponse{Data: []map[string]string{{"k": "v"}}},
+			expectedData: []map[string]string{{"k": "v"}},
+			expectedCode: codes.OK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUsecase := mocks.NewMockEncryptionUseCase(ctrl)
+			mockUserSvc := mocks.NewMockUserService(ctrl)
+
+			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc)
+			_, err := handler.HealthCheck(context.Background(), &pb.HealthCheckRequest{})
+
+			if tc.expectedData != nil {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
 				}
 			} else {
 				if err == nil {
