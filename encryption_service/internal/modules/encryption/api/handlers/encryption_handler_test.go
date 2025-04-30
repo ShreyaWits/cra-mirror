@@ -128,14 +128,16 @@ func TestEncryptionHandlerImpl_GenerateEDEK(t *testing.T) {
 
 func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 	tests := []struct {
-		name            string
-		token           string
-		getUserDataFunc func(string) (*user.User, *errors.CustomError)
-		encResp         *dtos.EncryptResponse
-		encErr          *errors.CustomError
-		expectedData    []map[string]string
-		expectedCode    codes.Code
-		expectedMsg     string
+		name             string
+		token            string
+		getUserDataFunc  func(string) (*user.User, *errors.CustomError)
+		getUserDataFunc2 func(string) (*user.User, *errors.CustomError)
+		encResp          *dtos.EncryptResponse
+		encErr           *errors.CustomError
+		expectedData     []map[string]string
+		expectedCode     codes.Code
+		expectedMsg      string
+		userId           *string
 	}{
 		{
 			name:  "success",
@@ -166,6 +168,34 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 			expectedCode: codes.Internal,
 			expectedMsg:  "enc err",
 		},
+		{
+			name:  "success",
+			token: "tkn",
+			getUserDataFunc: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
+			},
+			getUserDataFunc2: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u2", EDEKPrivate: "x2", EDEKPublic: "y2"}, nil
+			},
+			encResp:      &dtos.EncryptResponse{Data: []map[string]string{{"k": "v"}}},
+			expectedData: []map[string]string{{"k": "v"}},
+			expectedCode: codes.OK,
+			userId:       &[]string{"invalid"}[0],
+		},
+		{
+			name:  "userId Error",
+			token: "tkn",
+			getUserDataFunc: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
+			},
+			getUserDataFunc2: func(string) (*user.User, *errors.CustomError) {
+				return nil, errors.NewCustomError(errors.USRErrFetchUserData, fmt.Errorf("user not found"))
+			},
+			encErr:       errors.NewCustomError(errors.ESErrEncrypt, fmt.Errorf("enc err")),
+			expectedCode: codes.Unauthenticated,
+			expectedMsg:  "enc err",
+			userId:       &[]string{"valid"}[0],
+		},
 	}
 
 	for _, tc := range tests {
@@ -177,14 +207,26 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 			mockUserSvc := mocks.NewMockUserService(ctrl)
 			ud, ue := tc.getUserDataFunc(tc.token)
 			mockUserSvc.EXPECT().GetUserData(tc.token).Return(ud, ue)
-			if ue == nil {
-				mockUsecase.EXPECT().
-					Encrypt(gomock.Any(), ud.ID, ud.EDEKPrivate, ud.EDEKPublic, gomock.Any()).
-					Return(tc.encResp, tc.encErr)
+			if tc.userId != nil {
+				fmt.Println("jkdsajfkjasdklfjldf")
+				ud2, ue2 := tc.getUserDataFunc2(*tc.userId)
+				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(ud2, ue2)
+				if ue2 == nil {
+					mockUsecase.EXPECT().
+						Encrypt(gomock.Any(), ud2.ID, ud2.EDEKPrivate, ud2.EDEKPublic, gomock.Any()).
+						Return(tc.encResp, tc.encErr)
+				}
+			} else {
+				if ue == nil {
+					mockUsecase.EXPECT().
+						Encrypt(gomock.Any(), ud.ID, ud.EDEKPrivate, ud.EDEKPublic, gomock.Any()).
+						Return(tc.encResp, tc.encErr)
+				}
 			}
+
 			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc)
 			dataPB := mapper.ConvertToStructPB([]map[string]string{{"k": "v"}})
-			resp, err := handler.Encrypt(context.Background(), &pb.EncryptDataRequest{Token: tc.token, Data: dataPB})
+			resp, err := handler.Encrypt(context.Background(), &pb.EncryptDataRequest{Token: tc.token, Data: dataPB, UserId: tc.userId})
 
 			if tc.expectedData != nil {
 				if err != nil {
@@ -209,14 +251,16 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 
 func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 	tests := []struct {
-		name            string
-		token           string
-		getUserDataFunc func(string) (*user.User, *errors.CustomError)
-		decResp         *dtos.DecryptResponse
-		decErr          *errors.CustomError
-		expectedData    []map[string]string
-		expectedCode    codes.Code
-		expectedMsg     string
+		name             string
+		token            string
+		getUserDataFunc  func(string) (*user.User, *errors.CustomError)
+		decResp          *dtos.DecryptResponse
+		decErr           *errors.CustomError
+		expectedData     []map[string]string
+		expectedCode     codes.Code
+		expectedMsg      string
+		getUserDataFunc2 func(string) (*user.User, *errors.CustomError)
+		userId           *string
 	}{
 		{
 			name:  "success",
@@ -247,6 +291,34 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 			expectedCode: codes.Internal,
 			expectedMsg:  "dec err",
 		},
+		{
+			name:   "userid",
+			token:  "tkn",
+			userId: &[]string{"valid"}[0],
+			getUserDataFunc: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
+			},
+			getUserDataFunc2: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u2", EDEKPrivate: "x2", EDEKPublic: "y2"}, nil
+			},
+			decResp:      &dtos.DecryptResponse{Data: []map[string]string{{"k": "v"}}},
+			expectedData: []map[string]string{{"k": "v"}},
+			expectedCode: codes.OK,
+		},
+		{
+			name:  "userid error",
+			token: "tkn",
+			getUserDataFunc: func(string) (*user.User, *errors.CustomError) {
+				return &user.User{ID: "u1", EDEKPrivate: "x", EDEKPublic: "y"}, nil
+			},
+			getUserDataFunc2: func(string) (*user.User, *errors.CustomError) {
+				return nil, errors.NewCustomError(errors.USRErrFetchUserData, fmt.Errorf("user not found"))
+			},
+			userId:       &[]string{"invalid"}[0],
+			decErr:       errors.NewCustomError(errors.ESErrDecrypt, fmt.Errorf("dec err")),
+			expectedCode: codes.Unauthenticated,
+			expectedMsg:  "dec err",
+		},
 	}
 
 	for _, tc := range tests {
@@ -258,14 +330,24 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 			mockUserSvc := mocks.NewMockUserService(ctrl)
 			ud, ue := tc.getUserDataFunc(tc.token)
 			mockUserSvc.EXPECT().GetUserData(tc.token).Return(ud, ue)
-			if ue == nil {
-				mockUsecase.EXPECT().
-					Decrypt(gomock.Any(), ud.ID, ud.EDEKPrivate, ud.EDEKPublic, gomock.Any()).
-					Return(tc.decResp, tc.decErr)
+			if tc.userId != nil {
+				ud2, ue2 := tc.getUserDataFunc2(*tc.userId)
+				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(ud2, ue2)
+				if ue2 == nil {
+					mockUsecase.EXPECT().
+						Decrypt(gomock.Any(), ud2.ID, ud2.EDEKPrivate, ud2.EDEKPublic, gomock.Any()).
+						Return(tc.decResp, tc.decErr)
+				}
+			} else {
+				if ue == nil {
+					mockUsecase.EXPECT().
+						Decrypt(gomock.Any(), ud.ID, ud.EDEKPrivate, ud.EDEKPublic, gomock.Any()).
+						Return(tc.decResp, tc.decErr)
+				}
 			}
 			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc)
 			dataPB := mapper.ConvertToStructPB([]map[string]string{{"k": "v"}})
-			resp, err := handler.Decrypt(context.Background(), &pb.DecryptRequest{Token: tc.token, Data: dataPB})
+			resp, err := handler.Decrypt(context.Background(), &pb.DecryptRequest{Token: tc.token, Data: dataPB, UserId: tc.userId})
 
 			if tc.expectedData != nil {
 				if err != nil {
