@@ -10,9 +10,11 @@ type MockWebhookService struct {
 	mock.Mock
 }
 
-func (m *MockWebhookService) RegisterWebhookService(configData dtos.RegisterWebhookRequest) (interface{}, error) {
+func (m *MockWebhookService) RegisterWebhookService(configData dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, error) {
 	args := m.Called(configData)
-	return args.Get(0), args.Error(1)
+	res, _ := args.Get(0).(*dtos.SuccessResponse) // Type assertion
+	return res, args.Error(1)
+
 }
 
 func (m *MockWebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error) {

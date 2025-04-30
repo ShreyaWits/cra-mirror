@@ -10,13 +10,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	clientMocks "go.temporal.io/sdk/mocks"
 )
 
 func TestStoreConfigService_Success(t *testing.T) {
 	mockRepo := new(repoMock.MockRepository)
 	mockWebhook := new(serviceMock.MockWebhookService)
-
-	service := NewConfigService(mockRepo, mockWebhook)
+	mockTemporalClient := new(clientMocks.Client)
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
 
 	env := "dev"
 	serviceName := "test-service"
@@ -25,11 +26,11 @@ func TestStoreConfigService_Success(t *testing.T) {
 	storedResponse := map[string]interface{}{"status": "success"}
 	webhookData := `[{"url":"http://example.com/webhook"}]`
 
-	mockRepo.On("StoreConfig", env, serviceName, req).Return(storedResponse, nil)
+	mockRepo.On("StoreConfig", serviceName, env, req).Return(storedResponse, nil)
 	mockRepo.On("Get", mock.Anything, "/webhooks/dev/test-service").Return(webhookData, nil)
 
 	mockWebhook.On("NotifyWebhook", mock.Anything, req)
-
+	mockTemporalClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&clientMocks.WorkflowRun{}, nil)
 	result, err := service.StoreConfigService(env, serviceName, req)
 
 	assert.NoError(t, err)
@@ -42,8 +43,8 @@ func TestStoreConfigService_Success(t *testing.T) {
 func TestStoreConfigService_InvalidWebhookData(t *testing.T) {
 	mockRepo := new(repoMock.MockRepository)
 	mockWebhook := new(serviceMock.MockWebhookService)
-
-	service := NewConfigService(mockRepo, mockWebhook)
+	mockTemporalClient := new(clientMocks.Client)
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
 
 	env := "dev"
 	serviceName := "test-service"
@@ -55,7 +56,7 @@ func TestStoreConfigService_InvalidWebhookData(t *testing.T) {
 	webhookData := `[{"url":"http://example.com/webhook"` // Missing closing bracket
 
 	// Set up the mocks
-	mockRepo.On("StoreConfig", env, serviceName, req).Return(storedResponse, nil)
+	mockRepo.On("StoreConfig", serviceName, env, req).Return(storedResponse, nil)
 	mockRepo.On("Get", mock.Anything, "/webhooks/dev/test-service").Return(webhookData, nil)
 
 	// Run the service method
@@ -74,14 +75,14 @@ func TestStoreConfigService_InvalidWebhookData(t *testing.T) {
 func TestStoreConfigService_StoreError(t *testing.T) {
 	mockRepo := new(repoMock.MockRepository)
 	mockWebhook := new(serviceMock.MockWebhookService)
-	service := NewConfigService(mockRepo, mockWebhook)
+	mockTemporalClient := new(clientMocks.Client)
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
 
 	env := "dev"
 	serviceName := "test-service"
 	req := map[string]interface{}{"key": "value"}
 
-	mockRepo.On("StoreConfig", env, serviceName, req).Return(nil, errors.New("store failed"))
-
+	mockRepo.On("StoreConfig", serviceName, env, req).Return(nil,  errors.New("store failed"))
 	result, err := service.StoreConfigService(env, serviceName, req)
 
 	assert.Nil(t, result)
@@ -94,7 +95,8 @@ func TestStoreConfigService_StoreError(t *testing.T) {
 func TestStoreConfigService_NoWebhookFound(t *testing.T) {
 	mockRepo := new(repoMock.MockRepository)
 	mockWebhook := new(serviceMock.MockWebhookService)
-	service := NewConfigService(mockRepo, mockWebhook)
+	mockTemporalClient := new(clientMocks.Client)
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
 
 	env := "dev"
 	serviceName := "test-service"
@@ -102,7 +104,8 @@ func TestStoreConfigService_NoWebhookFound(t *testing.T) {
 
 	storedResponse := map[string]interface{}{"status": "success"}
 
-	mockRepo.On("StoreConfig", env, serviceName, req).Return(storedResponse, nil)
+	mockRepo.On("StoreConfig", serviceName, env, req).Return(storedResponse, nil)
+	
 	mockRepo.On("Get", mock.Anything, "/webhooks/dev/test-service").Return("", errors.New("not found"))
 
 	result, err := service.StoreConfigService(env, serviceName, req)
@@ -117,7 +120,8 @@ func TestStoreConfigService_NoWebhookFound(t *testing.T) {
 func TestGetConfigService_Success(t *testing.T) {
 	mockRepo := new(repoMock.MockRepository)
 	mockWebhook := new(serviceMock.MockWebhookService)
-	service := NewConfigService(mockRepo, mockWebhook)
+	mockTemporalClient := new(clientMocks.Client)
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
 
 	serviceName := "test-service"
 	env := "dev"
@@ -136,7 +140,8 @@ func TestGetConfigService_Success(t *testing.T) {
 func TestGetConfigValueService_Success(t *testing.T) {
 	mockRepo := new(repoMock.MockRepository)
 	mockWebhook := new(serviceMock.MockWebhookService)
-	service := NewConfigService(mockRepo, mockWebhook)
+	mockTemporalClient := new(clientMocks.Client)
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
 
 	serviceName := "test-service"
 	env := "dev"
@@ -156,7 +161,8 @@ func TestGetConfigValueService_Success(t *testing.T) {
 func TestGetConfigMetadataService_Success(t *testing.T) {
 	mockRepo := new(repoMock.MockRepository)
 	mockWebhook := new(serviceMock.MockWebhookService)
-	service := NewConfigService(mockRepo, mockWebhook)
+	mockTemporalClient := new(clientMocks.Client)
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
 
 	serviceName := "test-service"
 	env := "dev"

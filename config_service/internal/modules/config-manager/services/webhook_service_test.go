@@ -37,7 +37,7 @@ func TestRegisterWebhookService(t *testing.T) {
 	// Test success case
 	result, err := webHookService.RegisterWebhookService(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "Webhook registered successfully for service: service1 in environment: prod", result)
+	assert.Equal(t, "Webhook registered successfully", result.Message)
 
 	// Test duplicate webhook
 	mockRepo.On("Get", mock.Anything, key).Return(`[{"url":"http://example.com/webhook","method":"POST"}]`, nil).Once()

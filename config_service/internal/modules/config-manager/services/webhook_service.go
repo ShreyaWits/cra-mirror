@@ -32,7 +32,7 @@ func (s *WebhookService) On(param1 string, argument mock.AnythingOfTypeArgument,
 }
 
 type IWebhookService interface {
-	RegisterWebhookService(req dtos.RegisterWebhookRequest) (interface{}, error)
+	RegisterWebhookService(req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, error)
 	GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error)
 	DeleteWebhook(env, service, url, method string) (string, error)
 	DeleteAllWebhooks(env, service string) error
@@ -43,7 +43,7 @@ func NewWebhookService(repo repositories.IConfigRepo) IWebhookService {
 	return &WebhookService{Repo: repo}
 }
 
-func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest) (interface{}, error) {
+func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, error) {
 	key := fmt.Sprintf("/webhooks/%s/%s", req.Environment, req.ServiceName)
 	ctx := context.Background()
 	var hooks []dtos.RegisterWebhookRequest
@@ -69,9 +69,13 @@ func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest)
 	if err := s.Repo.Set(ctx, key, string(data), -1); err != nil {
 		return nil, err
 	}
-
-	res := fmt.Sprintf("Webhook registered successfully for service: %s in environment: %s", req.ServiceName, req.Environment)
-	return res, nil
+	response := &dtos.SuccessResponse{
+		StatusCode: 201,
+		Message:    "Webhook registered successfully",
+		Data:       map[string]interface{}{"webhook": req},
+	}
+	// res := fmt.Sprintf("Webhook registered successfully for service: %s in environment: %s", req.ServiceName, req.Environment)
+	return response, nil
 }
 func (s *WebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error) {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)

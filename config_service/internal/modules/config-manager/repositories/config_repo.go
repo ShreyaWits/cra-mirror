@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -21,13 +20,12 @@ import (
 )
 
 type ConfigRepository struct {
-	EtcdClient etcdDB.EtcdClientImpl // ✅ Injected interface
+	EtcdClient *etcdDB.EtcdClientImpl
 }
 
 type IConfigRepo interface {
 	StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error)
 	GetConfig(serviceName, environment string) (map[string]interface{}, error)
-	GetAllKeys(prefix string) (map[string]string, error)
 	GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error)
 	GetConfigValue(serviceName, environment, key string) (interface{}, error)
 	Set(ctx context.Context, key string, data string, ttl time.Duration) error
@@ -37,47 +35,53 @@ type IConfigRepo interface {
 	GetAdminByCredentials(username, password string) (*models.Admin, error)
 }
 
-func NewConfigRepository(etcdClient etcdDB.EtcdClientImpl) IConfigRepo {
+func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl) IConfigRepo {
 	return &ConfigRepository{EtcdClient: etcdClient}
 }
 
 func (r *ConfigRepository) StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error) {
 
 	// Store each config field as a separate key
-	baseKey := fmt.Sprintf("%s/%s", serviceName, environment)
+	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
 
 	log.Printf("Storing config with base key: %s", baseKey)
-
+	changeHistory := []string{}
 	// Store config data fields
 	for key, value := range configData {
 		configKey := fmt.Sprintf("%s/%s", baseKey, key)
 		valueStr := fmt.Sprintf("%v", value)
 		log.Printf("Storing key: %s, value: %s", configKey, valueStr)
-
-		err := r.EtcdClient.PutKey(configKey, valueStr)
+		existingVal, err := r.GetConfigValue(serviceName, environment, key)
+		if err != nil {
+			changeHistory = append(changeHistory, fmt.Sprintf("added: %s", key))
+		} else if existingVal != valueStr {
+			changeHistory = append(changeHistory, fmt.Sprintf("updated: %s", key))
+		}
+		err = r.EtcdClient.PutKey(configKey, valueStr)
 		if err != nil {
 			log.Printf("Error storing key %s: %v", configKey, err)
 			return nil, fmt.Errorf("failed to store config field %s: %v", key, err)
 		}
 	}
-
+	log.Println("Config data stored successfully. Change history: ", changeHistory,)
 	// Store metadata
-	now := time.Now()
-	metadata := map[string]string{
-		"created_at": now.Format(time.RFC3339Nano),
-		"updated_at": now.Format(time.RFC3339Nano),
-	}
+	// now := time.Now()
+	// type ConfigMetadata struct {
+	// 	LastModifiedBy string    `json:"last_modified_by"`
+	// 	ChangeHistory  []string  `json:"change_history"`
+	// 	LastModifiedAt time.Time `json:"last_modified_at"`
+	// }
+	// result := models.ConfigMetadata{}
+	// for key, value := range metadata {
+	// 	metadataKey := fmt.Sprintf("/metadata/%s/%s", baseKey, key)
+	// 	log.Printf("Storing metadata key: %s, value: %s", metadataKey, value)
 
-	for key, value := range metadata {
-		metadataKey := fmt.Sprintf("%s/%s", baseKey, key)
-		log.Printf("Storing metadata key: %s, value: %s", metadataKey, value)
-
-		err := r.EtcdClient.PutKey(metadataKey, value)
-		if err != nil {
-			log.Printf("Error storing metadata key %s: %v", metadataKey, err)
-			return nil, fmt.Errorf("failed to store metadata field %s: %v", key, err)
-		}
-	}
+	// 	err := r.EtcdClient.PutKey(metadataKey, value)
+	// 	if err != nil {
+	// 		log.Printf("Error storing metadata key %s: %v", metadataKey, err)
+	// 		return nil, fmt.Errorf("failed to store metadata field %s: %v", key, err)
+	// 	}
+	// }
 
 	log.Printf("Successfully stored all config and metadata for %s", baseKey)
 	return configData, nil
@@ -99,42 +103,52 @@ func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[strin
 	}
 
 	// Create result map
-	result := make(map[string]interface{})
+	type ConfigMetadata struct {
+		LastModifiedBy string    `json:"last_modified_by"`
+		ChangeHistory  []string  `json:"change_history"`
+		LastModifiedAt time.Time `json:"last_modified_at"`
+	}
+	result := map[string]interface{}{}
 
 	// Process each key-value pair
 	for key, value := range keys {
 		// Skip metadata fields
-		if key == "created_at" || key == "updated_at" {
-			continue
-		}
 		result[key] = value
 		log.Printf("Retrieved key: %s, value: %v", key, value)
 	}
 
-	log.Printf("Successfully retrieved all config for %s", baseKey)
+	// log.Printf("Successfully retrieved all config for %s", baseKey)
 	return result, nil
-}
-
-func (r *ConfigRepository) GetAllKeys(prefix string) (map[string]string, error) {
-	return r.EtcdClient.GetAllKeys(prefix)
 }
 
 // GetConfigMetadata retrieves metadata for a configuration
 func (r *ConfigRepository) GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error) {
 
 	key := fmt.Sprintf("/metadata/%s/%s", environment, serviceName)
-	res, err := r.EtcdClient.GetKey(key)
+	_, err := r.EtcdClient.GetAllKeys(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get metadata: %v", err)
 	}
 
-	var metadata models.ConfigMetadata
-	err = json.Unmarshal([]byte(res), &metadata)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v", err)
-	}
+	// Create result map
+	result := models.ConfigMetadata{}
 
-	return &metadata, nil
+	// Process each key-value pair
+	// for key, value := range keys {
+	// 	// Skip metadata fields
+	// 	switch key {
+	// 	case "created_at":
+	// 		result["created_at"] = value
+	// 	case "updated_at":
+	// 		result.UpdatedAt = value
+	// 	default:
+	// 		log.Printf("Unknown metadata key: %s", key)
+	// 	}
+	// 	log.Printf("Retrieved key: %s, value: %v", key, value)
+	// }
+
+	log.Printf("Successfully retrieved meta for config for %s", key)
+	return &result, nil
 }
 
 // GetConfigValue retrieves a specific config value from etcd
