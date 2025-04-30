@@ -41,7 +41,6 @@ func (h *EncryptionHandlerImpl) Encrypt(ctx context.Context, req *pb.EncryptData
 	encryptedReq := &dtos.EncryptRequest{
 		Data: mappedRequest,
 	}
-	fmt.Print("*******Key", keyId)
 
 	// Execute use case
 	response, customErr := h.encryptionUseCase.Encrypt(ctx, keyId, userData.EDEKPrivate, userData.EDEKPublic, encryptedReq)

@@ -17,7 +17,7 @@ func NewKeyManager(kms kms.KmsService) KeyManager {
 
 func (k *KeyManagerImpl) StoreKEK(keyID string, kek []byte) *errors.CustomError {
 	if err := k.kms.StoreKEK(keyID, kek); err != nil {
-		return errors.NewCustomError(errors.KMGErrStoreKEK, err)
+		return err
 	}
 	return nil
 }
@@ -25,7 +25,7 @@ func (k *KeyManagerImpl) StoreKEK(keyID string, kek []byte) *errors.CustomError 
 func (k *KeyManagerImpl) RetrieveKEK(keyID string) ([]byte, *errors.CustomError) {
 	kek, err := k.kms.RetrieveKEK(keyID)
 	if err != nil {
-		return nil, errors.NewCustomError(errors.KMSerrRetrieveKEK, err)
+		return nil, err
 	}
 	return kek, nil
 }

@@ -13,19 +13,22 @@ import (
 )
 
 // HandleDecrypt handles the decryption request
-func (h *EncryptionHandlerImpl) Decrypt(ctx context.Context, req *pb.DecryptRequest) (*pb.DecryptResponse, error) {
+func (h *EncryptionHandlerImpl) Decrypt(ctx context.Context, req *pb.DecryptRequest) (resp *pb.DecryptResponse, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("Fatal Error", fmt.Errorf("%v", r))
-			status.Error(codes.Internal, fmt.Sprintf("%v", r))
+			resp = nil
+			err = status.Error(codes.Internal, fmt.Sprintf("%v", r))
 		}
 	}()
+
 	token := req.Token
 
 	userData, customErr := h.userService.GetUserData(token)
 	if customErr != nil {
 		return nil, status.Error(codes.Unauthenticated, customErr.Error())
 	}
+
 	var keyId string
 	if req.UserId == nil || *req.UserId == "" {
 		keyId = userData.ID
@@ -36,7 +39,7 @@ func (h *EncryptionHandlerImpl) Decrypt(ctx context.Context, req *pb.DecryptRequ
 		}
 		keyId = userData.ID
 	}
-	fmt.Println("*******Key Decrypt", keyId)
+
 	mappedRequest := mapper.ConvertFromStructPB(req.Data)
 	decryptRequest := &dtos.DecryptRequest{Data: mappedRequest}
 
