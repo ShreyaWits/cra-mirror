@@ -1,0 +1,65 @@
+{
+	"SRV001": "Content-Type must be application/json",
+    "SRV002": "Invalid JSON in request body",
+    "SRV003": "Invalid request format",
+    "SRV004": "Validation failed",
+    "SRV005": "Something went wrong!",
+    "SRV006": "Failed to save link",
+    "SRV007": "Invalid request payload",
+    "SRV008": "Link could not be deleted",
+    
+
+    "SUC001": "Link generated successfully",
+    "SUC002": "Protected link generated successfully",
+    "SUC003": "Data fetched successfully",
+    "SUC004": "Protected link deleted successfully",
+
+    "VLD013": "User not found",
+	"VLD014": "Mobile number is required",
+	"VLD015": "Invalid email format",
+	"VLD016": "user_id and otp are required",
+	"VLD017": "Invalid value: should be one of ",
+	"VLD018": "Validation failed for ",
+    "VLD019": "The user associated with this OTP is not found or does not match the provided user.",
+
+
+    "AUTH001": "Unauthorized",
+    "AUTH002": "Invalid username or password",
+    "AUTH003": "Access token has expired",
+    "AUTH004": "Refresh token has expired",
+    "AUTH005": "Invalid access token",
+    "AUTH006": "Invalid refresh token",
+    "AUTH007": "Token is missing from the request",
+    "AUTH008": "Access denied",
+    "AUTH009": "Login successful",
+    "AUTH010": "Logout successful",
+    "AUTH011": "Failed to generate token",
+    "AUTH012": "Failed to verify token",
+    "AUTH013": "Account is inactive",
+    "AUTH014": "Account is locked",
+    "AUTH015": "Session has expired",
+
+    "AUTH016": "OTP sent successfully",
+    "AUTH017": "Failed to send OTP",
+    "AUTH018": "Invalid OTP",
+    "AUTH019": "OTP has expired or not found.",
+    "AUTH020": "OTP verified successfully",
+    "AUTH021": "Failed to save OTP",
+    "AUTH022": "OTP is mismatched",
+    
+    "AUTH023": "User registered successfully",
+    "AUTH024": "Email is already registered",
+    "AUTH025": "Mobile number is already registered",
+    "AUTH026": "Username is already taken",
+    "AUTH027": "Registration validation failed",
+    "AUTH028": "Failed to create user",
+    "AUTH029": "Failed to retrieve OTP",
+
+    "AUTH030": "The link you're trying to access has expired. Please request a new one.",
+    "AUTH031": "Link Expired",
+
+    "AUTH032": "The OTP you entered is no longer valid or missing. Please request a new one.",
+    "AUTH033": "The OTP you entered is either incorrect or has expired. Please request a new OTP and try again."
+}
+
+
