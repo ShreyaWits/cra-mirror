@@ -225,11 +225,11 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 				mockUserSvc.EXPECT().GetUserData(tc.token).Return(tokenUserData, tokenErr)
 			}
 			if tc.userId != nil {
-				ud2, ue2 := tc.getUserDataFunc2(*tc.userId)
-				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(ud2, ue2)
-				if ue2 == nil {
+				userIdData, userIdErr := tc.getUserDataFunc2(*tc.userId)
+				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(userIdData, userIdErr)
+				if userIdErr == nil {
 					mockUsecase.EXPECT().
-						Encrypt(gomock.Any(), ud2.ID, ud2.EDEKPrivate, ud2.EDEKPublic, gomock.Any()).
+						Encrypt(gomock.Any(), userIdData.ID, userIdData.EDEKPrivate, userIdData.EDEKPublic, gomock.Any()).
 						Return(tc.encResp, tc.encErr)
 				}
 			} else {
@@ -364,11 +364,11 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 			}
 
 			if tc.userId != nil {
-				ud2, ue2 := tc.getUserDataFunc2(*tc.userId)
-				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(ud2, ue2)
-				if ue2 == nil {
+				userIdData, userIdErr := tc.getUserDataFunc2(*tc.userId)
+				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(userIdData, userIdErr)
+				if userIdErr == nil {
 					mockUsecase.EXPECT().
-						Decrypt(gomock.Any(), ud2.ID, ud2.EDEKPrivate, ud2.EDEKPublic, gomock.Any()).
+						Decrypt(gomock.Any(), userIdData.ID, userIdData.EDEKPrivate, userIdData.EDEKPublic, gomock.Any()).
 						Return(tc.decResp, tc.decErr)
 				}
 			} else {
