@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	workflows "nps-config-service/pkg/temporal"
+	"os"
 
 	"time" // Required for rand.Seed
 
@@ -15,10 +17,13 @@ import (
 func main() {
 	// Seed the random number generator once in main
 	rand.Seed(time.Now().UnixNano())
-
+	endpoint := os.Getenv("TEMPORAL_SERVER_URL")
+	fmt.Println("Endpoint:", endpoint)
 	// Create a Temporal Client
 	// Assumes Temporal Frontend is running on localhost:7233
-	c, err := client.Dial(client.Options{})
+	c, err := client.Dial(client.Options{
+		HostPort: endpoint,
+	})
 	if err != nil {
 		log.Fatalln("Unable to create Temporal client", err)
 	}

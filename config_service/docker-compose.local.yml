@@ -15,6 +15,16 @@ services:
         - PORT=3006
         - ETCD_ENDPOINT=http://etcd:2379
         - IS_DOCKER=true
+  worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    # restart: always
+    environment:
+      - IS_DOCKER=true
+      - TEMPORAL_SERVER_URL=host.docker.internal:7233
+    networks:
+      - nps2.0
   etcd:
     image: quay.io/coreos/etcd:v3.5.15 # Use the latest stable version
     container_name: etcd
