@@ -22,9 +22,9 @@ func (m *MockWebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequ
 
 	// Retrieve the return values that were set using .Return() in the test.
 	// Ensure correct type casting for each expected return value.
-	var successResp *dtos.SuccessResponse
+	var successResp dtos.SuccessResponse
 	if args.Get(0) != nil {
-		successResp = args.Get(0).(*dtos.SuccessResponse)
+		successResp = args.Get(0).(dtos.SuccessResponse)
 	}
 
 	var serviceErrResp *dtos.ServiceErrorResponse
@@ -33,7 +33,7 @@ func (m *MockWebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequ
 	}
 
 	// Return the retrieved values.
-	return successResp, serviceErrResp
+	return &successResp, serviceErrResp
 }
 
 // GetWebhooks is a mock implementation of the corresponding IWebhookService method.

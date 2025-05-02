@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services/mocks"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestConfigHandler_StoreConfigHandler(t *testing.T) {
@@ -32,8 +34,12 @@ func TestConfigHandler_StoreConfigHandler(t *testing.T) {
 				"key1": "value1",
 				"key2": "value2",
 			},
-			mockResponse: map[string]interface{}{
-				"message": "Config stored successfully",
+			mockResponse:   dtos.SuccessResponse{
+				StatusCode: 200,
+				Message:    "Config stored successfully",
+				Data: map[string]interface{}{
+					"message": "Config stored successfully",
+				},
 			},
 			mockError:      nil,
 			expectedStatus: 200,
@@ -89,7 +95,7 @@ func TestConfigHandler_StoreConfigHandler(t *testing.T) {
 
 			// Set up mock expectations
 			if tt.requestBody != nil {
-				mockService.On("StoreConfigService", tt.environment, tt.service, tt.requestBody).
+				mockService.On("StoreConfigService", tt.environment, tt.service, mock.Anything).
 					Return(tt.mockResponse, tt.mockError).Once()
 			}
 

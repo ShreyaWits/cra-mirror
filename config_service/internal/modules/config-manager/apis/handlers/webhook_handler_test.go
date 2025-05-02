@@ -1,14 +1,14 @@
 package handler
 
 import (
-	"errors"
-	customErr "nps-config-service/internal/common/errors"
-	"nps-config-service/internal/modules/config-manager/apis/dtos"
-	"testing"
-	mocks_service "nps-config-service/internal/modules/config-manager/services/mocks"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
+	customErr "nps-config-service/internal/common/errors"
+	"nps-config-service/internal/modules/config-manager/apis/dtos"
+	mocks_service "nps-config-service/internal/modules/config-manager/services/mocks"
+	"testing"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -21,11 +21,11 @@ func setupFiberWithHandler(h *WebhookHandler) *fiber.App {
 	app := fiber.New()
 
 	app.Post("/register", func(c *fiber.Ctx) error {
-		var body map[string]interface{}
+		var body *dtos.RegisterWebhookRequest
 		if err := c.BodyParser(&body); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 		}
-		c.Locals("contextData", &body)
+		c.Locals("contextData", body)
 		return h.RegisterWebhook(c)
 	})
 
@@ -56,8 +56,12 @@ func TestRegisterWebhook_Success(t *testing.T) {
 		ServiceName: "my-service",
 		Environment: "dev",
 	}
-
-	mockService.On("RegisterWebhookService", request).Return(request, nil)
+	successRes := dtos.SuccessResponse{StatusCode: 201, 
+		Message: "Webhook registered successfully", 
+		Data: map[string]interface {}{
+			"message": "Webhook registered successfully",
+		},}
+	mockService.On("RegisterWebhookService", request).Return(successRes, nil)
 
 	body, _ := json.Marshal(request)
 
@@ -66,7 +70,7 @@ func TestRegisterWebhook_Success(t *testing.T) {
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 	mockService.AssertExpectations(t)
 }
 
