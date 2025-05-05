@@ -3,7 +3,9 @@ package middleware
 import (
 	"context"
 	claimErrorResponse "nps-reciept-service/common"
+	"nps-reciept-service/internal/utils"
 	"nps-reciept-service/proto"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,6 +31,21 @@ func ValidateClaimRequestInterceptor() grpc.UnaryServerInterceptor {
 		}
 		if claimReq.TransactionType == "" {
 			return nil, claimErrorResponse.SendError("CLM0003", codes.InvalidArgument)
+		}
+
+		// Validate PRAN length
+		if len(claimReq.Pran) != 12 {
+			return nil, claimErrorResponse.SendError("CLM0001", codes.InvalidArgument)
+		}
+
+		// Validate date_of_claim format
+		_, err := time.Parse("2006-01-02", claimReq.DateOfClaim)
+		if err != nil {
+			return nil, claimErrorResponse.SendError("CLM0004", codes.InvalidArgument)
+		}
+
+		if claimReq.TransactionType != "" && utils.IsNumeric(claimReq.TransactionType) {
+			return nil, claimErrorResponse.SendError("CLM0008", codes.InvalidArgument)
 		}
 
 		// All good → call the actual handler
