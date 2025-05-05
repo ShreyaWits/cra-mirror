@@ -4,6 +4,7 @@ import (
 	"context"
 	claimErrorResponse "nps-reciept-service/common"
 	"nps-reciept-service/internal/utils"
+	"regexp"
 
 	pb "nps-reciept-service/proto"
 	"time"
@@ -44,10 +45,16 @@ func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*
 		return nil, claimErrorResponse.SendError("CLM0004")
 	}
 
+	// 💥 New validation: TransactionType must be non-numeric
+	isNumeric := regexp.MustCompile(`^\d+$`).MatchString
+	if req.TransactionType != "" && isNumeric(req.TransactionType) {
+		return nil, claimErrorResponse.SendError("CLM0008")
+	}
+
 	last4 := req.Pran[len(req.Pran)-4:]
 	datePart := date.Format("060102")
 
-	key := "claim:sequence:" + datePart + ":" + last4
+	key := "claim:sequence:" + datePart 
 	utils.LogInfo("Generating sequence key", map[string]interface{}{
 		"key": key,
 	})

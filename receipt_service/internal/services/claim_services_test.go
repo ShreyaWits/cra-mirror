@@ -105,6 +105,19 @@ func TestClaimServer_ProcessClaim(t *testing.T) {
 		assert.ErrorContains(t, err, "CLM0004")
 	})
 
+	t.Run("Invalid TransactionType", func(t *testing.T) {
+		server := NewClaimServer(nil)
+		req := &pb.ClaimRequest{
+			Pran:            "123456789012",
+			DateOfClaim:     "2024-04-24",
+			TransactionType: "12345",
+		}
+
+		resp, err := server.ProcessClaim(context.Background(), req)
+		assert.Nil(t, resp)
+		assert.ErrorContains(t, err, "CLM0008")
+	})
+
 	t.Run("Redis Incr Error", func(t *testing.T) {
 		mock := &mockRedisClient{
 			incr: func(ctx context.Context, key string) *redis.IntCmd {
@@ -118,13 +131,13 @@ func TestClaimServer_ProcessClaim(t *testing.T) {
 				return cmd
 			},
 		}
-	
+
 		server := NewClaimServer(mock)
 		req := &pb.ClaimRequest{
 			Pran:        "123456789012",
 			DateOfClaim: "2024-04-24",
 		}
-	
+
 		resp, err := server.ProcessClaim(context.Background(), req)
 		assert.Nil(t, resp)
 		assert.ErrorContains(t, err, "CLM0005")
@@ -143,13 +156,13 @@ func TestClaimServer_ProcessClaim(t *testing.T) {
 				return cmd
 			},
 		}
-	
+
 		server := NewClaimServer(mock)
 		req := &pb.ClaimRequest{
 			Pran:        "123456789012",
 			DateOfClaim: "2024-04-24",
 		}
-	
+
 		// Should still succeed even with expire error as it's handled gracefully
 		resp, err := server.ProcessClaim(context.Background(), req)
 		assert.NoError(t, err)
