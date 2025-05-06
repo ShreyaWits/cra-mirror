@@ -3,6 +3,8 @@ package middlewares
 import (
 	"log"
 	commonDtos "protected_link/internal/common/api/dtos"
+	"protected_link/internal/common/constants"
+	"protected_link/internal/common/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -24,7 +26,7 @@ func CommonRequestValidator() fiber.Handler {
 
 					commonDtos.ApiResponseDto{
 						Success: false,
-						Message: "Content-Type must be application/json",
+						Error:   utils.GetMessage(string(constants.RequestBodyInvalidContentType)),
 					})
 
 			}
@@ -34,7 +36,7 @@ func CommonRequestValidator() fiber.Handler {
 			if err := c.BodyParser(&body); err != nil {
 				return c.Status(fiber.StatusBadRequest).JSON(commonDtos.ApiResponseDto{
 					Success: false,
-					Message: "Invalid JSON in request body",
+					Error:   utils.GetMessage(string(constants.RequestBodyInvalidJSON)),
 				})
 			}
 		}

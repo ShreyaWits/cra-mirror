@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	commonDtos "protected_link/internal/common/api/dtos"
+	"protected_link/internal/common/constants"
+	"protected_link/internal/common/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,7 +22,7 @@ func RecoveryMiddleware() fiber.Handler {
 				// Respond with a structured JSON error message
 				_ = c.Status(fiber.StatusInternalServerError).JSON(commonDtos.ApiResponseDto{
 					Success: false,
-					Message: "Something went wrong!",
+					Message: utils.GetMessage(string(constants.InternalServerError)),
 					Error:   errMsg})
 			}
 		}()

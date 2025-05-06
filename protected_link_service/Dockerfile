@@ -27,6 +27,9 @@
     # Copy the compiled binary from builder
     COPY --from=builder /app/protected_link .
     
+    # ✅ Copy the internal config files needed at runtime
+    COPY --from=builder /app/internal/configs /app/internal/configs
+
     # Give execute permission (optional if already executable)
     RUN chmod +x /app/protected_link
     
