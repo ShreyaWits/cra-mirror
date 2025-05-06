@@ -18,8 +18,6 @@ func LoadMessages() {
 		env := os.Getenv("APP_ENV")
 		var path string
 
-		log.Println("✅ Environment configuration loaded successfully", env)
-
 		switch env {
 		case "docker":
 			path = "/app/internal/configs/message_helper_config.json"
