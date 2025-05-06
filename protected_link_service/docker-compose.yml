@@ -25,11 +25,10 @@ services:
     networks:
       - protected-link
 
-  redis:
+ 
   redis:
     image: redis:latest
     container_name: redis
-    command: redis-server --requirepass ${DB_PASSWORD}
     command: redis-server --requirepass ${DB_PASSWORD}
     ports:
       - "6379:6379"
