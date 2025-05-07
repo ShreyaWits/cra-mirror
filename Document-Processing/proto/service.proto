@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package documentprocessing;
+
+option go_package = "Document-Processing/proto";
+
+// Health check service definition
+service HealthService {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+// Health check request message
+message HealthCheckRequest {
+  string service = 1;
+}
+
+// Health check response message
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+  }
+  ServingStatus status = 1;
+}
+
+// Document processing service definition
+service DocumentProcessingService {
+  rpc ProcessDocument(ProcessDocumentRequest) returns (ProcessDocumentResponse) {}
+}
+
+// Document processing request message
+message ProcessDocumentRequest {
+  bytes document = 1;
+  string document_type = 2;
+}
+
+// Document processing response message
+message ProcessDocumentResponse {
+  bool success = 1;
+  string message = 2;
+  bytes processed_document = 3;
+} 
