@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package messaging_proto;
+
+option go_package = "github.com/shubhpreet/protos/messaging_service;messaging_proto";
+service MessagingService {
+  // Publishes a binary message to the specified Kafka topic.
+  rpc PublishMessage(PublishRequest) returns (PublishResponse);
+
+  // Streams messages from a Kafka topic to the consumer.
+  rpc SubscribeStream(SubscribeRequest) returns (stream KafkaMessage);
+}
+
+// Request for publishing a message.
+message PublishRequest {
+  string topic = 1;
+  bytes value = 2;
+  string key = 3;
+  string group_id = 4;
+  map<string, string> headers = 5;
+  repeated string brokers = 6;
+  int32 min_bytes = 7; // Optional, default: 10 * 1024 (10 KB)
+  int32 max_bytes = 8; // Optional, default: 10 * 1024 * 1024 (10 MB)
+}
+
+// Response after publishing.
+message PublishResponse {
+  string status = 1;
+  string message_id = 2;
+}
+
+// Request for subscribing to a topic.
+message SubscribeRequest {
+  string topic = 1;
+  string group_id = 2;
+  repeated string brokers = 3;
+  map<string, string> headers = 4;
+  int32 min_bytes = 5; // Optional, default: 10 * 1024 (10 KB)
+  int32 max_bytes = 6; // Optional, default: 10 * 1024 * 1024 (10 MB)
+}
+
+// Kafka message to stream.
+message KafkaMessage {
+  string key = 1;
+  bytes value = 2;
+  map<string, string> headers = 3;
+  int64 timestamp = 4;
+}
