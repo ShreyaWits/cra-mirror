@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"messaging-service/pkg/kafka"
-	pb "messaging-service/protos/messaging_service"
+	"messaging_service/pkg/kafka"
+	pb "messaging_service/protos/messaging_service"
 )
 
 type MessagingServer struct {

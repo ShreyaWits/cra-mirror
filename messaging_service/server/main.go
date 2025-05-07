@@ -2,10 +2,10 @@ package main
 
 import (
 	"log"
-	"messaging-service/internal/messaging_service/service"
+	"messaging_service/internal/messaging_service/service"
 	"net"
 
-	pb "messaging-service/protos/messaging_service"
+	pb "messaging_service/protos/messaging_service"
 
 	"google.golang.org/grpc"
 )

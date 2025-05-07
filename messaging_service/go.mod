@@ -1,4 +1,4 @@
-module messaging-service
+module messaging_service
 
 go 1.23
 

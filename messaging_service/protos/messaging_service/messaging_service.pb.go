@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: protos/messaging_service/messaging_service.proto
+// source: messaging_service/protos/messaging_service/messaging_service.proto
 
 package messaging_proto
 
@@ -38,7 +38,7 @@ type PublishRequest struct {
 
 func (x *PublishRequest) Reset() {
 	*x = PublishRequest{}
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[0]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -50,7 +50,7 @@ func (x *PublishRequest) String() string {
 func (*PublishRequest) ProtoMessage() {}
 
 func (x *PublishRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[0]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -63,7 +63,7 @@ func (x *PublishRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishRequest.ProtoReflect.Descriptor instead.
 func (*PublishRequest) Descriptor() ([]byte, []int) {
-	return file_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{0}
+	return file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *PublishRequest) GetTopic() string {
@@ -133,7 +133,7 @@ type PublishResponse struct {
 
 func (x *PublishResponse) Reset() {
 	*x = PublishResponse{}
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[1]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -145,7 +145,7 @@ func (x *PublishResponse) String() string {
 func (*PublishResponse) ProtoMessage() {}
 
 func (x *PublishResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[1]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -158,7 +158,7 @@ func (x *PublishResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishResponse.ProtoReflect.Descriptor instead.
 func (*PublishResponse) Descriptor() ([]byte, []int) {
-	return file_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{1}
+	return file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *PublishResponse) GetStatus() string {
@@ -190,7 +190,7 @@ type SubscribeRequest struct {
 
 func (x *SubscribeRequest) Reset() {
 	*x = SubscribeRequest{}
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[2]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -202,7 +202,7 @@ func (x *SubscribeRequest) String() string {
 func (*SubscribeRequest) ProtoMessage() {}
 
 func (x *SubscribeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[2]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -215,7 +215,7 @@ func (x *SubscribeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeRequest) Descriptor() ([]byte, []int) {
-	return file_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{2}
+	return file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SubscribeRequest) GetTopic() string {
@@ -273,7 +273,7 @@ type KafkaMessage struct {
 
 func (x *KafkaMessage) Reset() {
 	*x = KafkaMessage{}
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[3]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -285,7 +285,7 @@ func (x *KafkaMessage) String() string {
 func (*KafkaMessage) ProtoMessage() {}
 
 func (x *KafkaMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[3]
+	mi := &file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -298,7 +298,7 @@ func (x *KafkaMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KafkaMessage.ProtoReflect.Descriptor instead.
 func (*KafkaMessage) Descriptor() ([]byte, []int) {
-	return file_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{3}
+	return file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *KafkaMessage) GetKey() string {
@@ -329,11 +329,11 @@ func (x *KafkaMessage) GetTimestamp() int64 {
 	return 0
 }
 
-var File_protos_messaging_service_messaging_service_proto protoreflect.FileDescriptor
+var File_messaging_service_protos_messaging_service_messaging_service_proto protoreflect.FileDescriptor
 
-const file_protos_messaging_service_messaging_service_proto_rawDesc = "" +
+const file_messaging_service_protos_messaging_service_messaging_service_proto_rawDesc = "" +
 	"\n" +
-	"0protos/messaging_service/messaging_service.proto\x12\x0fmessaging_proto\"\xc1\x02\n" +
+	"Bmessaging_service/protos/messaging_service/messaging_service.proto\x12\x0fmessaging_proto\"\xc1\x02\n" +
 	"\x0ePublishRequest\x12\x14\n" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value\x12\x10\n" +
@@ -373,19 +373,19 @@ const file_protos_messaging_service_messaging_service_proto_rawDesc = "" +
 	"\x0fSubscribeStream\x12!.messaging_proto.SubscribeRequest\x1a\x1d.messaging_proto.KafkaMessage0\x01B@Z>github.com/shubhpreet/protos/messaging_service;messaging_protob\x06proto3"
 
 var (
-	file_protos_messaging_service_messaging_service_proto_rawDescOnce sync.Once
-	file_protos_messaging_service_messaging_service_proto_rawDescData []byte
+	file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescOnce sync.Once
+	file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescData []byte
 )
 
-func file_protos_messaging_service_messaging_service_proto_rawDescGZIP() []byte {
-	file_protos_messaging_service_messaging_service_proto_rawDescOnce.Do(func() {
-		file_protos_messaging_service_messaging_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protos_messaging_service_messaging_service_proto_rawDesc), len(file_protos_messaging_service_messaging_service_proto_rawDesc)))
+func file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescGZIP() []byte {
+	file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescOnce.Do(func() {
+		file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_messaging_service_protos_messaging_service_messaging_service_proto_rawDesc), len(file_messaging_service_protos_messaging_service_messaging_service_proto_rawDesc)))
 	})
-	return file_protos_messaging_service_messaging_service_proto_rawDescData
+	return file_messaging_service_protos_messaging_service_messaging_service_proto_rawDescData
 }
 
-var file_protos_messaging_service_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_protos_messaging_service_messaging_service_proto_goTypes = []any{
+var file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_messaging_service_protos_messaging_service_messaging_service_proto_goTypes = []any{
 	(*PublishRequest)(nil),   // 0: messaging_proto.PublishRequest
 	(*PublishResponse)(nil),  // 1: messaging_proto.PublishResponse
 	(*SubscribeRequest)(nil), // 2: messaging_proto.SubscribeRequest
@@ -394,7 +394,7 @@ var file_protos_messaging_service_messaging_service_proto_goTypes = []any{
 	nil,                      // 5: messaging_proto.SubscribeRequest.HeadersEntry
 	nil,                      // 6: messaging_proto.KafkaMessage.HeadersEntry
 }
-var file_protos_messaging_service_messaging_service_proto_depIdxs = []int32{
+var file_messaging_service_protos_messaging_service_messaging_service_proto_depIdxs = []int32{
 	4, // 0: messaging_proto.PublishRequest.headers:type_name -> messaging_proto.PublishRequest.HeadersEntry
 	5, // 1: messaging_proto.SubscribeRequest.headers:type_name -> messaging_proto.SubscribeRequest.HeadersEntry
 	6, // 2: messaging_proto.KafkaMessage.headers:type_name -> messaging_proto.KafkaMessage.HeadersEntry
@@ -409,26 +409,26 @@ var file_protos_messaging_service_messaging_service_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_protos_messaging_service_messaging_service_proto_init() }
-func file_protos_messaging_service_messaging_service_proto_init() {
-	if File_protos_messaging_service_messaging_service_proto != nil {
+func init() { file_messaging_service_protos_messaging_service_messaging_service_proto_init() }
+func file_messaging_service_protos_messaging_service_messaging_service_proto_init() {
+	if File_messaging_service_protos_messaging_service_messaging_service_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_messaging_service_messaging_service_proto_rawDesc), len(file_protos_messaging_service_messaging_service_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_messaging_service_protos_messaging_service_messaging_service_proto_rawDesc), len(file_messaging_service_protos_messaging_service_messaging_service_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_protos_messaging_service_messaging_service_proto_goTypes,
-		DependencyIndexes: file_protos_messaging_service_messaging_service_proto_depIdxs,
-		MessageInfos:      file_protos_messaging_service_messaging_service_proto_msgTypes,
+		GoTypes:           file_messaging_service_protos_messaging_service_messaging_service_proto_goTypes,
+		DependencyIndexes: file_messaging_service_protos_messaging_service_messaging_service_proto_depIdxs,
+		MessageInfos:      file_messaging_service_protos_messaging_service_messaging_service_proto_msgTypes,
 	}.Build()
-	File_protos_messaging_service_messaging_service_proto = out.File
-	file_protos_messaging_service_messaging_service_proto_goTypes = nil
-	file_protos_messaging_service_messaging_service_proto_depIdxs = nil
+	File_messaging_service_protos_messaging_service_messaging_service_proto = out.File
+	file_messaging_service_protos_messaging_service_messaging_service_proto_goTypes = nil
+	file_messaging_service_protos_messaging_service_messaging_service_proto_depIdxs = nil
 }

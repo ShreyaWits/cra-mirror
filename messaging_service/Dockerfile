@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o messaging-service ./server
+RUN CGO_ENABLED=0 GOOS=linux go build -o messaging_service ./server
 
 # Use a minimal alpine image for the final container
 FROM alpine:latest
@@ -20,8 +20,13 @@ FROM alpine:latest
 WORKDIR /app
 
 # Copy the binary from builder
-COPY --from=builder /app/messaging-service .
+COPY --from=builder /app/messaging_service .
 
+# Ensure the binary is executable
+RUN chmod +x ./messaging_service
+
+# Verify the binary is present and executable
+RUN ls -l ./messaging_service
 
 # Run the application
-CMD ["./messaging-service"] 
+CMD ["./messaging_service"] 

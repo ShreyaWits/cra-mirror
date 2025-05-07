@@ -13,6 +13,7 @@ func NewKafkaReader(cfg KafkaConfig) *kafka.Reader {
 	readerCfg := kafka.ReaderConfig{
 		Brokers:         cfg.Brokers,
 		Topic:           cfg.Topic,
+		GroupID:         cfg.GroupID,
 		MinBytes:        cfg.MinBytes,
 		MaxBytes:        cfg.MaxBytes,
 		StartOffset:     kafka.FirstOffset,

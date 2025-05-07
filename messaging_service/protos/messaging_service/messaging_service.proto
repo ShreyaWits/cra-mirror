@@ -3,6 +3,7 @@ syntax = "proto3";
 package messaging_proto;
 
 option go_package = "github.com/shubhpreet/protos/messaging_service;messaging_proto";
+
 service MessagingService {
   // Publishes a binary message to the specified Kafka topic.
   rpc PublishMessage(PublishRequest) returns (PublishResponse);
