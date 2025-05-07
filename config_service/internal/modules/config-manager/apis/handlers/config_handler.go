@@ -16,38 +16,6 @@ func NewConfigHandler(service services.IConfigService) *ConfigHandler {
 	return &ConfigHandler{Service: service}
 }
 
-// func (h *ConfigHandler) AdminHandler(c *fiber.Ctx) error {
-// 	contextData, ok := c.Locals("contextData").(*dtos.AdminDto)
-// 	fmt.Print(contextData)
-
-// 	if !ok {
-// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
-// 	}
-
-// 	// Load the admin secret from .env
-// 	adminSecret := os.Getenv("ADMIN_SECRET")
-// 	if adminSecret == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF005")) // Admin secret not configured
-// 	}
-
-// 	if contextData.Secret != adminSecret {
-// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF010")) // Invalid secret
-// 	}
-
-// 	// Load JWT secret
-// 	jwtSecret := os.Getenv("JWT_SECRET")
-// 	if jwtSecret == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF007"))
-// 	}
-
-// 	responseData, responseError := h.Service.AdminService(contextData, jwtSecret)
-
-// 	if responseError != nil {
-// 		return responseError
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(responseData)
-// }
-
 func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
@@ -62,11 +30,11 @@ func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 
 	responseData, responseError := h.Service.StoreConfigService(environment, serviceName, *configData)
 	if responseError != nil {
-		utils.SendError(c, fiber.StatusInternalServerError, "Failed to store config", responseError.Error())
+		utils.SendError(c, fiber.StatusInternalServerError, "Failed to store config", responseError.ErrorMessage)
 		return nil
 	}
 
-	utils.SendSuccess(c, fiber.StatusOK, "Config stored successfully", responseData)
+	utils.SendSuccess(c, fiber.StatusOK, "Config stored successfully", responseData.Data)
 	return nil
 }
 

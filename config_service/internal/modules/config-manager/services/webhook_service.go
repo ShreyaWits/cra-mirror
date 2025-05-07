@@ -11,7 +11,6 @@ import (
 	"nps-config-service/internal/modules/config-manager/repositories"
 	"time"
 
-	customErr "nps-config-service/internal/common/errors"
 	"strings"
 )
 
@@ -26,9 +25,9 @@ type WebhookService struct {
 }
 
 type IWebhookService interface {
-	RegisterWebhookService(req dtos.RegisterWebhookRequest) (interface{}, error)
-	GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error)
-	DeleteWebhook(env, service, url, method string) (string, error)
+	RegisterWebhookService(req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse)
+	GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse)
+	DeleteWebhook(env, service, url, method string) (string, *dtos.ServiceErrorResponse)
 	DeleteAllWebhooks(env, service string) error
 	NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{})
 }
@@ -37,7 +36,7 @@ func NewWebhookService(repo repositories.IConfigRepo) IWebhookService {
 	return &WebhookService{Repo: repo}
 }
 
-func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest) (interface{}, error) {
+func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
 	key := fmt.Sprintf("/webhooks/%s/%s", req.Environment, req.ServiceName)
 	ctx := context.Background()
 	var hooks []dtos.RegisterWebhookRequest
@@ -45,48 +44,83 @@ func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest)
 	webHook, err := s.Repo.Get(ctx, key)
 	if err == nil && len(webHook) > 0 {
 		if err := json.Unmarshal([]byte(webHook), &hooks); err != nil {
-			return nil, fmt.Errorf("invalid webhook data stored for %s: %v", key, err)
+			return nil, &dtos.ServiceErrorResponse{
+				StatusCode:   500,
+				ErrorCode:    "Failed to parse webhook data",
+				ErrorMessage: fmt.Sprintf("invalid webhook data stored for %s: %v", key, err),
+			}
 		}
 	}
 
 	for _, existing := range hooks {
 		if existing.URL == req.URL && existing.Method == req.Method {
-			return nil, customErr.NewConflictError(fmt.Sprintf("webhook with URL '%s' and method '%s' already exists", req.URL, req.Method))
+			return nil, &dtos.ServiceErrorResponse{
+				StatusCode:   409,
+				ErrorCode:    "Webhook already exists",
+				ErrorMessage: fmt.Sprintf("webhook with URL '%s' and method '%s' already exists", req.URL, req.Method),
+			}
 		}
 	}
 
 	hooks = append(hooks, req)
 	data, err := json.Marshal(hooks)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal webhook: %v", err)
+		return nil, &dtos.ServiceErrorResponse{
+			StatusCode:   500,
+			ErrorCode:    "Failed to marshal webhook data",
+			ErrorMessage: fmt.Sprintf("failed to marshal webhook data for %s: %v", key, err),
+		}
 	}
 	if err := s.Repo.Set(ctx, key, string(data), -1); err != nil {
-		return nil, err
+		return nil, &dtos.ServiceErrorResponse{
+			StatusCode:   500,
+			ErrorCode:    "Failed to store webhook data",
+			ErrorMessage: fmt.Sprintf("failed to store webhook data for %s: %v", key, err),
+		}
 	}
-
-	res := fmt.Sprintf("Webhook registered successfully for service: %s in environment: %s", req.ServiceName, req.Environment)
-	return res, nil
+	response := &dtos.SuccessResponse{
+		StatusCode: 201,
+		Message:    "Webhook registered successfully",
+		Data:       map[string]interface{}{"webhook": req},
+	}
+	// res := fmt.Sprintf("Webhook registered successfully for service: %s in environment: %s", req.ServiceName, req.Environment)
+	return response, nil
 }
-func (s *WebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error) {
+func (s *WebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse) {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
 	ctx := context.Background()
 
 	webHook, err := s.Repo.Get(ctx, key)
 	if err != nil || len(webHook) == 0 {
-		return nil, fmt.Errorf("no webhooks found for %s/%s", env, service)
+		return nil, &dtos.ServiceErrorResponse{
+			StatusCode:   404,
+			ErrorCode:    "No webhooks found",
+			ErrorMessage: fmt.Sprintf("no webhooks found for %s/%s: %v", env, service, err),
+		}
 	}
 
 	var hooks []dtos.RegisterWebhookRequest
 	if err := json.Unmarshal([]byte(webHook), &hooks); err != nil {
-		return nil, fmt.Errorf("failed to parse webhook data: %v", err)
+		return nil, &dtos.ServiceErrorResponse{
+			StatusCode:   500,
+			ErrorCode:    "Failed to parse webhook data",
+			ErrorMessage: fmt.Sprintf("failed to parse webhook data for %s/%s: %v", env, service, err),
+		}
 	}
 	return hooks, nil
 }
-func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string, error) {
+func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string, *dtos.ServiceErrorResponse) {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
 	ctx := context.Background()
 
-	hooks, err := s.GetWebhooks(env, service)
+	hooks, errService := s.GetWebhooks(env, service)
+	if errService != nil {
+		return "", &dtos.ServiceErrorResponse{
+			StatusCode:   404,
+			ErrorCode:    "No webhooks found",
+			ErrorMessage: fmt.Sprintf("no webhooks found for %s/%s: %v", env, service, errService),
+		}
+	}
 	updated := make([]dtos.RegisterWebhookRequest, 0)
 	found := false
 	for _, h := range hooks {
@@ -97,16 +131,28 @@ func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string
 		updated = append(updated, h)
 	}
 	if !found {
-		return "", fmt.Errorf("webhook with URL '%s' and method '%s' not found", url, method)
+		return "", &dtos.ServiceErrorResponse{
+			StatusCode:   404,
+			ErrorCode:    "Webhook not found",
+			ErrorMessage: fmt.Sprintf("webhook with URL '%s' and method '%s' not found", url, method),
+		}
 	}
 
 	// Re-save the updated list
 	data, err := json.Marshal(updated)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal updated webhooks: %v", err)
+		return "", &dtos.ServiceErrorResponse{
+			StatusCode:   500,
+			ErrorCode:    "Failed to marshal updated webhooks",
+			ErrorMessage: fmt.Sprintf("failed to marshal updated webhooks for %s/%s: %v", env, service, err),
+		}
 	}
 	if err := s.Repo.Set(ctx, key, string(data), -1); err != nil {
-		return "", err
+		return "", &dtos.ServiceErrorResponse{
+			StatusCode:   500,
+			ErrorCode:    "Failed to store updated webhooks",
+			ErrorMessage: fmt.Sprintf("failed to store updated webhooks for %s/%s: %v", env, service, err),
+		}
 	}
 	return "Webhook deleted successfully", nil
 }

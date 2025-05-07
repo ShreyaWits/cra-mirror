@@ -23,7 +23,7 @@ type ConfigMetadata struct {
 }
 
 type Admin struct {
-	ID          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey"` //
 	UserName    string    `gorm:"not null"`
 	Password    string    `gorm:"not null"`
 	CreatedAt   time.Time `gorm:"autoCreateTime"`

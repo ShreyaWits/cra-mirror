@@ -63,3 +63,8 @@ func (m *MockRepository) GetAdminByCredentials(string, string) (*models.Admin, e
 	args := m.Called()
 	return args.Get(0).(*models.Admin), args.Error(1)
 }
+
+func (m *MockRepository) NotifyWebhook(string, string) (*models.Admin, error) {
+	args := m.Called()
+	return args.Get(0).(*models.Admin), args.Error(1)
+}
