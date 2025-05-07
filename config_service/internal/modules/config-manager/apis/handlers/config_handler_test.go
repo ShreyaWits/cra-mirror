@@ -19,7 +19,7 @@ func TestConfigHandler_StoreConfigHandler(t *testing.T) {
 		environment    string
 		service        string
 		requestBody    map[string]interface{}
-		mockResponse   interface{}
+		mockResponse   any
 		mockError      error
 		expectedStatus int
 		expectedBody   map[string]interface{}
@@ -63,37 +63,29 @@ func TestConfigHandler_StoreConfigHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create mock service for each test case
+			// Always create and assign the mock service
 			mockService := new(mocks.MockConfigService)
 			handler := NewConfigHandler(mockService)
 
-			// Create a new Fiber app for testing
 			app := fiber.New()
-
-			// Set up the route
 			app.Put("/:environment/:service", func(c *fiber.Ctx) error {
 				if tt.requestBody != nil {
-					// Create a new map and copy the request body
 					bodyMap := make(map[string]interface{})
 					for k, v := range tt.requestBody {
 						bodyMap[k] = v
 					}
-					// Set the pointer to the map in the context
 					c.Locals("contextData", &bodyMap)
 				} else {
-					// Set nil in the context for error case
 					c.Locals("contextData", nil)
 				}
 				return handler.StoreConfigHandler(c)
 			})
 
-			// Set up mock expectations
 			if tt.requestBody != nil {
 				mockService.On("StoreConfigService", tt.environment, tt.service, tt.requestBody).
 					Return(tt.mockResponse, tt.mockError).Once()
 			}
 
-			// Create test request with proper body
 			var req *http.Request
 			if tt.requestBody != nil {
 				body, _ := json.Marshal(tt.requestBody)
@@ -103,22 +95,19 @@ func TestConfigHandler_StoreConfigHandler(t *testing.T) {
 				req = httptest.NewRequest("PUT", "/"+tt.environment+"/"+tt.service, nil)
 			}
 
-			// Perform request
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
-
-			// Assert response
-			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
 			var responseBody map[string]interface{}
 			err = json.NewDecoder(resp.Body).Decode(&responseBody)
 			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 			assert.Equal(t, tt.expectedBody, responseBody)
 
-			// Verify mock expectations
 			mockService.AssertExpectations(t)
 		})
 	}
+
 }
 
 func TestConfigHandler_GetfullConfig(t *testing.T) {
