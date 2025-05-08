@@ -3,62 +3,32 @@ package services
 import (
 	"context"
 	claimErrorResponse "nps-reciept-service/common"
+	"nps-reciept-service/internal/repositories"
 	"nps-reciept-service/internal/utils"
-
 	pb "nps-reciept-service/proto"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 )
-
-type RedisClient interface {
-	Incr(ctx context.Context, key string) *redis.IntCmd
-	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
-}
 type ClaimServer struct {
 	pb.UnimplementedClaimServiceServer
-	redisClient RedisClient
+	repo repositories.ClaimRepository
 }
 
-func NewClaimServer(client RedisClient) *ClaimServer {
+func NewClaimServer(repo repositories.ClaimRepository) *ClaimServer {
 	return &ClaimServer{
-		redisClient: client,
+		repo: repo,
 	}
 }
 
 func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*pb.ClaimResponse, error) {
-	// Validate PRAN
-	if len(req.Pran) != 12 {
-		utils.LogWarning("Validation failed: invalid PRAN", map[string]interface{}{
-			"pran": req.Pran,
-		})
-		return nil, claimErrorResponse.SendError("CLM0001") // custom error code
-	}
-
-	// Validate date_of_claim
-	date, err := time.Parse("2006-01-02", req.DateOfClaim)
-	if err != nil {
-		utils.LogError("Invalid date format", err, map[string]interface{}{
-			"date_of_claim": req.DateOfClaim,
-		})
-		return nil, claimErrorResponse.SendError("CLM0004")
-	}
-
 	last4 := req.Pran[len(req.Pran)-4:]
+	date, _ := time.Parse("2006-01-02", req.DateOfClaim)
 	datePart := date.Format("060102")
 
-	key := "claim:sequence:" + datePart + ":" + last4
-	utils.LogInfo("Generating sequence key", map[string]interface{}{
-		"key": key,
-	})
-
-	redisClient := s.redisClient
-
-	// Increment the sequence number in Redis
-	sequence, err := redisClient.Incr(ctx, key).Result()
+	// Increment the sequence number using the repository
+	sequence, err := s.repo.IncrementClaimSequence(ctx, datePart)
 	if err != nil {
-		utils.LogError("Failed to increment Redis sequence", err, map[string]interface{}{
-			"key": key,
+		utils.LogError("Failed to increment claim sequence", err, map[string]interface{}{
+			"date_part": datePart,
 		})
 		return nil, claimErrorResponse.SendError("CLM0005")
 	}
@@ -66,10 +36,10 @@ func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*
 	// Set expiry for 24 hours only when the key is newly created
 	if sequence == 1 {
 		expiry := 24 * time.Hour
-		err = redisClient.Expire(ctx, key, expiry).Err()
+		err = s.repo.SetClaimSequenceExpiry(ctx, datePart, expiry)
 		if err != nil {
-			utils.LogError("Failed to set expiry for Redis key", err, map[string]interface{}{
-				"key": key,
+			utils.LogError("Failed to set expiry for claim sequence key", err, map[string]interface{}{
+				"date_part": datePart,
 			})
 			// Optional: decide if you want to return error or continue
 		}
@@ -92,3 +62,5 @@ func (s *ClaimServer) ProcessClaim(ctx context.Context, req *pb.ClaimRequest) (*
 func formatSequence(seq int64) string {
 	return utils.PadLeft(int(seq), 4)
 }
+
+

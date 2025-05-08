@@ -25,6 +25,7 @@ var errorMap = map[string]string{
 	"CLM0005": "Failed to increment Redis sequence",
 	"CLM0006": "Invalid request type",
 	"CLM0007": "Validation failed: missing PRAN",
+	"CLM0008": "Validation failed: invalid Transaction type",
 }
 
 func SendError(code string, errorCode ...codes.Code) error {

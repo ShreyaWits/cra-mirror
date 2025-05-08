@@ -5,6 +5,7 @@ import (
 	"net"
 	"nps-reciept-service/internal/config"
 	"nps-reciept-service/internal/middleware"
+	"nps-reciept-service/internal/repositories"
 	"nps-reciept-service/internal/services"
 	"nps-reciept-service/internal/utils"
 	"nps-reciept-service/proto"
@@ -35,7 +36,9 @@ func (s *GrpcServer) Start() error {
 	}
 
 	// Register services
-	claimServer := services.NewClaimServer(config.GetRedisClient())
+	redisClient := config.GetRedisClient()
+	claimRepo := repositories.NewRedisClaimRepository(redisClient)
+	claimServer := services.NewClaimServer(claimRepo)
 
 	// Create a new server with the interceptor
 	serverWithInterceptor := grpc.NewServer(grpc.UnaryInterceptor(middleware.ValidateClaimRequestInterceptor()))

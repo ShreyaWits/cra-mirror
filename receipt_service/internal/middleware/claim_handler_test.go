@@ -63,6 +63,46 @@ func TestValidateClaimRequestInterceptor(t *testing.T) {
 			wantErr:     true,
 			expectedErr: `rpc error: code = InvalidArgument desc = {"errorCode":"CLM0003","errorMsg":"Validation failed: missing transaction type"}`,
 		},
+		{
+			name: "Invalid PRAN Format",
+			req: &pb.ClaimRequest{
+				Pran:            "123", // Invalid PRAN
+				DateOfClaim:     "2024-04-24",
+				TransactionType: "debit",
+			},
+			wantErr:     true,
+			expectedErr: `rpc error: code = InvalidArgument desc = {"errorCode":"CLM0001","errorMsg":"Validation failed: invalid PRAN"}`,
+		},
+		{
+			name: "Invalid DateOfClaim Format",
+			req: &pb.ClaimRequest{
+				Pran:            "123456789012",
+				DateOfClaim:     "24-04-2024", // Invalid format
+				TransactionType: "debit",
+			},
+			wantErr:     true,
+			expectedErr: `rpc error: code = InvalidArgument desc = {"errorCode":"CLM0004","errorMsg":"Invalid date format"}`,
+		},
+		{
+			name: "Invalid TransactionType",
+			req: &pb.ClaimRequest{
+				Pran:            "123456789012",
+				DateOfClaim:     "2024-04-24",
+				TransactionType: "invalid_type", // Invalid transaction type
+			},
+			wantErr:     false,
+			expectedErr: ``,
+		},
+		{
+			name: "Numeric TransactionType",
+			req: &pb.ClaimRequest{
+				Pran:            "123456789012",
+				DateOfClaim:     "2024-04-24",
+				TransactionType: "123", // Numeric transaction type
+			},
+			wantErr:     true,
+			expectedErr: `rpc error: code = InvalidArgument desc = {"errorCode":"CLM0008","errorMsg":"Validation failed: invalid Transaction type"}`,
+		},
 	}
 
 	// Run test cases
