@@ -1,0 +1,46 @@
+version: '3.8'  # Docker Compose file format version
+
+services:
+  messaging_service:
+    build:
+      context: ../                      # Current directory used for build context
+      dockerfile: ./docker/Dockerfile             # Dockerfile path for building the service
+    ports:
+      - "50051:50051"      # gRPC port exposed to host
+    environment:
+      - GRPC_PORT=50051 
+    env_file:
+      - ../messaging_service/.env          # gRPC server port from .env
+    depends_on:
+      - kafka                            # Ensure Kafka is running before starting this service
+      - zookeeper                        # Optional: only needed if service talks to Zookeeper
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest # Zookeeper image and version from .env
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181     # Port for Zookeeper client connections
+      ZOOKEEPER_TICK_TIME: 2000          # Heartbeat interval for Zookeeper
+    ports:
+      - "2181:2181" # Expose Zookeeper port to host
+
+  kafka:
+    image: confluentinc/cp-kafka:latest          # Kafka image and version from .env
+    depends_on:
+      - zookeeper                                           # Kafka starts only after Zookeeper is ready
+    ports:
+      - "9092:9092"                       # Expose Kafka broker port
+    environment:
+      KAFKA_BROKER_ID: 1                  # Unique ID for Kafka broker
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181  # Zookeeper connection string
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" 
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+volumes:
+  kafka_data:   
+
+##[NOTE : Don't remove this line] :- docker compose -f 'docker/docker-compose.yml' up -d --build 
+##docker build -f docker/Dockerfile -t messaging_service .                           

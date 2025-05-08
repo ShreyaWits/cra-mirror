@@ -13,17 +13,26 @@ func NewKafkaReader(cfg KafkaConfig) *kafka.Reader {
 	readerCfg := kafka.ReaderConfig{
 		Brokers:         cfg.Brokers,
 		Topic:           cfg.Topic,
-		GroupID:         cfg.GroupID,
 		MinBytes:        cfg.MinBytes,
 		MaxBytes:        cfg.MaxBytes,
-		StartOffset:     kafka.FirstOffset,
 		MaxWait:         500 * time.Millisecond,
 		ReadLagInterval: -1,
 	}
 
-	// Competing Consumers use GroupID
-	if cfg.Mode == CompetingConsumer {
+	if cfg.GroupID != "" {
 		readerCfg.GroupID = cfg.GroupID
+		readerCfg.CommitInterval = time.Second
+	} else {
+		readerCfg.StartOffset = kafka.LastOffset
+	}
+
+	reader := kafka.NewReader(readerCfg)
+
+	// Manually seek to the latest offset if there's no group ID (stateless consumer)
+	if cfg.GroupID == "" {
+		if err := reader.SetOffset(kafka.LastOffset); err != nil {
+			// Optional: handle or log this error if needed
+		}
 	}
 
 	return kafka.NewReader(readerCfg)

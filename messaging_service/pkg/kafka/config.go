@@ -2,11 +2,6 @@ package kafka
 
 type ConsumerMode string
 
-const (
-	CompetingConsumer ConsumerMode = "competing"
-	FanOut            ConsumerMode = "fanout"
-)
-
 type KafkaConfig struct {
 	Brokers      []string
 	Topic        string
@@ -16,4 +11,3 @@ type KafkaConfig struct {
 	MinBytes     int
 	MaxBytes     int
 }
-
