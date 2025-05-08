@@ -16,7 +16,6 @@ func main() {
 
 	// Initialize encryption service
 	container, err := di.NewContainer()
-	
 	if err != nil {
 		log.Fatalf("Failed to initialize container: %v", err)
 	}
