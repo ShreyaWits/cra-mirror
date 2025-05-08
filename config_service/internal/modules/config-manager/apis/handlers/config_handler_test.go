@@ -125,6 +125,7 @@ func TestConfigHandler_StoreConfigHandler(t *testing.T) {
 			mockService.AssertExpectations(t)
 		})
 	}
+
 }
 
 func TestConfigHandler_GetfullConfig(t *testing.T) {
