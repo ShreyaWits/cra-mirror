@@ -32,7 +32,7 @@ const (
 // Cache gRPC Service
 // ----------------------
 type CacheServiceClient interface {
-	SetCache(ctx context.Context, in *SetCacheEvent, opts ...grpc.CallOption) (*SetCacheResponse, error)
+	SetCache(ctx context.Context, in *SetCacheRequest, opts ...grpc.CallOption) (*SetCacheResponse, error)
 	GetCache(ctx context.Context, in *GetCacheRequest, opts ...grpc.CallOption) (*GetCacheResponse, error)
 	InvalidateCache(ctx context.Context, in *InvalidateCacheRequest, opts ...grpc.CallOption) (*InvalidateCacheResponse, error)
 }
@@ -45,7 +45,7 @@ func NewCacheServiceClient(cc grpc.ClientConnInterface) CacheServiceClient {
 	return &cacheServiceClient{cc}
 }
 
-func (c *cacheServiceClient) SetCache(ctx context.Context, in *SetCacheEvent, opts ...grpc.CallOption) (*SetCacheResponse, error) {
+func (c *cacheServiceClient) SetCache(ctx context.Context, in *SetCacheRequest, opts ...grpc.CallOption) (*SetCacheResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetCacheResponse)
 	err := c.cc.Invoke(ctx, CacheService_SetCache_FullMethodName, in, out, cOpts...)
@@ -83,7 +83,7 @@ func (c *cacheServiceClient) InvalidateCache(ctx context.Context, in *Invalidate
 // Cache gRPC Service
 // ----------------------
 type CacheServiceServer interface {
-	SetCache(context.Context, *SetCacheEvent) (*SetCacheResponse, error)
+	SetCache(context.Context, *SetCacheRequest) (*SetCacheResponse, error)
 	GetCache(context.Context, *GetCacheRequest) (*GetCacheResponse, error)
 	InvalidateCache(context.Context, *InvalidateCacheRequest) (*InvalidateCacheResponse, error)
 	mustEmbedUnimplementedCacheServiceServer()
@@ -96,7 +96,7 @@ type CacheServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCacheServiceServer struct{}
 
-func (UnimplementedCacheServiceServer) SetCache(context.Context, *SetCacheEvent) (*SetCacheResponse, error) {
+func (UnimplementedCacheServiceServer) SetCache(context.Context, *SetCacheRequest) (*SetCacheResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetCache not implemented")
 }
 func (UnimplementedCacheServiceServer) GetCache(context.Context, *GetCacheRequest) (*GetCacheResponse, error) {
@@ -127,7 +127,7 @@ func RegisterCacheServiceServer(s grpc.ServiceRegistrar, srv CacheServiceServer)
 }
 
 func _CacheService_SetCache_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetCacheEvent)
+	in := new(SetCacheRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func _CacheService_SetCache_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: CacheService_SetCache_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServiceServer).SetCache(ctx, req.(*SetCacheEvent))
+		return srv.(CacheServiceServer).SetCache(ctx, req.(*SetCacheRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

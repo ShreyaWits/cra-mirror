@@ -22,7 +22,7 @@ const (
 )
 
 // Payload for setting a cache entry
-type SetCacheEvent struct {
+type SetCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`                     // Service namespace (e.g., serviceA)
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`                                 // Redis key
@@ -33,20 +33,20 @@ type SetCacheEvent struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SetCacheEvent) Reset() {
-	*x = SetCacheEvent{}
+func (x *SetCacheRequest) Reset() {
+	*x = SetCacheRequest{}
 	mi := &file_proto_redis_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetCacheEvent) String() string {
+func (x *SetCacheRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetCacheEvent) ProtoMessage() {}
+func (*SetCacheRequest) ProtoMessage() {}
 
-func (x *SetCacheEvent) ProtoReflect() protoreflect.Message {
+func (x *SetCacheRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_redis_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -58,40 +58,40 @@ func (x *SetCacheEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetCacheEvent.ProtoReflect.Descriptor instead.
-func (*SetCacheEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use SetCacheRequest.ProtoReflect.Descriptor instead.
+func (*SetCacheRequest) Descriptor() ([]byte, []int) {
 	return file_proto_redis_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SetCacheEvent) GetNamespace() string {
+func (x *SetCacheRequest) GetNamespace() string {
 	if x != nil {
 		return x.Namespace
 	}
 	return ""
 }
 
-func (x *SetCacheEvent) GetKey() string {
+func (x *SetCacheRequest) GetKey() string {
 	if x != nil {
 		return x.Key
 	}
 	return ""
 }
 
-func (x *SetCacheEvent) GetValue() string {
+func (x *SetCacheRequest) GetValue() string {
 	if x != nil {
 		return x.Value
 	}
 	return ""
 }
 
-func (x *SetCacheEvent) GetTtl() int64 {
+func (x *SetCacheRequest) GetTtl() int64 {
 	if x != nil {
 		return x.Ttl
 	}
 	return 0
 }
 
-func (x *SetCacheEvent) GetTrackingId() string {
+func (x *SetCacheRequest) GetTrackingId() string {
 	if x != nil {
 		return x.TrackingId
 	}
@@ -218,6 +218,7 @@ type GetCacheResponse struct {
 	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 	Found         bool                   `protobuf:"varint,2,opt,name=found,proto3" json:"found,omitempty"`
 	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"` // Optional status message
+	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,6 +270,13 @@ func (x *GetCacheResponse) GetFound() bool {
 func (x *GetCacheResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
+	}
+	return ""
+}
+
+func (x *GetCacheResponse) GetError() string {
+	if x != nil {
+		return x.Error
 	}
 	return ""
 }
@@ -391,8 +399,8 @@ var File_proto_redis_proto protoreflect.FileDescriptor
 
 const file_proto_redis_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/redis.proto\x12\x0eredis.cache.v1\"\x88\x01\n" +
-	"\rSetCacheEvent\x12\x1c\n" +
+	"\x11proto/redis.proto\x12\x0eredis.cache.v1\"\x8a\x01\n" +
+	"\x0fSetCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\tR\x05value\x12\x10\n" +
@@ -406,11 +414,12 @@ const file_proto_redis_proto_rawDesc = "" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1f\n" +
 	"\vtracking_id\x18\x03 \x01(\tR\n" +
-	"trackingId\"X\n" +
+	"trackingId\"n\n" +
 	"\x10GetCacheResponse\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x14\n" +
 	"\x05found\x18\x02 \x01(\bR\x05found\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"i\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"i\n" +
 	"\x16InvalidateCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1f\n" +
@@ -418,9 +427,9 @@ const file_proto_redis_proto_rawDesc = "" +
 	"trackingId\"M\n" +
 	"\x17InvalidateCacheResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\x8e\x02\n" +
-	"\fCacheService\x12K\n" +
-	"\bSetCache\x12\x1d.redis.cache.v1.SetCacheEvent\x1a .redis.cache.v1.SetCacheResponse\x12M\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\x90\x02\n" +
+	"\fCacheService\x12M\n" +
+	"\bSetCache\x12\x1f.redis.cache.v1.SetCacheRequest\x1a .redis.cache.v1.SetCacheResponse\x12M\n" +
 	"\bGetCache\x12\x1f.redis.cache.v1.GetCacheRequest\x1a .redis.cache.v1.GetCacheResponse\x12b\n" +
 	"\x0fInvalidateCache\x12&.redis.cache.v1.InvalidateCacheRequest\x1a'.redis.cache.v1.InvalidateCacheResponseB\x15Z\x13redis-service/protob\x06proto3"
 
@@ -438,7 +447,7 @@ func file_proto_redis_proto_rawDescGZIP() []byte {
 
 var file_proto_redis_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_redis_proto_goTypes = []any{
-	(*SetCacheEvent)(nil),           // 0: redis.cache.v1.SetCacheEvent
+	(*SetCacheRequest)(nil),         // 0: redis.cache.v1.SetCacheRequest
 	(*SetCacheResponse)(nil),        // 1: redis.cache.v1.SetCacheResponse
 	(*GetCacheRequest)(nil),         // 2: redis.cache.v1.GetCacheRequest
 	(*GetCacheResponse)(nil),        // 3: redis.cache.v1.GetCacheResponse
@@ -446,7 +455,7 @@ var file_proto_redis_proto_goTypes = []any{
 	(*InvalidateCacheResponse)(nil), // 5: redis.cache.v1.InvalidateCacheResponse
 }
 var file_proto_redis_proto_depIdxs = []int32{
-	0, // 0: redis.cache.v1.CacheService.SetCache:input_type -> redis.cache.v1.SetCacheEvent
+	0, // 0: redis.cache.v1.CacheService.SetCache:input_type -> redis.cache.v1.SetCacheRequest
 	2, // 1: redis.cache.v1.CacheService.GetCache:input_type -> redis.cache.v1.GetCacheRequest
 	4, // 2: redis.cache.v1.CacheService.InvalidateCache:input_type -> redis.cache.v1.InvalidateCacheRequest
 	1, // 3: redis.cache.v1.CacheService.SetCache:output_type -> redis.cache.v1.SetCacheResponse
