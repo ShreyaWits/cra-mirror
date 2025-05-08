@@ -1,0 +1,1773 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">nps-config-service/cmd/server/main.go (0.0%)</option>
+				
+				<option value="file1">nps-config-service/internal/app/modules.go (0.0%)</option>
+				
+				<option value="file2">nps-config-service/internal/app/routers.go (0.0%)</option>
+				
+				<option value="file3">nps-config-service/internal/common/errors/custom_errors.go (0.0%)</option>
+				
+				<option value="file4">nps-config-service/internal/common/errors/errors.go (0.0%)</option>
+				
+				<option value="file5">nps-config-service/internal/common/middleware/config_middleware.go (0.0%)</option>
+				
+				<option value="file6">nps-config-service/internal/configs/db/postgres.go (0.0%)</option>
+				
+				<option value="file7">nps-config-service/internal/configs/env_config.go (0.0%)</option>
+				
+				<option value="file8">nps-config-service/internal/modules/config-manager/apis/dtos/register_webhook.go (0.0%)</option>
+				
+				<option value="file9">nps-config-service/internal/modules/config-manager/apis/handlers/admin_handler.go (70.6%)</option>
+				
+				<option value="file10">nps-config-service/internal/modules/config-manager/apis/handlers/config_handler.go (95.0%)</option>
+				
+				<option value="file11">nps-config-service/internal/modules/config-manager/apis/handlers/webhook_handler.go (0.0%)</option>
+				
+				<option value="file12">nps-config-service/internal/modules/config-manager/apis/routes/admin_routes.go (100.0%)</option>
+				
+				<option value="file13">nps-config-service/internal/modules/config-manager/apis/routes/config_routes.go (0.0%)</option>
+				
+				<option value="file14">nps-config-service/internal/modules/config-manager/apis/routes/webhook_routers.go (0.0%)</option>
+				
+				<option value="file15">nps-config-service/internal/modules/config-manager/di/provider.go (0.0%)</option>
+				
+				<option value="file16">nps-config-service/internal/modules/config-manager/models/config_models.go (0.0%)</option>
+				
+				<option value="file17">nps-config-service/internal/modules/config-manager/repositories/config_repo.go (0.0%)</option>
+				
+				<option value="file18">nps-config-service/internal/modules/config-manager/repositories/mocks/config_repo_mock.go (0.0%)</option>
+				
+				<option value="file19">nps-config-service/internal/modules/config-manager/services/admin_service.go (90.0%)</option>
+				
+				<option value="file20">nps-config-service/internal/modules/config-manager/services/config_service.go (83.3%)</option>
+				
+				<option value="file21">nps-config-service/internal/modules/config-manager/services/mocks/config_mock.go (0.0%)</option>
+				
+				<option value="file22">nps-config-service/internal/modules/config-manager/services/mocks/webhook_mock.go (0.0%)</option>
+				
+				<option value="file23">nps-config-service/internal/modules/config-manager/services/webhook_service.go (78.6%)</option>
+				
+				<option value="file24">nps-config-service/internal/modules/config-manager/utils/map_to_struct.go (0.0%)</option>
+				
+				<option value="file25">nps-config-service/internal/modules/config-manager/utils/response.go (0.0%)</option>
+				
+				<option value="file26">nps-config-service/pkg/etcd/etcd_client.go (0.0%)</option>
+				
+				<option value="file27">nps-config-service/pkg/etcd/etcd_operations.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "nps-config-service/internal/app"
+        "nps-config-service/internal/configs/db"
+        "nps-config-service/internal/configs"
+        "os"
+)
+
+func main() <span class="cov0" title="0">{
+
+        //env file loading
+        configs.LoadConfig()
+        
+        DbPort := os.Getenv("DATABASE_URL")
+        db.ConnectDatabase(DbPort)
+        
+        //setup routes
+        appInstance := app.SetupRouter()
+
+        appInstance.Listen(":" + configs.AppConfig.Port)
+
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package app
+
+import (
+        "nps-config-service/internal/common/middleware"
+        "nps-config-service/internal/modules/config-manager/apis/routes"
+
+        "nps-config-service/internal/modules/config-manager/di"
+
+        "github.com/gofiber/fiber/v2"
+)
+
+func RegisterModules(app *fiber.App) <span class="cov0" title="0">{
+        container, err := di.NewContainer()
+        if err != nil </span><span class="cov0" title="0">{
+                panic("Failed to initialize container: " + err.Error())</span>
+        }
+
+        <span class="cov0" title="0">adminHandler, configHandler, webhookHandler, err := di.InitHandlers(container)
+        if err != nil </span><span class="cov0" title="0">{
+                panic("Failed to initialize handlers: " + err.Error())</span>
+        }
+
+        <span class="cov0" title="0">api := app.Group("/api/v1/")
+        protected := api.Group("/config", middleware.JWTMiddleware())
+
+        routes.RegisterWebHookRoutes(protected, webhookHandler)
+        routes.RegisterAdminRoutes(api, adminHandler)
+        routes.RegisterConfigRoutes(protected, configHandler)</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package app
+
+import "github.com/gofiber/fiber/v2"
+
+func SetupRouter() *fiber.App <span class="cov0" title="0">{
+
+        //fiber registeration
+        app := fiber.New()
+
+        //modules registration
+        RegisterModules(app)
+        return app
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package common
+
+type ConflictError struct {
+        Message string
+}
+
+func (e *ConflictError) Error() string <span class="cov0" title="0">{
+        return e.Message
+}</span>
+
+func NewConflictError(msg string) *ConflictError <span class="cov0" title="0">{
+        return &amp;ConflictError{Message: msg}
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package common
+
+type AppError struct {
+        Status  int    `json:"status"`
+        Code string `json:"errorCode"`
+        Msg  string `json:"errorMsg"`
+}
+
+func (e AppError) Error() string <span class="cov0" title="0">{
+        return e.Msg
+}</span>
+
+var Errors = map[string]string{
+        "CNF001": "Invalid config data",
+        "CNF002": "Config key not found",
+        "CNF003": "ETCD connection failed",
+        "CNF004": "Invalid request body",
+        "CNF005": "Admin Secret not configured in environment",
+        "CNF006": "Invalid password",
+        "CNF007": "JWT secret not configured in environment",
+        "AUTH001": "Authorization header missing",
+        "AUTH002": "Invalid authorization header format",
+        "AUTH003": "Invalid or expired token",
+        "CNF008": "Invalid username",
+        "CNF009": "username not configured in environment",
+        "CNF010": "Invalid secret key",
+        "CNF011": "Database connection failed",
+        "CNF012": "username (email) should not be blank",
+        "CNF013": "password should not be blank",
+        "CNF014": "secret should not be blank",
+        "ADMIN001": "Admin user already exists",
+        "ADMIN002": "Admin user not found",
+}
+
+func ThrowError(status int,code string) AppError <span class="cov0" title="0">{
+        msg, ok := Errors[code]
+        if !ok </span><span class="cov0" title="0">{
+                return AppError{400,"UNKNOWN", "Unknown error"}
+        }</span>
+        <span class="cov0" title="0">return AppError{status, code, msg}</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package middleware
+
+import (
+        common "nps-config-service/internal/common/errors"
+        "os"
+        "strings"
+
+        "github.com/gofiber/fiber/v2"
+        "github.com/golang-jwt/jwt"
+)
+
+// Generic Middleware to parse and validate request body
+func SetContextDataMiddleware[T any](c *fiber.Ctx) error <span class="cov0" title="0">{
+        var request T
+        if err := c.BodyParser(&amp;request); err != nil </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+                        "message": "Invalid request body",
+                })
+        }</span>
+
+        <span class="cov0" title="0">c.Locals("contextData", &amp;request)
+
+        return c.Next()</span>
+}
+
+func JWTMiddleware() fiber.Handler <span class="cov0" title="0">{
+        return func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                authHeader := c.Get("Authorization")
+                if authHeader == "" </span><span class="cov0" title="0">{
+                        return c.Status(fiber.StatusUnauthorized).JSON(common.ThrowError(fiber.StatusBadRequest, "AUTH001"))
+                }</span>
+
+                <span class="cov0" title="0">parts := strings.Split(authHeader, " ")
+                if len(parts) != 2 || parts[0] != "Bearer" </span><span class="cov0" title="0">{
+                        return c.Status(fiber.StatusUnauthorized).JSON(common.ThrowError(fiber.StatusBadRequest, "AUTH002"))
+                }</span>
+
+                <span class="cov0" title="0">tokenStr := parts[1]
+                jwtSecret := os.Getenv("JWT_SECRET")
+
+                // Parse and validate token
+                token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) </span><span class="cov0" title="0">{
+                        // Make sure signing method is HMAC
+                        if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok </span><span class="cov0" title="0">{
+                                return nil, fiber.ErrUnauthorized
+                        }</span>
+                        <span class="cov0" title="0">return []byte(jwtSecret), nil</span>
+                })
+
+                <span class="cov0" title="0">if err != nil || !token.Valid </span><span class="cov0" title="0">{
+                        return c.Status(fiber.StatusUnauthorized).JSON(common.ThrowError(fiber.StatusBadRequest, "AUTH003"))
+                }</span>
+
+                <span class="cov0" title="0">return c.Next()</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package db
+
+import (
+        "gorm.io/driver/postgres"
+        "gorm.io/gorm"
+        "log"
+        "nps-config-service/internal/modules/config-manager/models"
+)
+
+
+var DB *gorm.DB
+
+func ConnectDatabase(port string) <span class="cov0" title="0">{
+        dsn := port
+        database, err := gorm.Open(postgres.Open(dsn), &amp;gorm.Config{})
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Failed to connect to the database:", err)
+        }</span>
+        <span class="cov0" title="0">database.AutoMigrate(&amp;models.Admin{})
+        DB = database
+        log.Println("Database connected successfully!")</span>
+}
+
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package configs
+
+import (
+        "log"
+        "os"
+
+        "github.com/joho/godotenv"
+)
+
+type Config struct {
+        Port         string
+        EtcdEndpoint string
+        APISecret    string
+}
+
+var AppConfig Config
+
+func LoadConfig() <span class="cov0" title="0">{
+        err := godotenv.Load()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("⚠️  .env not found, using default values")
+        }</span>
+        <span class="cov0" title="0">AppConfig = Config{
+                Port:         os.Getenv("PORT"),
+                EtcdEndpoint: os.Getenv("ETCD_ENDPOINT"),
+                APISecret:    os.Getenv("API_SECRET"),
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package dtos
+
+type RegisterWebhookRequest struct {
+        URL         string `json:"url"`
+        Environment string `json:"environment"`
+        ServiceName string `json:"serviceName"`
+        Method      string `json:"method"`
+}
+
+func NewErrorResponse(statusCode int, message, err string) map[string]interface{} <span class="cov0" title="0">{
+        return map[string]interface{}{
+                "status_code": statusCode,
+                "message":     message,
+                "error":       err,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package handler
+
+import (
+        "fmt"
+        common "nps-config-service/internal/common/errors"
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+        "nps-config-service/internal/modules/config-manager/services"
+        "os"
+
+        "github.com/gofiber/fiber/v2"
+)
+
+type AdminHandler struct {
+        Service services.IAdminService
+}
+
+func NewAdminHandler(service services.IAdminService) *AdminHandler <span class="cov8" title="1">{
+        return &amp;AdminHandler{Service: service}
+}</span>
+
+func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error <span class="cov8" title="1">{
+        contextData, ok := c.Locals("contextData").(*dtos.AdminSignupDto)
+
+        if !ok </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
+        }</span>
+        <span class="cov8" title="1">if contextData.Username == "" </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF012")) // Username is required
+        }</span>
+        <span class="cov8" title="1">if contextData.Password == "" </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF013")) // Password is required
+        }</span>
+        <span class="cov8" title="1">if contextData.Secret == "" </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF014")) // Secret is required
+        }</span>
+        // Load the admin secret from .env
+        <span class="cov8" title="1">adminSecret := os.Getenv("ADMIN_SECRET")
+        if adminSecret == "" </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF005")) // Admin secret not configured
+        }</span>
+
+        <span class="cov8" title="1">if contextData.Secret != adminSecret </span><span class="cov8" title="1">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF010")) // Invalid secret
+        }</span>
+
+        <span class="cov8" title="1">responseData, responseError := h.Service.CreateAdminService(contextData)
+        if responseError != nil </span><span class="cov0" title="0">{
+                return responseError
+        }</span>
+        <span class="cov8" title="1">return c.Status(fiber.StatusOK).JSON(responseData)</span>
+}
+
+func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error <span class="cov8" title="1">{
+        contextData, ok := c.Locals("contextData").(*dtos.AdminLoginDto)
+        fmt.Print(contextData)
+
+        if !ok </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
+        }</span>
+
+        <span class="cov8" title="1">if contextData.Username == "" </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004")) // Username is required
+        }</span>
+
+        <span class="cov8" title="1">if contextData.Password == "" </span><span class="cov0" title="0">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004")) // Password is required
+        }</span>
+        // Load the admin secret from .env
+        // adminSecret := os.Getenv("ADMIN_SECRET")
+        // if adminSecret == "" {
+        //         return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF005")) // Admin secret not configured
+        // }
+
+        // if contextData.Secret != adminSecret {
+        //         return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF010")) // Invalid secret
+        // }
+
+        // Load JWT secret
+        <span class="cov8" title="1">jwtSecret := os.Getenv("JWT_SECRET")
+        if jwtSecret == "" </span><span class="cov8" title="1">{
+                return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF007"))
+        }</span>
+
+        <span class="cov8" title="1">responseData, responseError := h.Service.FetchAdminService(contextData, jwtSecret)
+
+        if responseError != nil </span><span class="cov0" title="0">{
+                return responseError
+        }</span>
+        <span class="cov8" title="1">return c.Status(fiber.StatusOK).JSON(responseData)</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package handler
+
+import (
+        common "nps-config-service/internal/common/errors"
+        "nps-config-service/internal/modules/config-manager/services"
+        "nps-config-service/internal/modules/config-manager/utils"
+
+        "github.com/gofiber/fiber/v2"
+)
+
+type ConfigHandler struct {
+        Service services.IConfigService
+}
+
+func NewConfigHandler(service services.IConfigService) *ConfigHandler <span class="cov8" title="1">{
+        return &amp;ConfigHandler{Service: service}
+}</span>
+
+func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error <span class="cov8" title="1">{
+        environment := c.Params("environment")
+        serviceName := c.Params("service")
+
+        contextData := c.Locals("contextData")
+        configData, ok := contextData.(*map[string]any)
+        if !ok </span><span class="cov8" title="1">{
+                err := common.ThrowError(fiber.StatusBadRequest, "CNF001")
+                utils.SendError(c, fiber.StatusBadRequest, "Invalid config data", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">responseData, responseError := h.Service.StoreConfigService(environment, serviceName, *configData)
+        if responseError != nil </span><span class="cov0" title="0">{
+                utils.SendError(c, fiber.StatusInternalServerError, "Failed to store config", responseError.Error())
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">utils.SendSuccess(c, fiber.StatusOK, "Config stored successfully", responseData)
+        return nil</span>
+}
+
+func (h *ConfigHandler) GetfullConfig(c *fiber.Ctx) error <span class="cov8" title="1">{
+        environment := c.Params("environment")
+        serviceName := c.Params("service")
+
+        config, err := h.Service.GetConfigService(serviceName, environment)
+        if err != nil </span><span class="cov8" title="1">{
+                utils.SendError(c, fiber.StatusInternalServerError, "Failed to fetch config", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">utils.SendSuccess(c, fiber.StatusOK, "Config fetched successfully", config)
+        return nil</span>
+}
+
+func (h *ConfigHandler) GetByValue(c *fiber.Ctx) error <span class="cov8" title="1">{
+        environment := c.Params("environment")
+        serviceName := c.Params("service")
+        key := c.Params("key")
+
+        value, err := h.Service.GetConfigValueService(serviceName, environment, key)
+        if err != nil </span><span class="cov8" title="1">{
+                utils.SendError(c, fiber.StatusInternalServerError, "Failed to get config value", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">utils.SendSuccess(c, fiber.StatusOK, "Value fetched successfully", fiber.Map{key: value})
+        return nil</span>
+}
+
+func (h *ConfigHandler) GetByMetadata(c *fiber.Ctx) error <span class="cov8" title="1">{
+        environment := c.Params("environment")
+        serviceName := c.Params("service")
+
+        metadata, err := h.Service.GetConfigMetadataService(serviceName, environment)
+        if err != nil </span><span class="cov8" title="1">{
+                utils.SendError(c, fiber.StatusInternalServerError, "Failed to fetch metadata", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">utils.SendSuccess(c, fiber.StatusOK, "Metadata fetched successfully", metadata)
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package handler
+
+import (
+        "log"
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+        "nps-config-service/internal/modules/config-manager/utils"
+
+        customErr "nps-config-service/internal/common/errors"
+        "nps-config-service/internal/modules/config-manager/services"
+
+        "github.com/gofiber/fiber/v2"
+)
+
+type WebhookHandler struct {
+        Service services.IWebhookService
+}
+
+func NewWebhookHandler(service services.IWebhookService) *WebhookHandler <span class="cov0" title="0">{
+        return &amp;WebhookHandler{Service: service}
+}</span>
+
+func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error <span class="cov0" title="0">{
+        contextData := c.Locals("contextData")
+        bodyMap, ok := contextData.(*map[string]any)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("Invalid context data: %v", contextData)
+                utils.SendError(c, fiber.StatusBadRequest, "Invalid config data", "Context data missing or invalid")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">var configData dtos.RegisterWebhookRequest
+        if err := utils.MapToStruct(*bodyMap, &amp;configData); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error mapping context data to struct: %v", err)
+                utils.SendError(c, fiber.StatusBadRequest, "Invalid config structure", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">res, err := h.Service.RegisterWebhookService(configData)
+        if err != nil </span><span class="cov0" title="0">{
+                if conflictErr, ok := err.(*customErr.ConflictError); ok </span><span class="cov0" title="0">{
+                        log.Printf("Conflict error while registering webhook: %v", conflictErr)
+                        utils.SendError(c, fiber.StatusConflict, "Webhook already exists", conflictErr.Error())
+                }</span> else<span class="cov0" title="0"> {
+                        log.Printf("Internal error while registering webhook: %v", err)
+                        utils.SendError(c, fiber.StatusInternalServerError, "Failed to register webhook", err.Error())
+                }</span>
+                <span class="cov0" title="0">return nil</span>
+        }
+
+        <span class="cov0" title="0">log.Printf("Successfully registered webhook: %v", res)
+        utils.SendSuccess(c, fiber.StatusOK, "Webhook registered successfully", res)
+        return nil</span>
+}
+
+func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error <span class="cov0" title="0">{
+        env := c.Params("environment")
+        service := c.Params("service")
+        res, err := h.Service.GetWebhooks(env, service)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error retrieving webhooks for environment %s and service %s: %v", env, service, err)
+                utils.SendError(c, fiber.StatusNotFound, "Failed to retrieve webhooks", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">log.Printf("Successfully retrieved webhooks for environment %s and service %s: %v", env, service, res)
+        utils.SendSuccess(c, fiber.StatusOK, "Webhooks retrieved successfully", res)
+        return nil</span>
+}
+
+func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error <span class="cov0" title="0">{
+        env := c.Params("environment")
+        service := c.Params("service")
+
+        contextData := c.Locals("contextData")
+        bodyMap, ok := contextData.(*map[string]any)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("Invalid context data for delete request: %v", contextData)
+                utils.SendError(c, fiber.StatusBadRequest, "Invalid delete request", "Context data missing or invalid")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">var deleteReq dtos.RegisterWebhookRequest
+        if err := utils.MapToStruct(*bodyMap, &amp;deleteReq); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error mapping context data to delete request struct: %v", err)
+                utils.SendError(c, fiber.StatusBadRequest, "Invalid delete structure", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">res, err := h.Service.DeleteWebhook(env, service, deleteReq.URL, deleteReq.Method)
+        if err != nil </span><span class="cov0" title="0">{
+                if deleteErr, ok := err.(*customErr.ConflictError); ok </span><span class="cov0" title="0">{
+                        log.Printf("Webhook not found for delete request: %v", deleteErr)
+                        utils.SendError(c, fiber.StatusNotFound, "Webhook not found", deleteErr.Error())
+                }</span> else<span class="cov0" title="0"> {
+                        log.Printf("Internal error while deleting webhook: %v", err)
+                        utils.SendError(c, fiber.StatusInternalServerError, "Failed to delete webhook", err.Error())
+                }</span>
+                <span class="cov0" title="0">return nil</span>
+        }
+
+        <span class="cov0" title="0">log.Printf("Successfully deleted webhook: %v", res)
+        utils.SendSuccess(c, fiber.StatusOK, "Webhook deleted successfully", res)
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package routes
+
+import (
+        "nps-config-service/internal/common/middleware"
+        handler "nps-config-service/internal/modules/config-manager/apis/handlers"
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+        "github.com/gofiber/fiber/v2"
+)
+
+
+func RegisterAdminRoutes(router fiber.Router, h *handler.AdminHandler) <span class="cov8" title="1">{
+        router.Post("/admin/signup", middleware.SetContextDataMiddleware[dtos.AdminSignupDto],h.CreateAdminHandler)
+        router.Post("/admin/login", middleware.SetContextDataMiddleware[dtos.AdminLoginDto],h.FetchAdminHandler)
+}</span>
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package routes
+
+import (
+        "nps-config-service/internal/common/middleware"
+        handler "nps-config-service/internal/modules/config-manager/apis/handlers"
+
+        "github.com/gofiber/fiber/v2"
+)
+
+func RegisterConfigRoutes(router fiber.Router, h *handler.ConfigHandler) <span class="cov0" title="0">{
+        router.Put("/:environment/:service", middleware.SetContextDataMiddleware[map[string]any], h.StoreConfigHandler)
+        router.Get("/:environment/:service", h.GetfullConfig)
+        router.Get("/:environment/:service/:key", h.GetByValue)
+        router.Get("/:environment/:service/metadata", h.GetByMetadata)
+}</span>
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package routes
+
+import (
+        "nps-config-service/internal/common/middleware"
+        handler "nps-config-service/internal/modules/config-manager/apis/handlers"
+
+        "github.com/gofiber/fiber/v2"
+)
+
+func RegisterWebHookRoutes(router fiber.Router, h *handler.WebhookHandler) <span class="cov0" title="0">{
+        router.Post("/webhook", middleware.SetContextDataMiddleware[map[string]interface{}], h.RegisterWebhook)
+
+        // Get all webhooks for a specific environment/service
+        router.Get("/:environment/:service/webhooks", h.GetWebhooks)
+
+        // todo: Update a specific webhook (PATCH for partial updates)
+        // router.Patch("/webhook/:environment/:service", h.UpdateWebhook)
+
+        router.Delete("/:environment/:service/webhook", middleware.SetContextDataMiddleware[map[string]interface{}], h.DeleteWebhook)
+}</span>
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package di
+
+import (
+        "nps-config-service/internal/configs"
+        handler "nps-config-service/internal/modules/config-manager/apis/handlers"
+        "nps-config-service/internal/modules/config-manager/repositories"
+        "nps-config-service/internal/modules/config-manager/services"
+        etcdDB "nps-config-service/pkg/etcd"
+)
+
+func InitHandlers(container *Container) (*handler.AdminHandler, *handler.ConfigHandler, *handler.WebhookHandler, error) <span class="cov0" title="0">{
+        adminHandler := handler.NewAdminHandler(container.AdminService)
+        configHandler := handler.NewConfigHandler(container.ConfigService)
+        webhookHandler := handler.NewWebhookHandler(container.WebhookService)
+        return adminHandler,configHandler, webhookHandler, nil
+}</span>
+
+type Container struct {
+        ConfigRepo     repositories.IConfigRepo
+        AdminService    *services.AdminService
+        WebhookService *services.WebhookService
+        ConfigService  *services.ConfigService
+}
+
+func NewContainer() (*Container, error) <span class="cov0" title="0">{
+        container := &amp;Container{}
+
+        // Load config
+        client, err := etcdDB.InitEtcdDB(configs.AppConfig.EtcdEndpoint)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">etcdClient := etcdDB.NewEtcdClientImpl(client)
+
+        // Repository layer
+        configRepo := repositories.NewConfigRepository(*etcdClient)
+        container.ConfigRepo = configRepo
+
+        // Service layer
+        adminService := services.NewAdminService(configRepo)
+        container.AdminService = adminService.(*services.AdminService)
+
+        webhookService := services.NewWebhookService(configRepo)
+        container.WebhookService = webhookService.(*services.WebhookService)
+
+        configService := services.NewConfigService(configRepo, webhookService)
+        container.ConfigService = configService.(*services.ConfigService)
+
+        return container, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file16" style="display: none">package models
+
+import (
+        "time"
+
+        "github.com/google/uuid"
+        "gorm.io/gorm"
+)
+
+type Config struct {
+        ServiceName string                 `json:"service_name"`
+        Environment string                 `json:"environment"`
+        ConfigData  map[string]interface{} `json:"config_data"`
+        Version     string                 `json:"version"`
+        CreatedAt   time.Time              `json:"created_at"`
+        UpdatedAt   time.Time              `json:"updated_at"`
+}
+
+type ConfigMetadata struct {
+        LastModifiedBy string    `json:"last_modified_by"`
+        ChangeHistory  []string  `json:"change_history"`
+        LastModifiedAt time.Time `json:"last_modified_at"`
+}
+
+type Admin struct {
+        ID          uuid.UUID `gorm:"type:uuid;primaryKey"` //
+        UserName    string    `gorm:"not null"`
+        Password    string    `gorm:"not null"`
+        CreatedAt   time.Time `gorm:"autoCreateTime"`
+        UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+}
+
+func (n *Admin) BeforeCreate(tx *gorm.DB) (err error) <span class="cov0" title="0">{
+        if n.ID == uuid.Nil </span><span class="cov0" title="0">{
+                n.ID = uuid.New()
+        }</span>
+        <span class="cov0" title="0">return</span>
+}
+</pre>
+		
+		<pre class="file" id="file17" style="display: none">package repositories
+
+import (
+        "context"
+        "encoding/json"
+        "errors"
+        "fmt"
+        "log"
+        common "nps-config-service/internal/common/errors"
+        "nps-config-service/internal/configs/db"
+        "nps-config-service/internal/modules/config-manager/models"
+        etcdDB "nps-config-service/pkg/etcd"
+
+        "github.com/gofiber/fiber/v2"
+        "gorm.io/gorm"
+
+        "strconv"
+        "time"
+
+        clientv3 "go.etcd.io/etcd/client/v3"
+)
+
+type ConfigRepository struct {
+        EtcdClient etcdDB.EtcdClientImpl // ✅ Injected interface
+}
+
+type IConfigRepo interface {
+        StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error)
+        GetConfig(serviceName, environment string) (map[string]interface{}, error)
+        GetAllKeys(prefix string) (map[string]string, error)
+        GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error)
+        GetConfigValue(serviceName, environment, key string) (interface{}, error)
+        Set(ctx context.Context, key string, data string, ttl time.Duration) error
+        Get(ctx context.Context, key string) (string, error)
+        Delete(ctx context.Context, key string) error
+        CreateAdmin(admin *models.Admin) (*models.Admin, error)
+        GetAdminByCredentials(username, password string) (*models.Admin, error)
+}
+
+func NewConfigRepository(etcdClient etcdDB.EtcdClientImpl) IConfigRepo <span class="cov0" title="0">{
+        return &amp;ConfigRepository{EtcdClient: etcdClient}
+}</span>
+
+func (r *ConfigRepository) StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error) <span class="cov0" title="0">{
+
+        // Store each config field as a separate key
+        baseKey := fmt.Sprintf("%s/%s", serviceName, environment)
+
+        log.Printf("Storing config with base key: %s", baseKey)
+
+        // Store config data fields
+        for key, value := range configData </span><span class="cov0" title="0">{
+                configKey := fmt.Sprintf("%s/%s", baseKey, key)
+                valueStr := fmt.Sprintf("%v", value)
+                log.Printf("Storing key: %s, value: %s", configKey, valueStr)
+
+                err := r.EtcdClient.PutKey(configKey, valueStr)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Error storing key %s: %v", configKey, err)
+                        return nil, fmt.Errorf("failed to store config field %s: %v", key, err)
+                }</span>
+        }
+
+        // Store metadata
+        <span class="cov0" title="0">now := time.Now()
+        metadata := map[string]string{
+                "created_at": now.Format(time.RFC3339Nano),
+                "updated_at": now.Format(time.RFC3339Nano),
+        }
+
+        for key, value := range metadata </span><span class="cov0" title="0">{
+                metadataKey := fmt.Sprintf("%s/%s", baseKey, key)
+                log.Printf("Storing metadata key: %s, value: %s", metadataKey, value)
+
+                err := r.EtcdClient.PutKey(metadataKey, value)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Error storing metadata key %s: %v", metadataKey, err)
+                        return nil, fmt.Errorf("failed to store metadata field %s: %v", key, err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">log.Printf("Successfully stored all config and metadata for %s", baseKey)
+        return configData, nil</span>
+}
+
+// GetConfig retrieves a configuration from etcd
+func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[string]interface{}, error) <span class="cov0" title="0">{
+        // app.InitEtcdDB()
+        // defer app.Client.Close()
+
+        baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
+        log.Printf("Getting all config for base key: %s", baseKey)
+
+        // Get all keys under the base key
+        keys, err := r.EtcdClient.GetAllKeys(baseKey)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error getting all keys: %v", err)
+                return nil, fmt.Errorf("failed to get config keys: %v", err)
+        }</span>
+
+        // Create result map
+        <span class="cov0" title="0">result := make(map[string]interface{})
+
+        // Process each key-value pair
+        for key, value := range keys </span><span class="cov0" title="0">{
+                // Skip metadata fields
+                if key == "created_at" || key == "updated_at" </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">result[key] = value
+                log.Printf("Retrieved key: %s, value: %v", key, value)</span>
+        }
+
+        <span class="cov0" title="0">log.Printf("Successfully retrieved all config for %s", baseKey)
+        return result, nil</span>
+}
+
+func (r *ConfigRepository) GetAllKeys(prefix string) (map[string]string, error) <span class="cov0" title="0">{
+        return r.EtcdClient.GetAllKeys(prefix)
+}</span>
+
+// GetConfigMetadata retrieves metadata for a configuration
+func (r *ConfigRepository) GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error) <span class="cov0" title="0">{
+
+        key := fmt.Sprintf("/metadata/%s/%s", environment, serviceName)
+        res, err := r.EtcdClient.GetKey(key)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get metadata: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">var metadata models.ConfigMetadata
+        err = json.Unmarshal([]byte(res), &amp;metadata)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to unmarshal metadata: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;metadata, nil</span>
+}
+
+// GetConfigValue retrieves a specific config value from etcd
+func (r *ConfigRepository) GetConfigValue(serviceName, environment, key string) (interface{}, error) <span class="cov0" title="0">{
+        // app.InitEtcdDB()
+        // defer app.Client.Close()
+
+        // Construct the full key
+        fullKey := fmt.Sprintf("%s/%s/%s", environment, serviceName, key)
+        log.Printf("Getting config value for key: %s", fullKey)
+
+        // Get the value
+        value, err := r.EtcdClient.GetKey(fullKey)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error getting key %s: %v", fullKey, err)
+                return nil, fmt.Errorf("failed to get config value: %v", err)
+        }</span>
+
+        // Try to convert the value to appropriate type
+        <span class="cov0" title="0">var result interface{}
+        if value == "true" || value == "false" </span><span class="cov0" title="0">{
+                result = value == "true"
+        }</span> else<span class="cov0" title="0"> if intValue, err := strconv.Atoi(value); err == nil </span><span class="cov0" title="0">{
+                result = intValue
+        }</span> else<span class="cov0" title="0"> if floatValue, err := strconv.ParseFloat(value, 64); err == nil </span><span class="cov0" title="0">{
+                result = floatValue
+        }</span> else<span class="cov0" title="0"> {
+                result = value
+        }</span>
+
+        <span class="cov0" title="0">log.Printf("Successfully retrieved value for key %s: %v", fullKey, result)
+        return result, nil</span>
+}
+
+// Test function to demonstrate usage
+func (r *ConfigRepository) StoreAndRetrieveConfig() <span class="cov0" title="0">{
+        // Example config data
+        configData := map[string]interface{}{
+                "db_url":      "postgres://user:pass@localhost:5432/db",
+                "retry_count": 3,
+                "timeout":     5000,
+        }
+
+        // Store config
+        _, err := r.StoreConfig("user-service", "prod", configData)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to store config: %v", err)
+                return
+        }</span>
+
+        // Retrieve config
+        <span class="cov0" title="0">config, err := r.GetConfig("user-service", "prod")
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to get config: %v", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("Retrieved config: %+v\n", config)
+
+        // Retrieve metadata
+        metadata, err := r.GetConfigMetadata("user-service", "prod")
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to get metadata: %v", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("Retrieved metadata: %+v\n", metadata)</span>
+}
+
+// webhook service
+func (r *ConfigRepository) Set(ctx context.Context, key string, data string, ttl time.Duration) error <span class="cov0" title="0">{
+        // app.InitEtcdDB()
+        // defer app.Client.Close()
+        if ttl &gt; 0 </span><span class="cov0" title="0">{
+                // Create a lease
+                leaseResp, err := r.EtcdClient.Client.Grant(ctx, int64(ttl.Seconds()))
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Failed to create lease: %v", err)
+                        return fmt.Errorf("lease creation failed: %w", err)
+                }</span>
+
+                <span class="cov0" title="0">_, err = r.EtcdClient.Client.Put(ctx, key, data, clientv3.WithLease(leaseResp.ID))
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Error storing key with lease %s: %v", key, err)
+                        return fmt.Errorf("failed to store key %s: %w", key, err)
+                }</span>
+        } else<span class="cov0" title="0"> {
+                _, err := r.EtcdClient.Client.Put(ctx, key, data)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Error storing key %s: %v", key, err)
+                        return fmt.Errorf("failed to store key %s: %w", key, err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (r *ConfigRepository) Get(ctx context.Context, key string) (string, error) <span class="cov0" title="0">{
+
+        resp, err := r.EtcdClient.Client.Get(ctx, key)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to get key %s: %v", key, err)
+                return "", fmt.Errorf("failed to retrieve key %s: %w", key, err)
+        }</span>
+
+        <span class="cov0" title="0">if len(resp.Kvs) == 0 </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("key %s not found", key)
+        }</span>
+
+        <span class="cov0" title="0">return string(resp.Kvs[0].Value), nil</span>
+}
+func (r *ConfigRepository) Delete(ctx context.Context, key string) error <span class="cov0" title="0">{
+        _, err := r.EtcdClient.Client.Delete(ctx, key)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to delete key %s: %v", key, err)
+                return fmt.Errorf("failed to delete key %s: %w", key, err)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (r *ConfigRepository) CreateAdmin(admin *models.Admin) (*models.Admin, error) <span class="cov0" title="0">{
+        // Check if user with the same email already exists
+        var existingUser models.Admin
+        if err := db.DB.Where("user_name = ?", admin.UserName).First(&amp;existingUser).Error; err == nil </span><span class="cov0" title="0">{
+                return nil, common.ThrowError(fiber.StatusConflict, "ADMIN001") // User already exists
+        }</span>
+
+        // Create new user using GORM
+        <span class="cov0" title="0">if err := db.DB.Create(admin).Error; err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return admin, nil</span>
+}
+
+func (r *ConfigRepository) GetAdminByCredentials(username, password string) (*models.Admin, error) <span class="cov0" title="0">{
+        var admin models.Admin
+
+        // Find user by username and password
+        err := db.DB.Where("user_name = ? AND password = ?", username, password).First(&amp;admin).Error
+        if err != nil </span><span class="cov0" title="0">{
+                if errors.Is(err, gorm.ErrRecordNotFound) </span><span class="cov0" title="0">{
+                        return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002") // Admin not found
+                }</span>
+                <span class="cov0" title="0">return nil, err</span>
+        }
+
+        <span class="cov0" title="0">return &amp;admin, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file18" style="display: none">// mocks/repository.go
+
+package mocks
+
+import (
+        "context"
+        "nps-config-service/internal/modules/config-manager/models"
+        "time"
+
+        "github.com/stretchr/testify/mock"
+)
+
+type MockRepository struct {
+        mock.Mock
+}
+
+func (m *MockRepository) Get(ctx context.Context, key string) (string, error) <span class="cov0" title="0">{
+        args := m.Called(ctx, key)
+        return args.String(0), args.Error(1)
+}</span>
+
+func (m *MockRepository) Set(ctx context.Context, key string, value string, ttl time.Duration) error <span class="cov0" title="0">{
+        args := m.Called(ctx, key, value, ttl)
+        return args.Error(0)
+}</span>
+
+func (m *MockRepository) Delete(ctx context.Context, key string) error <span class="cov0" title="0">{
+        args := m.Called(ctx, key)
+        return args.Error(0)
+}</span>
+func (m *MockRepository) StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(serviceName, environment, configData)
+        return args.Get(0), args.Error(1)
+}</span>
+
+func (m *MockRepository) GetConfig(serviceName, environment string) (map[string]interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(serviceName, environment)
+        return args.Get(0).(map[string]interface{}), args.Error(1)
+}</span>
+
+func (m *MockRepository) GetAllKeys(prefix string) (map[string]string, error) <span class="cov0" title="0">{
+        args := m.Called(prefix)
+        return args.Get(0).(map[string]string), args.Error(1)
+}</span>
+
+func (m *MockRepository) GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error) <span class="cov0" title="0">{
+        args := m.Called(serviceName, environment)
+        return args.Get(0).(*models.ConfigMetadata), args.Error(1)
+}</span>
+
+func (m *MockRepository) GetConfigValue(serviceName, environment, key string) (interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(serviceName, environment, key)
+        return args.Get(0), args.Error(1)
+}</span>
+
+// Mock implementation of CreateAdmin
+func (m *MockRepository) CreateAdmin(*models.Admin) (*models.Admin, error) <span class="cov0" title="0">{
+        args := m.Called()
+        return args.Get(0).(*models.Admin), args.Error(1)
+}</span>
+
+func (m *MockRepository) GetAdminByCredentials(string, string) (*models.Admin, error) <span class="cov0" title="0">{
+        args := m.Called()
+        return args.Get(0).(*models.Admin), args.Error(1)
+}</span>
+
+func (m *MockRepository) NotifyWebhook(string, string) (*models.Admin, error) <span class="cov0" title="0">{
+        args := m.Called()
+        return args.Get(0).(*models.Admin), args.Error(1)
+}</span>
+</pre>
+		
+		<pre class="file" id="file19" style="display: none">package services
+
+import (
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+        "nps-config-service/internal/modules/config-manager/models"
+        "nps-config-service/internal/modules/config-manager/repositories"
+        "time"
+
+        "github.com/golang-jwt/jwt"
+)
+
+type AdminService struct {
+        Repo repositories.IConfigRepo
+}
+
+type IAdminService interface {
+        FetchAdminService(dto *dtos.AdminLoginDto, secret string) (*dtos.ResponseAdminDto, error)
+        CreateAdminService(req *dtos.AdminSignupDto) (*dtos.ResponseAdminSignupDto, error)
+}
+
+func NewAdminService(repo repositories.IConfigRepo) IAdminService <span class="cov8" title="1">{
+        return &amp;AdminService{Repo: repo}
+}</span>
+
+func (s *AdminService) CreateAdminService(req *dtos.AdminSignupDto) (*dtos.ResponseAdminSignupDto, error) <span class="cov8" title="1">{
+
+        admin := &amp;models.Admin{
+                UserName: req.Username,
+                Password: req.Password,
+        }
+        createAdmin, err := s.Repo.CreateAdmin(admin)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return &amp;dtos.ResponseAdminSignupDto{
+                Success: true,
+                Message: "Admin created successfully",
+                AdminId: createAdmin.UserName,
+        }, nil</span>
+}
+func (s *AdminService) FetchAdminService(req *dtos.AdminLoginDto, secret string) (*dtos.ResponseAdminDto, error) <span class="cov8" title="1">{
+        // Create access token (1 hour expiry)
+        accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+                "admin": true,
+                "exp":   time.Now().Add(time.Hour * 1).Unix(),
+        })
+
+        accessTokenString, err := accessToken.SignedString([]byte(secret))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">refreshSecret := secret // fallback to same secret if not set
+
+        // Create refresh token (7 days expiry)
+        refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+                "admin": true,
+                "exp":   time.Now().Add(time.Hour * 24 * 7).Unix(),
+        })
+
+        refreshTokenString, err := refreshToken.SignedString([]byte(refreshSecret))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">admin := &amp;models.Admin{
+                UserName: req.Username,
+                Password: req.Password,
+        }
+
+        createAdmin, err := s.Repo.GetAdminByCredentials(admin.UserName, admin.Password)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        // Return both tokens
+        <span class="cov8" title="1">return &amp;dtos.ResponseAdminDto{
+                Success:      true,
+                Message:      "Admin created successfully",
+                AdminId:      createAdmin.UserName,
+                Token:        accessTokenString,
+                RefreshToken: refreshTokenString,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file20" style="display: none">package services
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+        "nps-config-service/internal/modules/config-manager/repositories"
+)
+
+type ConfigService struct {
+        Repo           repositories.IConfigRepo
+        WebhookService IWebhookService
+}
+
+type IConfigService interface {
+        StoreConfigService(env string, service string, req map[string]interface{}) (interface{}, error)
+        GetConfigService(service string, env string) (interface{}, error)
+        GetConfigValueService(serviceName string, env string, key string) (interface{}, error)
+        GetConfigMetadataService(serviceName string, env string) (interface{}, error)
+}
+
+func NewConfigService(repo repositories.IConfigRepo, webHook IWebhookService) IConfigService <span class="cov8" title="1">{
+        return &amp;ConfigService{Repo: repo, WebhookService: webHook}
+}</span>
+
+func (s *ConfigService) StoreConfigService(env string, service string, req map[string]interface{}) (interface{}, error) <span class="cov8" title="1">{
+
+        response, err := s.Repo.StoreConfig(env, service, req)
+
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("failed to store %s: %v", env, err)
+                return nil, fmt.Errorf("no webhook registered for %s", env)
+        }</span>
+        <span class="cov8" title="1">key := fmt.Sprintf("/webhooks/%s/%s", env, service)
+        ctx := context.Background()
+        webHook, err := s.Repo.Get(ctx, key)
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("No webhook found for %s: %v", key, err)
+                return nil, fmt.Errorf("no webhook registered for %s", key)
+        }</span>
+
+        <span class="cov8" title="1">var hooks []dtos.RegisterWebhookRequest
+        if err := json.Unmarshal([]byte(webHook), &amp;hooks); err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("Failed to parse webhook data for %s: %v", key, err)
+                return nil, fmt.Errorf("invalid webhook data stored for %s", key)
+        }</span>
+
+        <span class="cov8" title="1">for _, hook := range hooks </span><span class="cov8" title="1">{
+                //TODO: ERROR HANDLING
+                go s.WebhookService.NotifyWebhook(hook, req)
+        }</span>
+
+        <span class="cov8" title="1">return response, nil</span>
+
+}
+
+func (s *ConfigService) GetConfigService(service string, env string) (any, error) <span class="cov8" title="1">{
+
+        response, err := s.Repo.GetConfig(service, env)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if response == nil </span><span class="cov0" title="0">{
+                return nil, nil // Explicitly return nil if response is nil
+        }</span>
+
+        <span class="cov8" title="1">return response, nil</span>
+}
+
+func (s *ConfigService) GetConfigValueService(serviceName string, env string, key string) (any, error) <span class="cov8" title="1">{
+        response, err := s.Repo.GetConfigValue(serviceName, env, key)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if response == nil </span><span class="cov0" title="0">{
+                return nil, nil // Explicitly return nil if response is nil
+        }</span>
+
+        <span class="cov8" title="1">return response, nil</span>
+}
+
+func (s *ConfigService) GetConfigMetadataService(serviceName string, env string) (any, error) <span class="cov8" title="1">{
+        response, err := s.Repo.GetConfigMetadata(serviceName, env)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">if response == nil </span><span class="cov0" title="0">{
+                return nil, nil // Explicitly return nil if response is nil
+        }</span>
+        <span class="cov8" title="1">return response, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file21" style="display: none">package mocks
+
+import (
+        "github.com/stretchr/testify/mock"
+)
+
+type MockConfigService struct {
+        mock.Mock
+}
+
+func (m *MockConfigService) StoreConfigService(env string, service string, req map[string]interface{}) (interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(env, service, req)
+        if args.Error(1) != nil </span><span class="cov0" title="0">{
+                return nil, args.Error(1)
+        }</span>
+        <span class="cov0" title="0">return args.Get(0), nil</span>
+}
+
+func (m *MockConfigService) GetConfigService(service string, env string) (interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(service, env)
+        if args.Error(1) != nil </span><span class="cov0" title="0">{
+                return nil, args.Error(1)
+        }</span>
+        <span class="cov0" title="0">return args.Get(0), nil</span>
+}
+
+func (m *MockConfigService) GetConfigValueService(serviceName string, env string, key string) (interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(serviceName, env, key)
+        if args.Error(1) != nil </span><span class="cov0" title="0">{
+                return nil, args.Error(1)
+        }</span>
+        <span class="cov0" title="0">return args.Get(0), nil</span>
+}
+
+func (m *MockConfigService) GetConfigMetadataService(serviceName string, env string) (interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(serviceName, env)
+        if args.Error(1) != nil </span><span class="cov0" title="0">{
+                return nil, args.Error(1)
+        }</span>
+        <span class="cov0" title="0">return args.Get(0), nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file22" style="display: none">package mocks
+
+import (
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+
+        "github.com/stretchr/testify/mock"
+)
+
+type MockWebhookService struct {
+        mock.Mock
+}
+
+func (m *MockWebhookService) RegisterWebhookService(configData dtos.RegisterWebhookRequest) (interface{}, error) <span class="cov0" title="0">{
+        args := m.Called(configData)
+        return args.Get(0), args.Error(1)
+}</span>
+
+func (m *MockWebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error) <span class="cov0" title="0">{
+        args := m.Called(env, service)
+        return args.Get(0).([]dtos.RegisterWebhookRequest), args.Error(1)
+}</span>
+
+func (m *MockWebhookService) DeleteWebhook(env, service, url, method string) (string, error) <span class="cov0" title="0">{
+        args := m.Called(env, service, url, method)
+        return args.String(0), args.Error(1)
+}</span>
+
+func (m *MockWebhookService) DeleteAllWebhooks(env, service string) error <span class="cov0" title="0">{
+        args := m.Called(env, service)
+        return args.Error(0)
+}</span>
+
+func (m *MockWebhookService) NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{}) <span class="cov0" title="0">{
+        m.Called(hook, data)
+}</span>
+</pre>
+		
+		<pre class="file" id="file23" style="display: none">package services
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "log"
+        "net/http"
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+        "nps-config-service/internal/modules/config-manager/repositories"
+        "time"
+
+        customErr "nps-config-service/internal/common/errors"
+        "strings"
+
+        "github.com/stretchr/testify/mock"
+)
+
+const (
+        maxRetries     = 3
+        retryDelay     = 2 * time.Second
+        requestTimeout = 5 * time.Second
+)
+
+type WebhookService struct {
+        Repo repositories.IConfigRepo
+}
+
+func (s *WebhookService) On(param1 string, argument mock.AnythingOfTypeArgument, req map[string]interface{}) <span class="cov0" title="0">{
+        panic("unimplemented")</span>
+}
+
+type IWebhookService interface {
+        RegisterWebhookService(req dtos.RegisterWebhookRequest) (interface{}, error)
+        GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error)
+        DeleteWebhook(env, service, url, method string) (string, error)
+        DeleteAllWebhooks(env, service string) error
+        NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{})
+}
+
+func NewWebhookService(repo repositories.IConfigRepo) IWebhookService <span class="cov8" title="1">{
+        return &amp;WebhookService{Repo: repo}
+}</span>
+
+func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest) (interface{}, error) <span class="cov8" title="1">{
+        key := fmt.Sprintf("/webhooks/%s/%s", req.Environment, req.ServiceName)
+        ctx := context.Background()
+        var hooks []dtos.RegisterWebhookRequest
+
+        webHook, err := s.Repo.Get(ctx, key)
+        if err == nil &amp;&amp; len(webHook) &gt; 0 </span><span class="cov8" title="1">{
+                if err := json.Unmarshal([]byte(webHook), &amp;hooks); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("invalid webhook data stored for %s: %v", key, err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">for _, existing := range hooks </span><span class="cov8" title="1">{
+                if existing.URL == req.URL &amp;&amp; existing.Method == req.Method </span><span class="cov8" title="1">{
+                        return nil, customErr.NewConflictError(fmt.Sprintf("webhook with URL '%s' and method '%s' already exists", req.URL, req.Method))
+                }</span>
+        }
+
+        <span class="cov8" title="1">hooks = append(hooks, req)
+        data, err := json.Marshal(hooks)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to marshal webhook: %v", err)
+        }</span>
+        <span class="cov8" title="1">if err := s.Repo.Set(ctx, key, string(data), -1); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">res := fmt.Sprintf("Webhook registered successfully for service: %s in environment: %s", req.ServiceName, req.Environment)
+        return res, nil</span>
+}
+func (s *WebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, error) <span class="cov8" title="1">{
+        key := fmt.Sprintf("/webhooks/%s/%s", env, service)
+        ctx := context.Background()
+
+        webHook, err := s.Repo.Get(ctx, key)
+        if err != nil || len(webHook) == 0 </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("no webhooks found for %s/%s", env, service)
+        }</span>
+
+        <span class="cov8" title="1">var hooks []dtos.RegisterWebhookRequest
+        if err := json.Unmarshal([]byte(webHook), &amp;hooks); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse webhook data: %v", err)
+        }</span>
+        <span class="cov8" title="1">return hooks, nil</span>
+}
+func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string, error) <span class="cov8" title="1">{
+        key := fmt.Sprintf("/webhooks/%s/%s", env, service)
+        ctx := context.Background()
+
+        hooks, err := s.GetWebhooks(env, service)
+        updated := make([]dtos.RegisterWebhookRequest, 0)
+        found := false
+        for _, h := range hooks </span><span class="cov8" title="1">{
+                if h.URL == url &amp;&amp; h.Method == method </span><span class="cov8" title="1">{
+                        found = true
+                        continue</span> // skip the one to delete
+                }
+                <span class="cov8" title="1">updated = append(updated, h)</span>
+        }
+        <span class="cov8" title="1">if !found </span><span class="cov8" title="1">{
+                return "", fmt.Errorf("webhook with URL '%s' and method '%s' not found", url, method)
+        }</span>
+
+        // Re-save the updated list
+        <span class="cov8" title="1">data, err := json.Marshal(updated)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("failed to marshal updated webhooks: %v", err)
+        }</span>
+        <span class="cov8" title="1">if err := s.Repo.Set(ctx, key, string(data), -1); err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov8" title="1">return "Webhook deleted successfully", nil</span>
+}
+func (s *WebhookService) DeleteAllWebhooks(env, service string) error <span class="cov8" title="1">{
+        key := fmt.Sprintf("/webhooks/%s/%s", env, service)
+        ctx := context.Background()
+        return s.Repo.Delete(ctx, key)
+}</span>
+func (s *WebhookService) NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{}) <span class="cov8" title="1">{
+        body, err := json.Marshal(map[string]interface{}{
+                "values":      data,
+                "method":      hook.Method,
+                "environment": hook.Environment,
+                "serviceName": hook.ServiceName,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to marshal webhook payload: %v", err)
+                return
+        }</span>
+        // fullURL := strings.TrimRight(hook.URL, "/")
+        <span class="cov8" title="1">fullURL := fmt.Sprintf("%s/%s/%s", strings.TrimRight(hook.URL, "/"), hook.Environment, hook.ServiceName)
+        if !strings.HasPrefix(fullURL, "http://") &amp;&amp; !strings.HasPrefix(fullURL, "https://") </span><span class="cov0" title="0">{
+                fullURL = "http://" + fullURL
+        }</span>
+        <span class="cov8" title="1">for attempt := 1; attempt &lt;= maxRetries; attempt++ </span><span class="cov8" title="1">{
+                client := http.Client{Timeout: requestTimeout}
+                resp, err := client.Post(fullURL, "application/json", bytes.NewBuffer(body))
+
+                if err != nil </span><span class="cov8" title="1">{
+                        log.Printf("Attempt %d: Failed to notify %s: %v", attempt, fullURL, err)
+                }</span> else<span class="cov0" title="0"> {
+                        defer resp.Body.Close()
+                        if resp.StatusCode &gt;= 200 &amp;&amp; resp.StatusCode &lt; 300 </span><span class="cov0" title="0">{
+                                log.Printf("Webhook to %s succeeded with status: %s", fullURL, resp.Status)
+                                return
+                        }</span>
+                        <span class="cov0" title="0">log.Printf("Attempt %d: Webhook to %s failed with status: %s", attempt, fullURL, resp.Status)</span>
+                }
+
+                // Wait before retrying
+                <span class="cov8" title="1">if attempt &lt; maxRetries </span><span class="cov8" title="1">{
+                        time.Sleep(retryDelay)
+                }</span>
+        }
+
+        <span class="cov8" title="1">log.Printf("All attempts to notify webhook %s failed after %d retries", fullURL, maxRetries)</span>
+}
+</pre>
+		
+		<pre class="file" id="file24" style="display: none">package utils
+
+import "encoding/json"
+
+func MapToStruct(input map[string]any, output interface{}) error <span class="cov0" title="0">{
+        bytes, err := json.Marshal(input)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">return json.Unmarshal(bytes, output)</span>
+}
+</pre>
+		
+		<pre class="file" id="file25" style="display: none">package utils
+
+import (
+        "nps-config-service/internal/modules/config-manager/apis/dtos"
+
+        "github.com/gofiber/fiber/v2"
+)
+
+func SendSuccess(c *fiber.Ctx, statusCode int, message string, data any) <span class="cov0" title="0">{
+        response := dtos.SuccessResponse{
+                StatusCode: statusCode,
+                Message:    message,
+                Data:       data,
+        }
+        c.Status(statusCode).JSON(response)
+}</span>
+
+// SendError sends a JSON error response
+func SendError(c *fiber.Ctx, statusCode int, message string, err any) <span class="cov0" title="0">{
+        response := dtos.ErrorResponse{
+                StatusCode: statusCode,
+                Message:    message,
+                Error:      err,
+        }
+        c.Status(statusCode).JSON(response)
+}</span>
+</pre>
+		
+		<pre class="file" id="file26" style="display: none">package etcdDB
+
+import (
+        "time"
+
+        clientv3 "go.etcd.io/etcd/client/v3"
+)
+
+func InitEtcdDB(endpoint string) (*clientv3.Client, error) <span class="cov0" title="0">{
+        return clientv3.New(clientv3.Config{
+                Endpoints:   []string{endpoint},
+                DialTimeout: 5 * time.Second,
+        })
+}</span>
+</pre>
+		
+		<pre class="file" id="file27" style="display: none">package etcdDB
+
+import (
+        "context"
+        "fmt"
+        "time"
+
+        clientv3 "go.etcd.io/etcd/client/v3"
+)
+
+type EtcdClientImpl struct {
+        Client *clientv3.Client
+}
+
+func NewEtcdClientImpl(client *clientv3.Client) *EtcdClientImpl <span class="cov0" title="0">{
+        return &amp;EtcdClientImpl{Client: client}
+}</span>
+
+// PutKey stores a value with a key
+func (e *EtcdClientImpl) PutKey(key, value string) error <span class="cov0" title="0">{
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        defer cancel()
+
+        _, err := e.Client.Put(ctx, key, value)
+        return err
+}</span>
+
+// GetKey retrieves the value for a given key
+func (e *EtcdClientImpl) GetKey(key string) (string, error) <span class="cov0" title="0">{
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        defer cancel()
+
+        resp, err := e.Client.Get(ctx, key)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov0" title="0">if len(resp.Kvs) &gt; 0 </span><span class="cov0" title="0">{
+                return string(resp.Kvs[0].Value), nil
+        }</span>
+        <span class="cov0" title="0">return "", fmt.Errorf("key not found")</span>
+}
+
+// DeleteKey removes a key
+func (e *EtcdClientImpl) DeleteKey(key string) error <span class="cov0" title="0">{
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        defer cancel()
+
+        _, err := e.Client.Delete(ctx, key)
+        return err
+}</span>
+
+// WatchKey listens for changes
+func (e *EtcdClientImpl) WatchKey(key string) <span class="cov0" title="0">{
+        rch := e.Client.Watch(context.Background(), key)
+        for wresp := range rch </span><span class="cov0" title="0">{
+                for _, ev := range wresp.Events </span><span class="cov0" title="0">{
+                        fmt.Printf("🔄 %s %q: %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
+                }</span>
+        }
+}
+
+// GetAllKeys gets all keys under a prefix
+func (e *EtcdClientImpl) GetAllKeys(prefix string) (map[string]string, error) <span class="cov0" title="0">{
+        ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+
+        resp, err := e.Client.Get(ctx, prefix, clientv3.WithPrefix())
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">result := make(map[string]string)
+        for _, kv := range resp.Kvs </span><span class="cov0" title="0">{
+                // Extract the key without the prefix
+                key := string(kv.Key[len(prefix)+1:])
+                result[key] = string(kv.Value)
+        }</span>
+
+        <span class="cov0" title="0">return result, nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
