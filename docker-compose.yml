@@ -11,7 +11,7 @@ services:
       - "5000:8080"    # REST
     depends_on:
       yugabyte:
-        condition: service_healthy
+        condition: service_started
       redis:
         condition: service_healthy
     environment:
@@ -21,7 +21,7 @@ services:
       - REDIS_PASSWORD=templatepassword
       - REDIS_URL=redis:6379
       - YUGABYTE_HOST=yugabyte
-      - YUGABYTE_PORT=5435
+      - YUGABYTE_PORT=5433
       - YUGABYTE_USER=yugabyte
       - YUGABYTE_PASSWORD=yugabyte
       - YUGABYTE_DB=yugabyte
@@ -39,10 +39,11 @@ services:
       - "7001:7000"
       - "9000:9000"
     healthcheck:
-      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5433"]
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5435"]
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
     networks:
       - template-services-network
 
@@ -54,6 +55,11 @@ services:
       - "6379:6379"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5  
     restart: unless-stopped
     networks:
       - template-services-network
