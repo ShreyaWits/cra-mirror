@@ -77,10 +77,11 @@ services:
     volumes:
       - cassandra_data:/var/lib/cassandra
     healthcheck:
-      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+      test: ["CMD", "cqlsh", "-e", "DESCRIBE keyspaces"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
     networks:
       - protected-link
 

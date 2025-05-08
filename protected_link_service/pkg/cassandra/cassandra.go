@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	configEnv "protected_link/internal/configs"
+	cassandra "protected_link/migrations"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -32,6 +33,13 @@ func NewCassandraConfig(cfg *configEnv.Config) (*CassandraConfig, error) {
 		session, err = cluster.CreateSession()
 		if err == nil {
 			log.Println("✅ Successfully connected to Cassandra")
+
+			// Apply migrations after successful connection
+			if err := cassandra.ApplyMigrations(session, "./migrations"); err != nil {
+				log.Printf("❌ Failed to apply migrations: %v", err)
+				return nil, err
+			}
+
 			return &CassandraConfig{
 				Session: session,
 			}, nil

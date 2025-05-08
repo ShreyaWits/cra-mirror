@@ -9,6 +9,7 @@ import (
 	pb "protected_link/pkg/grpc/proto"
 	"protected_link/pkg/validation"
 	"reflect"
+	"regexp"
 )
 
 // AuthHandler handles authentication-related gRPC requests
@@ -26,20 +27,26 @@ func NewAuthHandler(authService *authService.AuthenticationService) *AuthHandler
 
 // VerifyOTPV1 handles OTP verification requests
 func (h *AuthHandler) VerifyOTPV1(ctx context.Context, req *pb.VerifyOTPRequestV1) (*pb.VerifyOTPResponseV1, error) {
+	// Validate the incoming request
 	if err := h.validateRequest(req); err != nil {
 		return h.createErrorResponse(err), nil
 	}
 
+	// Map the request to internal model
 	internalReq := h.mapToInternalRequest(req)
+
+	// Validate the internal request
 	if err := h.validateInternalRequest(internalReq); err != nil {
 		return h.createErrorResponse(err), nil
 	}
 
+	// Perform the OTP verification
 	result, err := h.authService.VerifyOTP(internalReq)
 	if err != nil {
 		return h.createErrorResponse(err), nil
 	}
 
+	// Return the success response
 	return h.createSuccessResponse(result), nil
 }
 
@@ -48,7 +55,31 @@ func (h *AuthHandler) validateRequest(req *pb.VerifyOTPRequestV1) error {
 	if req == nil {
 		return fmt.Errorf("request cannot be nil")
 	}
+
+	// Check if UserId, OTP, and VerificationId are provided
+	if req.UserId == "" {
+		return fmt.Errorf("user_id is required")
+	}
+	if req.Otp == "" {
+		return fmt.Errorf("otp is required")
+	}
+	if req.VerificationId == "" {
+		return fmt.Errorf("verification_id is required")
+	}
+
+	// Check if OTP format is valid (for example, check if it's a 6-digit number)
+	if !isValidOTP(req.Otp) {
+		return fmt.Errorf("otp must be a 6-digit number")
+	}
+
 	return nil
+}
+
+// isValidOTP validates the OTP format (e.g., 6 digits)
+func isValidOTP(otp string) bool {
+	otpRegex := `^\d{6}$`
+	match, _ := regexp.MatchString(otpRegex, otp)
+	return match
 }
 
 // mapToInternalRequest converts gRPC request to internal model
