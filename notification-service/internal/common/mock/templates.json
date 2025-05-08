@@ -1,0 +1,6 @@
+{
+    "order_placed": ["username", "orderID", "orderDate", "deliveryDate", "trackingLink"],
+    "password_reset": ["username", "resetLink", "expiryTime"],
+    "account_activation": ["username", "activationLink"]
+  }
+  
