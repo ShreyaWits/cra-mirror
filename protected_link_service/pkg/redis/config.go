@@ -54,3 +54,14 @@ func ConnectRedis(cfg *configEnv.Config) (*RedisConfig, error) {
 	log.Printf("🔻 Unable to connect to Redis after %d attempts.", maxRetries)
 	return nil, fmt.Errorf("failed to connect to Redis after %d retries: %w", maxRetries, err)
 }
+
+// Close closes the Redis connection
+func (r *RedisConfig) Close() {
+	if r.Client != nil {
+		if err := r.Client.Close(); err != nil {
+			log.Printf("❌ Error closing Redis connection: %v", err)
+		} else {
+			log.Println("✅ Redis connection closed")
+		}
+	}
+}

@@ -1,4 +1,4 @@
-package utils
+package link_utils
 
 import (
 	"encoding/json"
@@ -33,4 +33,12 @@ func ConvertToGenerateUrlRequest(data interface{}) (*apiDtos.GenerateUrlRequest,
 	}
 
 	return &request, nil
+}
+
+func ParseExpiration(expireIn string) (int64, error) {
+	duration, err := time.ParseDuration(expireIn)
+	if err != nil {
+		return 0, fmt.Errorf("invalid expire_in format: %w", err)
+	}
+	return time.Now().Add(duration).Unix(), nil
 }

@@ -8,6 +8,10 @@ import (
 
 type JSONB map[string]interface{}
 
+func (j JSONB) UnmarshalJSON(b []byte) any {
+	panic("unimplemented")
+}
+
 // Value converts JSONB to a database-compatible format.
 func (j JSONB) Value() (driver.Value, error) {
 	return json.Marshal(j)

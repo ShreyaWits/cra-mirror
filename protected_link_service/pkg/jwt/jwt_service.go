@@ -37,31 +37,13 @@ func NewJwtCreation() (*JwtCreation, error) {
 	}, nil
 }
 
+
+
 // Encrypt encodes any struct into an encrypted URL-safe string
-func parseExpiration(expireIn string) (int64, error) {
-	duration, err := time.ParseDuration(expireIn)
-	if err != nil {
-		return 0, fmt.Errorf("invalid expire_in format: %w", err)
-	}
-	return time.Now().Add(duration).Unix(), nil
-}
 
-func (j *JwtCreation) Encrypt(data *apiDtos.GenerateUrlRequest) (string, error) {
+func (j *JwtCreation) Encrypt(data apiDtos.SecurePayload) (string, error) {
 
-	expireStr := data.ExpireIn
-
-	expiresAt, err := parseExpiration(expireStr)
-	if err != nil {
-		return "", err
-	}
-
-	// Wrap the data with expiration
-	payload := apiDtos.SecurePayload{
-		Data:      data,
-		ExpiresAt: expiresAt,
-	}
-
-	jsonData, err := json.Marshal(payload)
+	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal data: %w", err)
 	}
