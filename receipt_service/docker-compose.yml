@@ -1,0 +1,43 @@
+version: "1.0"
+
+services:
+  nps-receipt-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nps-receipt-service
+    restart: always
+    networks:
+      - nps2.0
+    ports:
+      - "50051:50051"
+    environment:
+      - PORT=3006
+      - IS_DOCKER=true
+
+
+  redis-service:
+    container_name: redis-service
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - user-redis:/data
+    environment:
+      - REDIS_PASSWORD=redis
+      - REDIS_USERNAME=redis
+    networks:
+      - nps2.0
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  user-redis:
+    driver: local
+
+networks:
+  nps2.0:

@@ -1,0 +1,100 @@
+{
+    "info": {
+      "name": "Encryption Microservice API",
+      "description": "Postman collection for the Encryption Microservice API",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Health Check",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:8082/health",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8082",
+            "path": ["health"]
+          },
+          "description": "Check the health status of the encryption microservice."
+        },
+        "response": []
+      },
+      {
+        "name": "Encrypt Data",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"data\": \"string to encrypt\",\n  \"contextId\": \"unique-context-id\"\n}"
+          },
+          "url": {
+            "raw": "http://localhost:8082/api/v1/encryption/encrypt",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8082",
+            "path": ["api", "v1", "encryption", "encrypt"]
+          },
+          "description": "Encrypt data using the provided context ID."
+        },
+        "response": []
+      },
+      {
+        "name": "Decrypt Data",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"encryptedData\": \"encrypted-string\",\n  \"edek\": \"encrypted-dek\",\n  \"contextId\": \"unique-context-id\"\n}"
+          },
+          "url": {
+            "raw": "http://localhost:8082/api/v1/encryption/decrypt",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8082",
+            "path": ["api", "v1", "encryption", "decrypt"]
+          },
+          "description": "Decrypt data using the provided EDEK and context ID."
+        },
+        "response": []
+      },
+      {
+        "name": "Generate EDEK",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"contextId\": \"unique-context-id\"\n}"
+          },
+          "url": {
+            "raw": "http://localhost:8082/api/v1/encryption/generate-edek",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8082",
+            "path": ["api", "v1", "encryption", "generate-edek"]
+          },
+          "description": "Generate an Encrypted Data Encryption Key (EDEK) using the provided context ID."
+        },
+        "response": []
+      }
+    ]
+  }

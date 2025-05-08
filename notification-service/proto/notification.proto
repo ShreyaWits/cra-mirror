@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "./proto";
+
+
+// Error message structure with only one FieldError
+message FieldError {
+  string field = 1;     // The field where the error occurred
+  string errorMsg = 2;  // The error message
+  string errorCode = 3; // The custom error code
+}
+
+// New messages for ConfigureChannel
+message ChannelConfig {
+  string service = 1;  // e.g., email, whatsapp, sms
+  string primary = 2;  // e.g., sendgrid
+  string fallback = 3; // e.g., smtp
+}
+
+message ConfigureRequest {
+  repeated ChannelConfig configs = 1; // List of channel configurations
+}
+
+message ConfigureResponse {
+  // Consistent response structure for configuration
+  string status = 1;
+  int32 statusCode = 2;
+  string message = 3;
+  FieldError fieldError = 4; // Single field error
+  string data = 5; // Optional data field, can be customized
+}
+
+message GetConfigureResponse {
+  // Consistent response structure for getting configuration
+  repeated ChannelConfig configs = 1; // List of channel configurations
+  string status = 2;
+  int32 statusCode = 3;
+  string message = 4;
+  FieldError fieldError = 5; // Single field error
+  string data = 6; // Optional data field, can be customized
+}
+
+// Service definition
+service NotificationService {
+
+  // New method for configuring channels
+  rpc Configure(ConfigureRequest) returns (ConfigureResponse);
+
+  rpc GetConfigure(ConfigureRequest) returns (GetConfigureResponse);
+}
