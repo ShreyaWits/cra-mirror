@@ -4,13 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net"
-	configEnv "template-services/internal/configs"
-	"template-services/internal/pkg/cache"
-	"template-services/internal/pkg/db"
-	"template-services/internal/template/handler"
-	"template-services/internal/template/repository"
+	"template-services/internal/di"
 	"template-services/internal/template/routes"
-	"template-services/internal/template/service"
 	pb "template-services/proto"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,22 +15,17 @@ import (
 )
 
 func main() {
-	configEnv, err := configEnv.LoadConfig()
+	// Initialize DI container
+	container, err := di.NewContainer()
 	if err != nil {
-		log.Fatalf("❌ Failed to load config: %v", err)
+		log.Fatalf("❌ Failed to initialize container: %v", err)
 	}
 
-	// Initialize dependencies
-	yugabyteDB := db.NewYugabyteDB(configEnv.YugabyteDBHost, configEnv.YugabyteDBPort, configEnv.YugabyteDBUser, configEnv.YugabyteDBPassword, configEnv.YugabyteDBName)
-	if yugabyteDB == nil {
-		log.Fatalf("❌ Failed to connect to YugabyteDB")
+	// Get handlers from container
+	templateHandler, templateGRPCHandler, err := di.InitHandlers(container)
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize handlers: %v", err)
 	}
-	redisCache := cache.NewRedisCache(configEnv.RedisHost, configEnv.RedisPort, configEnv.RedisPassword)
-
-	templateRepository := repository.NewTemplateRepository(yugabyteDB)
-	templateService := service.NewTemplateService(templateRepository, redisCache)
-	templateHandler := handler.NewTemplateHandler(templateService)
-	templateGRPCHandler := handler.NewTemplateGRPCHandler(templateService)
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
@@ -70,6 +60,7 @@ func main() {
 			log.Fatalf("Failed to serve gRPC: %v", err)
 		}
 	}()
+
 	// Start HTTP Server
 	fmt.Println("HTTP server listening on :8080")
 	log.Fatal(app.Listen(":8080"))

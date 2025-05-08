@@ -174,9 +174,9 @@ const file_proto_template_proto_rawDesc = "" +
 	"\x04data\x18\x04 \x03(\v2$.template.TemplateResponse.DataEntryR\x04data\x1a7\n" +
 	"\tDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012Z\n" +
-	"\x0fTemplateService\x12G\n" +
-	"\vGetTemplate\x12\x1c.template.GetTemplateRequest\x1a\x1a.template.TemplateResponseB\tZ\a./protob\x06proto3"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\\\n" +
+	"\x0fTemplateService\x12I\n" +
+	"\rGetTemplateV1\x12\x1c.template.GetTemplateRequest\x1a\x1a.template.TemplateResponseB\tZ\a./protob\x06proto3"
 
 var (
 	file_proto_template_proto_rawDescOnce sync.Once
@@ -198,8 +198,8 @@ var file_proto_template_proto_goTypes = []any{
 }
 var file_proto_template_proto_depIdxs = []int32{
 	2, // 0: template.TemplateResponse.data:type_name -> template.TemplateResponse.DataEntry
-	0, // 1: template.TemplateService.GetTemplate:input_type -> template.GetTemplateRequest
-	1, // 2: template.TemplateService.GetTemplate:output_type -> template.TemplateResponse
+	0, // 1: template.TemplateService.GetTemplateV1:input_type -> template.GetTemplateRequest
+	1, // 2: template.TemplateService.GetTemplateV1:output_type -> template.TemplateResponse
 	2, // [2:3] is the sub-list for method output_type
 	1, // [1:2] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

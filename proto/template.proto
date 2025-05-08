@@ -5,7 +5,7 @@ package template;
 option go_package = "./proto";
 
 service TemplateService {
-  rpc GetTemplate(GetTemplateRequest) returns (TemplateResponse);
+  rpc GetTemplateV1(GetTemplateRequest) returns (TemplateResponse);
 }
 
 message GetTemplateRequest {

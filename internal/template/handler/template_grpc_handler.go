@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 	"template-services/internal/template/service"
 	pb "template-services/proto"
 )
@@ -17,10 +18,15 @@ func NewTemplateGRPCHandler(service *service.TemplateService) *TemplateGRPCHandl
 	}
 }
 
-func (h *TemplateGRPCHandler) GetGRPCTemplate(ctx context.Context, req *pb.GetTemplateRequest) (*pb.TemplateResponse, error) {
+func (h *TemplateGRPCHandler) GetTemplateV1(ctx context.Context, req *pb.GetTemplateRequest) (*pb.TemplateResponse, error) {
+	// {
+	// 	"name": "welcome_sms",
+	// 	"channel": "sms",
+	// 	"language": "en"
+	// }
 
-	// Call service
 	resp, err := h.service.GetTemplate(ctx, req.Id, req.Name, req.Channel, req.Language)
+	log.Println("🚀 ~ func ~ resp:", resp)
 	if err != nil {
 		return &pb.TemplateResponse{
 			Success: false,

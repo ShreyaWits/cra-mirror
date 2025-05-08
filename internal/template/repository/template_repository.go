@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"template-services/internal/models"
 	"template-services/internal/pkg/db"
 )
@@ -27,28 +28,33 @@ func (r *templateRepository) Create(ctx context.Context, template *models.Templa
 }
 
 func (r *templateRepository) Get(ctx context.Context, id, name, channel, language *string) (*models.Template, error) {
-
-	var query string
+	var conditions []string
 	var args []interface{}
-	if id != nil {
-		query = "id = ?"
+
+	if id != nil && *id != "" {
+		conditions = append(conditions, "id = ?")
 		args = append(args, *id)
-	} else if name != nil {
-		query = "AND name = ?"
+	}
+	if name != nil && *name != "" {
+		conditions = append(conditions, "name = ?")
 		args = append(args, *name)
-	} else if channel != nil {
-		query = "AND channel = ?"
+	}
+	if channel != nil && *channel != "" {
+		conditions = append(conditions, "channel = ?")
 		args = append(args, *channel)
-	} else if language != nil {
-		query = "AND language = ?"
+	}
+	if language != nil && *language != "" {
+		conditions = append(conditions, "language = ?")
 		args = append(args, *language)
 	}
 
-	query += " AND is_active = true"
+	// Always include is_active = true
+	conditions = append(conditions, "is_active = true")
+
+	query := strings.Join(conditions, " AND ")
 
 	var template models.Template
-	err := r.db.Model(&models.Template{}).Where(query,
-		args...).First(&template).Error
+	err := r.db.Model(&models.Template{}).Where(query, args...).First(&template).Error
 	return &template, err
 }
 

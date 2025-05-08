@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TemplateService_GetTemplate_FullMethodName = "/template.TemplateService/GetTemplate"
+	TemplateService_GetTemplateV1_FullMethodName = "/template.TemplateService/GetTemplateV1"
 )
 
 // TemplateServiceClient is the client API for TemplateService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TemplateServiceClient interface {
-	GetTemplate(ctx context.Context, in *GetTemplateRequest, opts ...grpc.CallOption) (*TemplateResponse, error)
+	GetTemplateV1(ctx context.Context, in *GetTemplateRequest, opts ...grpc.CallOption) (*TemplateResponse, error)
 }
 
 type templateServiceClient struct {
@@ -37,10 +37,10 @@ func NewTemplateServiceClient(cc grpc.ClientConnInterface) TemplateServiceClient
 	return &templateServiceClient{cc}
 }
 
-func (c *templateServiceClient) GetTemplate(ctx context.Context, in *GetTemplateRequest, opts ...grpc.CallOption) (*TemplateResponse, error) {
+func (c *templateServiceClient) GetTemplateV1(ctx context.Context, in *GetTemplateRequest, opts ...grpc.CallOption) (*TemplateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TemplateResponse)
-	err := c.cc.Invoke(ctx, TemplateService_GetTemplate_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, TemplateService_GetTemplateV1_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *templateServiceClient) GetTemplate(ctx context.Context, in *GetTemplate
 // All implementations must embed UnimplementedTemplateServiceServer
 // for forward compatibility.
 type TemplateServiceServer interface {
-	GetTemplate(context.Context, *GetTemplateRequest) (*TemplateResponse, error)
+	GetTemplateV1(context.Context, *GetTemplateRequest) (*TemplateResponse, error)
 	mustEmbedUnimplementedTemplateServiceServer()
 }
 
@@ -62,8 +62,8 @@ type TemplateServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedTemplateServiceServer struct{}
 
-func (UnimplementedTemplateServiceServer) GetTemplate(context.Context, *GetTemplateRequest) (*TemplateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTemplate not implemented")
+func (UnimplementedTemplateServiceServer) GetTemplateV1(context.Context, *GetTemplateRequest) (*TemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTemplateV1 not implemented")
 }
 func (UnimplementedTemplateServiceServer) mustEmbedUnimplementedTemplateServiceServer() {}
 func (UnimplementedTemplateServiceServer) testEmbeddedByValue()                         {}
@@ -86,20 +86,20 @@ func RegisterTemplateServiceServer(s grpc.ServiceRegistrar, srv TemplateServiceS
 	s.RegisterService(&TemplateService_ServiceDesc, srv)
 }
 
-func _TemplateService_GetTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _TemplateService_GetTemplateV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTemplateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TemplateServiceServer).GetTemplate(ctx, in)
+		return srv.(TemplateServiceServer).GetTemplateV1(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: TemplateService_GetTemplate_FullMethodName,
+		FullMethod: TemplateService_GetTemplateV1_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TemplateServiceServer).GetTemplate(ctx, req.(*GetTemplateRequest))
+		return srv.(TemplateServiceServer).GetTemplateV1(ctx, req.(*GetTemplateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -112,8 +112,8 @@ var TemplateService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TemplateServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetTemplate",
-			Handler:    _TemplateService_GetTemplate_Handler,
+			MethodName: "GetTemplateV1",
+			Handler:    _TemplateService_GetTemplateV1_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

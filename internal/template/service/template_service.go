@@ -44,6 +44,10 @@ func (s *TemplateService) CreateTemplate(ctx context.Context, template *models.T
 }
 
 func (s *TemplateService) GetTemplate(ctx context.Context, id, name, channel, language string) (*models.Template, error) {
+	var idPtr *string
+	if id != "" {
+		idPtr = &id
+	}
 	cacheKey := fmt.Sprintf("template:%s:%s:%s", name, channel, language)
 
 	// Try to get from cache first
@@ -53,7 +57,7 @@ func (s *TemplateService) GetTemplate(ctx context.Context, id, name, channel, la
 	}
 
 	// If not in cache, get from database
-	template, err := s.repo.Get(ctx, &id, &name, &channel, &language)
+	template, err := s.repo.Get(ctx, idPtr, &name, &channel, &language)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get template: %w", err)
 	}
