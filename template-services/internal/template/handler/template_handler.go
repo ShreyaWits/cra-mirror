@@ -2,12 +2,13 @@ package handler
 
 import (
 	"template-services/internal/models"
+	"template-services/internal/pkg/errors"
 	"template-services/internal/template/dto"
 	"template-services/internal/template/service"
-    "template-services/internal/pkg/errors"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"time"
 )
 
 type TemplateHandler struct {
@@ -25,13 +26,11 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 	var req dto.CreateTemplateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
-			Success: false,
+			Success:      false,
 			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrInvalidRequestBody),
-			ErrorCode: errors.TmpErrInvalidRequestBody,
-			Data: nil,
+			ErrorCode:    errors.TmpErrInvalidRequestBody,
 		})
 	}
-
 
 	// Convert to proto request
 	protoReq := &models.Template{
@@ -47,9 +46,9 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 	resp, err := h.service.CreateTemplate(c.Context(), protoReq)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
-			Success: false,
-			ErrorMessage:errors.GetAppErrorMessage(errors.TmpErrTemplateCreate),
-			ErrorCode:errors.TmpErrTemplateCreate,
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateCreate),
+			ErrorCode:    errors.TmpErrTemplateCreate,
 		})
 	}
 
@@ -77,9 +76,9 @@ func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
 	resp, err := h.service.GetTemplate(c.Context(), req.ID, req.Name, req.Channel, req.Language)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
-			Success: false,
-			ErrorMessage:errors.GetAppErrorMessage(errors.TmpErrTemplateFetch),
-			ErrorCode: errors.TmpErrTemplateFetch,
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateFetch),
+			ErrorCode:    errors.TmpErrTemplateFetch,
 		})
 	}
 
@@ -106,9 +105,9 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	var req dto.UpdateTemplateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
-			Success: false,
-			ErrorMessage:errors.GetAppErrorMessage(errors.TmpErrInvalidRequestBody),
-			ErrorCode: errors.TmpErrInvalidRequestBody,
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrInvalidRequestBody),
+			ErrorCode:    errors.TmpErrInvalidRequestBody,
 		})
 	}
 
@@ -116,9 +115,9 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	uid, err := uuid.Parse(idParam)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
-			Success: false,
-			ErrorMessage:errors.GetAppErrorMessage(errors.TmpErrUUIDParsing),
-			ErrorCode: errors.TmpErrUUIDParsing,
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrUUIDParsing),
+			ErrorCode:    errors.TmpErrUUIDParsing,
 		})
 	}
 
@@ -126,9 +125,9 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	existing, err := h.service.GetTemplateByID(c.Context(), uid)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse{
-			Success: false,
-			ErrorMessage:errors.GetAppErrorMessage(errors.TmpErrTemplateNotFound),
-			ErrorCode: errors.TmpErrTemplateNotFound,
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateNotFound),
+			ErrorCode:    errors.TmpErrTemplateNotFound,
 		})
 	}
 
@@ -141,9 +140,9 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	updatedTemplate, err := h.service.UpdateTemplate(c.Context(), existing)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
-			Success: false,
-			ErrorMessage:errors.GetAppErrorMessage(errors.TmpErrTemplateUpdate),
-			ErrorCode: errors.TmpErrTemplateUpdate,
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateUpdate),
+			ErrorCode:    errors.TmpErrTemplateUpdate,
 		})
 	}
 
@@ -175,9 +174,9 @@ func (h *TemplateHandler) DeleteTemplate(c *fiber.Ctx) error {
 	_, err := h.service.DeleteTemplate(c.Context(), req.ID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
-			Success: false,
-			ErrorMessage:errors.GetAppErrorMessage(errors.TmpErrTemplateDelete),
-			ErrorCode: errors.TmpErrTemplateDelete,
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateDelete),
+			ErrorCode:    errors.TmpErrTemplateDelete,
 		})
 	}
 

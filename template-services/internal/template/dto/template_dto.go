@@ -89,9 +89,7 @@ type InterpolateTemplateResponse struct {
 
 // ErrorResponse represents an error response
 type ErrorResponse struct {
-	Success bool   `json:"success"`
+	Success      bool   `json:"success"`
 	ErrorMessage string `json:"message"`
-	ErrorCode   string `json:"error_code"`
-	Data
-
+	ErrorCode    string `json:"error_code"`
 }
