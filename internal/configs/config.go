@@ -40,7 +40,7 @@ func LoadConfig() (*Config, error) {
 		RedisPassword:      getEnv("REDIS_PASSWORD", "templatepassword"),
 		JWTSecret:          getEnv("JWT_SECRET", "myTemplateSecureKey1234567890@GoLan"),
 		YugabyteDBHost:     getEnv("YUGABYTEDB_HOST", "yugabyte"),
-		YugabyteDBPort:     getEnv("YUGABYTEDB_PORT", "5435"),
+		YugabyteDBPort:     getEnv("YUGABYTEDB_PORT", "5433"),
 		YugabyteDBUser:     getEnv("YUGABYTEDB_USER", "yugabyte"),
 		YugabyteDBPassword: getEnv("YUGABYTEDB_PASSWORD", "yugabyte"),
 		YugabyteDBName:     getEnv("YUGABYTEDB_NAME", "yugabyte"),
