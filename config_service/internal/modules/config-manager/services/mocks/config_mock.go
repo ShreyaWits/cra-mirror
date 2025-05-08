@@ -12,15 +12,14 @@ type MockConfigService struct {
 
 func (m *MockConfigService) StoreConfigService(env string, service string, req map[string]interface{}) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
 	args := m.Called(env, service, req)
-	if args.Error(1) != nil {
-		res, _:= args.Get(1).(*dtos.ServiceErrorResponse)
 
-		return nil, res
+	if args.Get(1) != nil {
+		errResp, _ := args.Get(1).(*dtos.ServiceErrorResponse)
+		return nil, errResp
 	}
-	res, _ := args.Get(0).(*dtos.SuccessResponse) // Type assertion
-	repposeErr, _:= args.Get(1).(*dtos.ServiceErrorResponse)
-	return res, repposeErr
-	// return args.Get(0), nil
+
+	successResp, _ := args.Get(0).(dtos.SuccessResponse)
+	return &successResp, nil
 }
 
 func (m *MockConfigService) GetConfigService(service string, env string) (interface{}, error) {

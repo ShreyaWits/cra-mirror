@@ -3,11 +3,9 @@ package services
 import (
 	"errors"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
-	"nps-config-service/internal/modules/config-manager/models"
 	repoMock "nps-config-service/internal/modules/config-manager/repositories/mocks"
 	serviceMock "nps-config-service/internal/modules/config-manager/services/mocks"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,7 +22,7 @@ func TestStoreConfigService_Success(t *testing.T) {
 	serviceName := "test-service"
 	req := map[string]interface{}{"key": "value"}
 
-	storedResponse := dtos.SuccessResponse{StatusCode:201, Message:"Config stored successfully", Data:dtos.SuccessResponse{StatusCode:201, Message:"Config stored successfully", Data:dtos.SuccessResponse{StatusCode:201, Message:"Config stored successfully", Data:map[string]interface {}{"status":"success"}}}}
+	storedResponse := dtos.SuccessResponse{StatusCode: 201, Message: "Config stored successfully", Data: dtos.SuccessResponse{StatusCode: 201, Message: "Config stored successfully", Data: dtos.SuccessResponse{StatusCode: 201, Message: "Config stored successfully", Data: map[string]interface{}{"status": "success"}}}}
 	webhookData := `[{"url":"http://example.com/webhook"}]`
 
 	mockRepo.On("StoreConfig", serviceName, env, req).Return(storedResponse, nil)
@@ -35,7 +33,7 @@ func TestStoreConfigService_Success(t *testing.T) {
 	result, err := service.StoreConfigService(env, serviceName, req)
 
 	assert.Nil(t, err)
-	assert.Equal(t, storedResponse.StatusCode, result.StatusCode)	
+	assert.Equal(t, storedResponse.StatusCode, result.StatusCode)
 
 	mockRepo.AssertExpectations(t)
 
@@ -84,7 +82,7 @@ func TestStoreConfigService_StoreError(t *testing.T) {
 	serviceName := "test-service"
 	req := map[string]interface{}{"key": "value"}
 
-	mockRepo.On("StoreConfig", serviceName, env, req).Return(nil,  errors.New("store failed"))
+	mockRepo.On("StoreConfig", serviceName, env, req).Return(nil, errors.New("store failed"))
 	result, err := service.StoreConfigService(env, serviceName, req)
 
 	assert.Nil(t, result)
@@ -157,35 +155,5 @@ func TestGetConfigValueService_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedValue, result)
 
-	mockRepo.AssertExpectations(t)
-}
-
-func TestGetConfigMetadataService_Success(t *testing.T) {
-	mockRepo := new(repoMock.MockRepository)
-	mockWebhook := new(serviceMock.MockWebhookService)
-	mockTemporalClient := new(clientMocks.Client)
-	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
-
-	serviceName := "test-service"
-	env := "dev"
-
-	// Define the expected metadata as a *models.ConfigMetadata type (assuming it’s a struct)
-	expectedMetadata := &models.ConfigMetadata{
-		LastModifiedBy: "admin",
-		ChangeHistory:  []string{"initial commit", "updated config"},
-		LastModifiedAt: time.Now(),
-	}
-
-	// Mock the repository to return the correct type
-	mockRepo.On("GetConfigMetadata", serviceName, env).Return(expectedMetadata, nil)
-
-	// Call the service method
-	result, err := service.GetConfigMetadataService(serviceName, env)
-
-	// Assert no errors and check the result
-	assert.NoError(t, err)
-	assert.Equal(t, expectedMetadata, result)
-
-	// Assert that the mock expectations were met
 	mockRepo.AssertExpectations(t)
 }

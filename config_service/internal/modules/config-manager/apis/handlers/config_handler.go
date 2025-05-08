@@ -66,17 +66,3 @@ func (h *ConfigHandler) GetByValue(c *fiber.Ctx) error {
 	utils.SendSuccess(c, fiber.StatusOK, "Value fetched successfully", fiber.Map{key: value})
 	return nil
 }
-
-func (h *ConfigHandler) GetByMetadata(c *fiber.Ctx) error {
-	environment := c.Params("environment")
-	serviceName := c.Params("service")
-
-	metadata, err := h.Service.GetConfigMetadataService(serviceName, environment)
-	if err != nil {
-		utils.SendError(c, fiber.StatusInternalServerError, "Failed to fetch metadata", err.Error())
-		return nil
-	}
-
-	utils.SendSuccess(c, fiber.StatusOK, "Metadata fetched successfully", metadata)
-	return nil
-}

@@ -27,8 +27,6 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /build/main /main
 
-# Expose port 3000 to the outside world
-EXPOSE 3006
 
 # Command to run the executable
 ENTRYPOINT ["/main"]

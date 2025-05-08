@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"nps-config-service/internal/constants"
 	workflows "nps-config-service/pkg/temporal"
 	"os"
 
@@ -17,10 +17,8 @@ import (
 func main() {
 	// Seed the random number generator once in main
 	rand.Seed(time.Now().UnixNano())
-	endpoint := os.Getenv("TEMPORAL_SERVER_URL")
-	fmt.Println("Endpoint:", endpoint)
+	endpoint := os.Getenv("TEMPORAL_ENDPOINT")
 	// Create a Temporal Client
-	// Assumes Temporal Frontend is running on localhost:7233
 	c, err := client.Dial(client.Options{
 		HostPort: endpoint,
 	})
@@ -31,7 +29,7 @@ func main() {
 
 	// Create a new worker
 	// "my-task-queue" is the name of the Task Queue this worker will poll
-	w := worker.New(c, "WEBHOOK_TASK_QUEUE", worker.Options{})
+	w := worker.New(c, constants.SendWebhookTaskQueueName, worker.Options{})
 
 	// Register our Workflow and Activity functions
 	// w.RegisterWorkflow(app.SimpleWorkflow)

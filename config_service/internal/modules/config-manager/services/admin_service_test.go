@@ -47,15 +47,15 @@ func (m *MockConfigRepo) GetConfigValue(serviceName, environment, key string) (i
 	return nil, nil
 }
 
-func (m *MockConfigRepo) Set(ctx context.Context, key string, data string, ttl time.Duration) error {
+func (m *MockConfigRepo) SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error {
 	return nil
 }
 
-func (m *MockConfigRepo) Get(ctx context.Context, key string) (string, error) {
+func (m *MockConfigRepo) GetEtcdKey(ctx context.Context, key string) (string, error) {
 	return "", nil
 }
 
-func (m *MockConfigRepo) Delete(ctx context.Context, key string) error {
+func (m *MockConfigRepo) DeleteEtcdKey(ctx context.Context, key string) error {
 	return nil
 }
 

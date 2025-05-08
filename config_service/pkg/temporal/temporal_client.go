@@ -9,7 +9,7 @@ import (
 func InitTemporal(endpoint string) (*temporalClient.Client, error) {
 
 	client, err := temporalClient.Dial(temporalClient.Options{
-		HostPort:  "localhost:7233",
+		HostPort:  endpoint,
 		Namespace: "default",
 	})
 	if err != nil {
