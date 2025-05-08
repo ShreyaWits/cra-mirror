@@ -3,9 +3,12 @@ package main
 func main() {
 
 	// Load config
-	//  modules.RegisterModules()
+	// configs.LoadEnv()
 
-	//  kafkaBrokers := strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
-	//  go thirdpartyservices.StartKafkaConsumer(kafkaBrokers)
+	// di.InitDependencies()
+
+	// if err := app.SetupRoutes(app); err != nil {
+	// 	log.Fatalf("error setting application routes: %v\n", err)
+	// }
 
 }
