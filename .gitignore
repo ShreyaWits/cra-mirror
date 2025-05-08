@@ -1,0 +1,20 @@
+# Ignore environment files
+.env
+
+# Ignore system files
+.DS_Store
+
+# Ignore log files
+*.log
+
+# Ignore compiled binaries
+*.exe
+*.out
+*.o
+
+# Ignore vendor directory (if using Go modules)
+vendor/
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
