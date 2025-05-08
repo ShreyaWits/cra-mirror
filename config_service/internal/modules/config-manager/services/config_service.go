@@ -68,10 +68,10 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 			Hook: hook,
 			Data: req,
 		}
-
+		log.Println("Starting webhook workflow for URL:", hook.URL)
 		_, err := s.temporalClient.ExecuteWorkflow(context.Background(),
 			temporalClient.StartWorkflowOptions{
-				ID:        fmt.Sprintf("webhook-%s-%s", hook.ServiceName, hook.Environment),
+				ID:        fmt.Sprintf("webhook-%s-%s url: %s", hook.ServiceName, hook.Environment, hook.URL),
 				TaskQueue: constants.SendWebhookTaskQueueName,
 			},
 			workflows.WebhookWorkflow,

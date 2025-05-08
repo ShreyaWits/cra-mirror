@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 #### `config-service`
 ## May 8, 2025
+    - Updates docker configurations for local development.
+    - Configures temporal endpoint via environment variables.
+    - Fixes workflow id for uniqueness.
+    - Adds .dockerignore file to exclude unnecessary files.
+
     - Adds a webhook retry mechanism using Temporal workflows for reliability.
     - Enables configuring the Temporal client via the `TEMPORAL_ENDPOINT` env var.
     - Removes `.env` and `temporal-development-sql-config.yaml`, simplifies env config.

@@ -9,12 +9,21 @@ services:
       # restart: always
       networks:
         - nps2.0
+        - temporal-network
       ports:
-        - "4002:3006"
+        - "4001:4001"
       environment:
-        - PORT=3006
-        - ETCD_ENDPOINT=http://etcd:2379
+        - PORT=4001
         - IS_DOCKER=true
+        - DATABASE_HOST=yugabyte-db
+        - DATABASE_PORT=5433
+        - DATABASE_USER=yugabyte
+        - DATABASE_PASSWORD=yugabyte
+        - DATABASE_NAME=yugabyte
+        - ETCD_ENDPOINT=etcd:2379
+        - TEMPORAL_ENDPOINT=temporal:7233
+        - ADMIN_SECRET=abd5f3e65f1f1e40f5cbdac1ef0344519ab7b0b569313c97db13cb9cce4bcf7d
+        - JWT_SECRET=aklsdjflk
   worker:
     build:
       context: .
@@ -22,9 +31,10 @@ services:
     # restart: always
     environment:
       - IS_DOCKER=true
-      - TEMPORAL_SERVER_URL=host.docker.internal:7233
+      - TEMPORAL_ENDPOINT=temporal:7233
     networks:
       - nps2.0
+      - temporal-network
   etcd:
     image: quay.io/coreos/etcd:v3.5.15 # Use the latest stable version
     container_name: etcd
@@ -46,12 +56,12 @@ services:
   yugabyte-db:
     image: yugabytedb/yugabyte:2.21.1.0-b271
     container_name: yugabyte-db
-    ports:
-      - "7001:7000"
-      - "9000:9000"
-      - "15433:15433"
-      - "5433:5433"
-      - "9042:9042"
+    # ports:
+      # - "7001:7000"
+      # - "9000:9000"
+      # - "15433:15433"
+      # - "5433:5433"
+      # - "9042:9042"
     command: bin/yugabyted start --base_dir=/home/yugabyte/yb_data --background=false
     # restart: always
     volumes:
@@ -73,3 +83,5 @@ volumes:
 networks:
   nps2.0:
     driver: bridge
+  temporal-network:
+    external: true

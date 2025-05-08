@@ -2,9 +2,9 @@ package main
 
 import (
 	"log"
-	"nps-config-service/internal/configs"
 	"nps-config-service/internal/constants"
 	workflows "nps-config-service/pkg/temporal"
+	"os"
 
 	"time" // Required for rand.Seed
 
@@ -17,7 +17,7 @@ import (
 func main() {
 	// Seed the random number generator once in main
 	rand.Seed(time.Now().UnixNano())
-	endpoint := configs.AppConfig.TemporalEndpoint
+	endpoint := os.Getenv("TEMPORAL_ENDPOINT")
 	// Create a Temporal Client
 	c, err := client.Dial(client.Options{
 		HostPort: endpoint,
