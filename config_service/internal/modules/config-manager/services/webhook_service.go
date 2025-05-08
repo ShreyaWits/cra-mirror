@@ -41,7 +41,7 @@ func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest)
 	ctx := context.Background()
 	var hooks []dtos.RegisterWebhookRequest
 
-	webHook, err := s.Repo.Get(ctx, key)
+	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err == nil && len(webHook) > 0 {
 		if err := json.Unmarshal([]byte(webHook), &hooks); err != nil {
 			return nil, &dtos.ServiceErrorResponse{
@@ -71,7 +71,7 @@ func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest)
 			ErrorMessage: fmt.Sprintf("failed to marshal webhook data for %s: %v", key, err),
 		}
 	}
-	if err := s.Repo.Set(ctx, key, string(data), -1); err != nil {
+	if err := s.Repo.SetEtcdKey(ctx, key, string(data), -1); err != nil {
 		return nil, &dtos.ServiceErrorResponse{
 			StatusCode:   500,
 			ErrorCode:    "Failed to store webhook data",
@@ -90,7 +90,7 @@ func (s *WebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhoo
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
 	ctx := context.Background()
 
-	webHook, err := s.Repo.Get(ctx, key)
+	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err != nil || len(webHook) == 0 {
 		return nil, &dtos.ServiceErrorResponse{
 			StatusCode:   404,
@@ -147,7 +147,7 @@ func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string
 			ErrorMessage: fmt.Sprintf("failed to marshal updated webhooks for %s/%s: %v", env, service, err),
 		}
 	}
-	if err := s.Repo.Set(ctx, key, string(data), -1); err != nil {
+	if err := s.Repo.SetEtcdKey(ctx, key, string(data), -1); err != nil {
 		return "", &dtos.ServiceErrorResponse{
 			StatusCode:   500,
 			ErrorCode:    "Failed to store updated webhooks",
@@ -159,7 +159,7 @@ func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string
 func (s *WebhookService) DeleteAllWebhooks(env, service string) error {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
 	ctx := context.Background()
-	return s.Repo.Delete(ctx, key)
+	return s.Repo.DeleteEtcdKey(ctx, key)
 }
 func (s *WebhookService) NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{}) {
 	body, err := json.Marshal(map[string]interface{}{

@@ -7,7 +7,6 @@ import (
 	"nps-config-service/internal/modules/config-manager/services"
 	etcdDB "nps-config-service/pkg/etcd"
 	workflows "nps-config-service/pkg/temporal"
-	"os"
 )
 
 func InitHandlers(container *Container) (*handler.AdminHandler, *handler.ConfigHandler, *handler.WebhookHandler, error) {
@@ -34,8 +33,11 @@ func NewContainer() (*Container, error) {
 	}
 
 	etcdClient := etcdDB.NewEtcdClientImpl(client)
-	temporalUrl := os.Getenv("TEMPORAL_ENDPOINT")
+	temporalUrl := configs.AppConfig.TemporalEndpoint
 	temporalClient, err := workflows.InitTemporal(temporalUrl)
+	if err != nil {
+		return nil, err
+	}
 	// Repository layer
 	configRepo := repositories.NewConfigRepository(etcdClient)
 	container.ConfigRepo = configRepo

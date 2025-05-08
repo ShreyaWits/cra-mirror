@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/repositories"
 	"nps-config-service/pkg/temporal"
 
 	temporalClient "go.temporal.io/sdk/client"
-
 )
 
 type ConfigService struct {
@@ -23,7 +23,6 @@ type IConfigService interface {
 	StoreConfigService(env string, service string, req map[string]interface{}) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse)
 	GetConfigService(service string, env string) (interface{}, error)
 	GetConfigValueService(serviceName string, env string, key string) (interface{}, error)
-	GetConfigMetadataService(serviceName string, env string) (interface{}, error)
 }
 
 func NewConfigService(repo repositories.IConfigRepo, webHook IWebhookService, temporal temporalClient.Client) IConfigService {
@@ -44,7 +43,7 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 	}
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
 	ctx := context.Background()
-	webHook, err := s.Repo.Get(ctx, key)
+	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err != nil {
 		fmt.Printf("No webhook found for %s: %v", key, err)
 		return nil, &dtos.ServiceErrorResponse{
@@ -73,7 +72,7 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 		_, err := s.temporalClient.ExecuteWorkflow(context.Background(),
 			temporalClient.StartWorkflowOptions{
 				ID:        fmt.Sprintf("webhook-%s-%s", hook.ServiceName, hook.Environment),
-				TaskQueue: "WEBHOOK_TASK_QUEUE",
+				TaskQueue: constants.SendWebhookTaskQueueName,
 			},
 			workflows.WebhookWorkflow,
 			input,
@@ -119,15 +118,3 @@ func (s *ConfigService) GetConfigValueService(serviceName string, env string, ke
 	return response, nil
 }
 
-func (s *ConfigService) GetConfigMetadataService(serviceName string, env string) (any, error) {
-	response, err := s.Repo.GetConfigMetadata(serviceName, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if response == nil {
-		return nil, nil // Explicitly return nil if response is nil
-	}
-	return response, nil
-}

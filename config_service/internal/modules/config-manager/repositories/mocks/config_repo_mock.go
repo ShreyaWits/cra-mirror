@@ -14,17 +14,17 @@ type MockRepository struct {
 	mock.Mock
 }
 
-func (m *MockRepository) Get(ctx context.Context, key string) (string, error) {
+func (m *MockRepository) GetEtcdKey(ctx context.Context, key string) (string, error) {
 	args := m.Called(ctx, key)
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockRepository) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
+func (m *MockRepository) SetEtcdKey(ctx context.Context, key string, value string, ttl time.Duration) error {
 	args := m.Called(ctx, key, value, ttl)
 	return args.Error(0)
 }
 
-func (m *MockRepository) Delete(ctx context.Context, key string) error {
+func (m *MockRepository) DeleteEtcdKey(ctx context.Context, key string) error {
 	args := m.Called(ctx, key)
 	return args.Error(0)
 }

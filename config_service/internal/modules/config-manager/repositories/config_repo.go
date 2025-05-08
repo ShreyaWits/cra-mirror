@@ -26,11 +26,10 @@ type ConfigRepository struct {
 type IConfigRepo interface {
 	StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error)
 	GetConfig(serviceName, environment string) (map[string]interface{}, error)
-	GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error)
 	GetConfigValue(serviceName, environment, key string) (interface{}, error)
-	Set(ctx context.Context, key string, data string, ttl time.Duration) error
-	Get(ctx context.Context, key string) (string, error)
-	Delete(ctx context.Context, key string) error
+	SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error
+	GetEtcdKey(ctx context.Context, key string) (string, error)
+	DeleteEtcdKey(ctx context.Context, key string) error
 	CreateAdmin(admin *models.Admin) (*models.Admin, error)
 	GetAdminByCredentials(username, password string) (*models.Admin, error)
 }
@@ -63,8 +62,8 @@ func (r *ConfigRepository) StoreConfig(serviceName, environment string, configDa
 			return nil, fmt.Errorf("failed to store config field %s: %v", key, err)
 		}
 	}
-	log.Println("Config data stored successfully. Change history: ", changeHistory,)
-	// Store metadata
+	log.Println("Config data stored successfully. Change history: ", changeHistory)
+	// Store metadata, code is commented out for now, will use it later when we have to store metadata
 	// now := time.Now()
 	// type ConfigMetadata struct {
 	// 	LastModifiedBy string    `json:"last_modified_by"`
@@ -89,10 +88,8 @@ func (r *ConfigRepository) StoreConfig(serviceName, environment string, configDa
 
 // GetConfig retrieves a configuration from etcd
 func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[string]interface{}, error) {
-	// app.InitEtcdDB()
-	// defer app.Client.Close()
 
-		baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
+	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
 	log.Printf("Getting all config for base key: %s", baseKey)
 
 	// Get all keys under the base key
@@ -117,38 +114,8 @@ func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[strin
 		log.Printf("Retrieved key: %s, value: %v", key, value)
 	}
 
-	// log.Printf("Successfully retrieved all config for %s", baseKey)
+	log.Printf("Successfully retrieved all config for %s", baseKey)
 	return result, nil
-}
-
-// GetConfigMetadata retrieves metadata for a configuration
-func (r *ConfigRepository) GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error) {
-
-	key := fmt.Sprintf("/metadata/%s/%s", environment, serviceName)
-	_, err := r.EtcdClient.GetAllKeys(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get metadata: %v", err)
-	}
-
-	// Create result map
-	result := models.ConfigMetadata{}
-
-	// Process each key-value pair
-	// for key, value := range keys {
-	// 	// Skip metadata fields
-	// 	switch key {
-	// 	case "created_at":
-	// 		result["created_at"] = value
-	// 	case "updated_at":
-	// 		result.UpdatedAt = value
-	// 	default:
-	// 		log.Printf("Unknown metadata key: %s", key)
-	// 	}
-	// 	log.Printf("Retrieved key: %s, value: %v", key, value)
-	// }
-
-	log.Printf("Successfully retrieved meta for config for %s", key)
-	return &result, nil
 }
 
 // GetConfigValue retrieves a specific config value from etcd
@@ -207,21 +174,9 @@ func (r *ConfigRepository) StoreAndRetrieveConfig() {
 	}
 
 	fmt.Printf("Retrieved config: %+v\n", config)
-
-	// Retrieve metadata
-	metadata, err := r.GetConfigMetadata("user-service", "prod")
-	if err != nil {
-		log.Printf("Failed to get metadata: %v", err)
-		return
-	}
-
-	fmt.Printf("Retrieved metadata: %+v\n", metadata)
 }
 
-// webhook service
-func (r *ConfigRepository) Set(ctx context.Context, key string, data string, ttl time.Duration) error {
-	// app.InitEtcdDB()
-	// defer app.Client.Close()
+func (r *ConfigRepository) SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error {
 	if ttl > 0 {
 		// Create a lease
 		leaseResp, err := r.EtcdClient.Client.Grant(ctx, int64(ttl.Seconds()))
@@ -246,7 +201,7 @@ func (r *ConfigRepository) Set(ctx context.Context, key string, data string, ttl
 	return nil
 }
 
-func (r *ConfigRepository) Get(ctx context.Context, key string) (string, error) {
+func (r *ConfigRepository) GetEtcdKey(ctx context.Context, key string) (string, error) {
 
 	resp, err := r.EtcdClient.Client.Get(ctx, key)
 	if err != nil {
@@ -260,7 +215,7 @@ func (r *ConfigRepository) Get(ctx context.Context, key string) (string, error) 
 
 	return string(resp.Kvs[0].Value), nil
 }
-func (r *ConfigRepository) Delete(ctx context.Context, key string) error {
+func (r *ConfigRepository) DeleteEtcdKey(ctx context.Context, key string) error {
 	_, err := r.EtcdClient.Client.Delete(ctx, key)
 	if err != nil {
 		log.Printf("Failed to delete key %s: %v", key, err)
