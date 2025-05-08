@@ -13,9 +13,10 @@ import (
 
 type TemplateServiceInterface interface {
 	CreateTemplate(ctx context.Context, template *models.Template) (*models.Template, error)
-	GetTemplate(ctx context.Context, name, channel, language string) (*models.Template, error)
-	UpdateTemplate(ctx context.Context, template *models.Template) error
-	DeleteTemplate(ctx context.Context, id string) error
+	GetTemplate(ctx context.Context, id, name, channel, language string) (*models.Template, error)
+	GetTemplateByID(ctx context.Context, id uuid.UUID) (*models.Template, error)
+	UpdateTemplate(ctx context.Context, template *models.Template) (*models.Template, error)
+	DeleteTemplate(ctx context.Context, id string) (*models.Template, error)
 }
 
 type TemplateService struct {

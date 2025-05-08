@@ -7,13 +7,14 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"time"
 )
 
 type TemplateHandler struct {
-	service *service.TemplateService
+	service service.TemplateServiceInterface
 }
 
-func NewTemplateHandler(service *service.TemplateService) *TemplateHandler {
+func NewTemplateHandler(service service.TemplateServiceInterface) *TemplateHandler {
 	return &TemplateHandler{
 		service: service,
 	}
@@ -32,11 +33,12 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 
 	// Convert to proto request
 	protoReq := &models.Template{
-		Name:     req.Name,
-		Channel:  req.Channel,
-		Language: req.Language,
-		Content:  req.Content,
-		IsActive: req.IsActive,
+		Name:           req.Name,
+		Channel:        req.Channel,
+		Language:       req.Language,
+		Content:        req.Content,
+		RequiredFields: req.RequiredFields,
+		IsActive:       req.IsActive,
 	}
 
 	// Call service
@@ -83,15 +85,16 @@ func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
 		Success: true,
 		Message: "Template retrieved successfully",
 		Data: dto.TemplateResponse{
-			ID:        resp.ID.String(),
-			Name:      resp.Name,
-			Channel:   resp.Channel,
-			Language:  resp.Language,
-			Version:   int(resp.Version),
-			IsActive:  resp.IsActive,
-			Content:   resp.Content,
-			CreatedAt: resp.CreatedAt,
-			UpdatedAt: resp.UpdatedAt,
+			ID:             resp.ID.String(),
+			Name:           resp.Name,
+			Channel:        resp.Channel,
+			Language:       resp.Language,
+			Version:        int(resp.Version),
+			IsActive:       resp.IsActive,
+			Content:        resp.Content,
+			RequiredFields: resp.RequiredFields,
+			CreatedAt:      resp.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:      resp.UpdatedAt.Format(time.RFC3339),
 		},
 	})
 }
@@ -129,6 +132,9 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 
 	// Update the fields
 	existing.IsActive = req.IsActive
+	if req.RequiredFields != nil {
+		existing.RequiredFields = req.RequiredFields
+	}
 
 	updatedTemplate, err := h.service.UpdateTemplate(c.Context(), existing)
 	if err != nil {
@@ -143,15 +149,16 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 		Success: true,
 		Message: "Template updated successfully",
 		Data: dto.TemplateResponse{
-			ID:        updatedTemplate.ID.String(),
-			Name:      updatedTemplate.Name,
-			Channel:   updatedTemplate.Channel,
-			Language:  updatedTemplate.Language,
-			Version:   int(updatedTemplate.Version),
-			IsActive:  updatedTemplate.IsActive,
-			Content:   updatedTemplate.Content,
-			CreatedAt: updatedTemplate.CreatedAt,
-			UpdatedAt: updatedTemplate.UpdatedAt,
+			ID:             updatedTemplate.ID.String(),
+			Name:           updatedTemplate.Name,
+			Channel:        updatedTemplate.Channel,
+			Language:       updatedTemplate.Language,
+			Version:        int(updatedTemplate.Version),
+			IsActive:       updatedTemplate.IsActive,
+			Content:        updatedTemplate.Content,
+			RequiredFields: updatedTemplate.RequiredFields,
+			CreatedAt:      updatedTemplate.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:      updatedTemplate.UpdatedAt.Format(time.RFC3339),
 		},
 	})
 }

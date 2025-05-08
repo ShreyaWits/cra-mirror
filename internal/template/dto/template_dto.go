@@ -1,14 +1,13 @@
 package dto
 
-import "time"
-
 // CreateTemplateRequest represents the request body for creating a template
 type CreateTemplateRequest struct {
-	Name     string `json:"name" validate:"required"`
-	Channel  string `json:"channel" validate:"required,oneof=email sms push"`
-	Language string `json:"language" validate:"required,len=2"`
-	Content  string `json:"content" validate:"required"`
-	IsActive bool   `json:"is_active"`
+	Name           string   `json:"name" validate:"required"`
+	Channel        string   `json:"channel" validate:"required,,oneof=email sms push"`
+	Language       string   `json:"language" validate:"required"`
+	Content        string   `json:"content" validate:"required"`
+	RequiredFields []string `json:"required_fields"`
+	IsActive       bool     `json:"is_active"`
 }
 
 // CreateTemplateResponse represents the response for template creation
@@ -25,20 +24,21 @@ type GetTemplateRequest struct {
 	Name     string `query:"name"`
 	Channel  string `query:"channel"`
 	Language string `query:"language"`
-	ID       string `param:"id"`
+	ID       string `params:"id"`
 }
 
 // TemplateResponse represents the template data in responses
 type TemplateResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Channel   string    `json:"channel"`
-	Language  string    `json:"language"`
-	Content   string    `json:"content"`
-	Version   int       `json:"version"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Channel        string   `json:"channel"`
+	Language       string   `json:"language"`
+	Version        int      `json:"version"`
+	IsActive       bool     `json:"is_active"`
+	Content        string   `json:"content"`
+	RequiredFields []string `json:"required_fields"`
+	CreatedAt      string   `json:"created_at"`
+	UpdatedAt      string   `json:"updated_at"`
 }
 
 // GetTemplateResponse represents the response for getting a template
@@ -50,7 +50,8 @@ type GetTemplateResponse struct {
 
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
-	IsActive bool `json:"is_active"`
+	RequiredFields []string `json:"required_fields"`
+	IsActive       bool     `json:"is_active"`
 }
 
 // UpdateTemplateResponse represents the response for template update
@@ -62,7 +63,7 @@ type UpdateTemplateResponse struct {
 
 // DeleteTemplateRequest represents the request for deleting a template
 type DeleteTemplateRequest struct {
-	ID string `param:"id" validate:"required"`
+	ID string `params:"id" validate:"required"`
 }
 
 // DeleteTemplateResponse represents the response for template deletion

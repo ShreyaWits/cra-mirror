@@ -4,22 +4,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
 type Template struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	Name      string         `gorm:"index" json:"name"`
-	Content   string         `json:"content"`
-	Channel   string         `gorm:"index" json:"channel"`
-	Language  string         `gorm:"index" json:"language"`
-	IsActive  bool           `gorm:"default:true" json:"is_active"`
-	Version   int            `gorm:"default:1" json:"version"`
-	CreatedBy string         `json:"created_by"`
-	UpdatedBy string         `json:"updated_by"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID             uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	Name           string         `gorm:"index" json:"name"`
+	Content        string         `json:"content"`
+	RequiredFields pq.StringArray `gorm:"type:text[]" json:"required_fields"`
+	Channel        string         `gorm:"index" json:"channel"`
+	Language       string         `gorm:"index" json:"language"`
+	IsActive       bool           `gorm:"default:true" json:"is_active"`
+	Version        int            `gorm:"default:1" json:"version"`
+	CreatedBy      string         `json:"created_by"`
+	UpdatedBy      string         `json:"updated_by"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // Hook to generate UUID before create
