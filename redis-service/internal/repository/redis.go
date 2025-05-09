@@ -9,9 +9,7 @@ type RedisRepo struct {
 	db redis.RedisInterface
 }
 
-func NewRedisRepository() *RedisRepo {
-	// Initialize Redis client
-	client := redis.NewRedisService("localhost:6379", "password", 0)
+func NewRedisRepository(client redis.RedisInterface) *RedisRepo {
 	return &RedisRepo{
 		db: client,
 	}

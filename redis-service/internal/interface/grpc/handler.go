@@ -7,6 +7,7 @@ import (
 	"redis-service/internal/service"
 	"redis-service/internal/utils"
 	"redis-service/pkg/message"
+	"redis-service/pkg/redis"
 	"redis-service/proto"
 )
 
@@ -17,7 +18,8 @@ type GRPCServer struct {
 
 func NewGRPCHandler() *GRPCServer {
 	// Initialize the Redis repository and service
-	redisRepo := repository.NewRedisRepository()
+	redisClient := redis.NewRedisService("localhost:6379", "password", 0)
+	redisRepo := repository.NewRedisRepository(redisClient)
 	redisService := service.NewRedisService(redisRepo)
 	return &GRPCServer{service: redisService}
 }

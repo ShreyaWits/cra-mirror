@@ -12,6 +12,8 @@ var (
 	REDIS_URL      string
 	REDIS_PASSWORD string
 	REDIS_DB       string
+	PORT           string
+	GRPC_PORT      string
 )
 
 // LoadEnv reads from .env and sets global config variables
@@ -24,6 +26,8 @@ func LoadEnv() {
 	REDIS_URL = getEnv("REDIS_URL", "localhost:6379")
 	REDIS_PASSWORD = getEnv("REDIS_PASSWORD", "")
 	REDIS_DB = getEnv("REDIS_DB", "0")
+	PORT = getEnv("PORT", ":8080")
+	GRPC_PORT = getEnv("GRPC_PORT", ":50051")
 }
 
 func getEnv(key, fallback string) string {
