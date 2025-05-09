@@ -49,7 +49,7 @@ func SendWebhookActivity(ctx context.Context, input WebhookInput) error {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	fullURL := fmt.Sprintf("%s/%s/%s", strings.TrimRight(input.Hook.URL, "/"), input.Hook.Environment, input.Hook.ServiceName)
+	fullURL := input.Hook.URL
 	if !strings.HasPrefix(fullURL, "http://") && !strings.HasPrefix(fullURL, "https://") {
 		fullURL = "http://" + fullURL
 	}

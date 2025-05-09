@@ -34,7 +34,7 @@ func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 		return nil
 	}
 
-	utils.SendSuccess(c, fiber.StatusOK, "Config stored successfully", responseData.Data)
+	utils.SendSuccess(c, responseData.StatusCode, responseData.Message, responseData.Data)
 	return nil
 }
 
