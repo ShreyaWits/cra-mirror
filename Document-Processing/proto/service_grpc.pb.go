@@ -125,106 +125,146 @@ var HealthService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	DocumentProcessingService_ProcessDocument_FullMethodName = "/documentprocessing.DocumentProcessingService/ProcessDocument"
+	DocumentProcessingServiceV1_ProcessBatchFilesV1_FullMethodName = "/documentprocessing.DocumentProcessingServiceV1/ProcessBatchFilesV1"
+	DocumentProcessingServiceV1_GetBatchStatusV1_FullMethodName    = "/documentprocessing.DocumentProcessingServiceV1/GetBatchStatusV1"
 )
 
-// DocumentProcessingServiceClient is the client API for DocumentProcessingService service.
+// DocumentProcessingServiceV1Client is the client API for DocumentProcessingServiceV1 service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Document processing service definition
-type DocumentProcessingServiceClient interface {
-	ProcessDocument(ctx context.Context, in *ProcessDocumentRequest, opts ...grpc.CallOption) (*ProcessDocumentResponse, error)
+// Document processing service definition with versioning
+type DocumentProcessingServiceV1Client interface {
+	// V1 methods
+	ProcessBatchFilesV1(ctx context.Context, in *BatchFileProcessingRequest, opts ...grpc.CallOption) (*BatchProcessingAck, error)
+	GetBatchStatusV1(ctx context.Context, in *BatchStatusRequest, opts ...grpc.CallOption) (*BatchFileProcessingResponse, error)
 }
 
-type documentProcessingServiceClient struct {
+type documentProcessingServiceV1Client struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewDocumentProcessingServiceClient(cc grpc.ClientConnInterface) DocumentProcessingServiceClient {
-	return &documentProcessingServiceClient{cc}
+func NewDocumentProcessingServiceV1Client(cc grpc.ClientConnInterface) DocumentProcessingServiceV1Client {
+	return &documentProcessingServiceV1Client{cc}
 }
 
-func (c *documentProcessingServiceClient) ProcessDocument(ctx context.Context, in *ProcessDocumentRequest, opts ...grpc.CallOption) (*ProcessDocumentResponse, error) {
+func (c *documentProcessingServiceV1Client) ProcessBatchFilesV1(ctx context.Context, in *BatchFileProcessingRequest, opts ...grpc.CallOption) (*BatchProcessingAck, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProcessDocumentResponse)
-	err := c.cc.Invoke(ctx, DocumentProcessingService_ProcessDocument_FullMethodName, in, out, cOpts...)
+	out := new(BatchProcessingAck)
+	err := c.cc.Invoke(ctx, DocumentProcessingServiceV1_ProcessBatchFilesV1_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// DocumentProcessingServiceServer is the server API for DocumentProcessingService service.
-// All implementations must embed UnimplementedDocumentProcessingServiceServer
-// for forward compatibility.
-//
-// Document processing service definition
-type DocumentProcessingServiceServer interface {
-	ProcessDocument(context.Context, *ProcessDocumentRequest) (*ProcessDocumentResponse, error)
-	mustEmbedUnimplementedDocumentProcessingServiceServer()
+func (c *documentProcessingServiceV1Client) GetBatchStatusV1(ctx context.Context, in *BatchStatusRequest, opts ...grpc.CallOption) (*BatchFileProcessingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchFileProcessingResponse)
+	err := c.cc.Invoke(ctx, DocumentProcessingServiceV1_GetBatchStatusV1_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-// UnimplementedDocumentProcessingServiceServer must be embedded to have
+// DocumentProcessingServiceV1Server is the server API for DocumentProcessingServiceV1 service.
+// All implementations must embed UnimplementedDocumentProcessingServiceV1Server
+// for forward compatibility.
+//
+// Document processing service definition with versioning
+type DocumentProcessingServiceV1Server interface {
+	// V1 methods
+	ProcessBatchFilesV1(context.Context, *BatchFileProcessingRequest) (*BatchProcessingAck, error)
+	GetBatchStatusV1(context.Context, *BatchStatusRequest) (*BatchFileProcessingResponse, error)
+	mustEmbedUnimplementedDocumentProcessingServiceV1Server()
+}
+
+// UnimplementedDocumentProcessingServiceV1Server must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedDocumentProcessingServiceServer struct{}
+type UnimplementedDocumentProcessingServiceV1Server struct{}
 
-func (UnimplementedDocumentProcessingServiceServer) ProcessDocument(context.Context, *ProcessDocumentRequest) (*ProcessDocumentResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProcessDocument not implemented")
+func (UnimplementedDocumentProcessingServiceV1Server) ProcessBatchFilesV1(context.Context, *BatchFileProcessingRequest) (*BatchProcessingAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessBatchFilesV1 not implemented")
 }
-func (UnimplementedDocumentProcessingServiceServer) mustEmbedUnimplementedDocumentProcessingServiceServer() {
+func (UnimplementedDocumentProcessingServiceV1Server) GetBatchStatusV1(context.Context, *BatchStatusRequest) (*BatchFileProcessingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBatchStatusV1 not implemented")
 }
-func (UnimplementedDocumentProcessingServiceServer) testEmbeddedByValue() {}
+func (UnimplementedDocumentProcessingServiceV1Server) mustEmbedUnimplementedDocumentProcessingServiceV1Server() {
+}
+func (UnimplementedDocumentProcessingServiceV1Server) testEmbeddedByValue() {}
 
-// UnsafeDocumentProcessingServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to DocumentProcessingServiceServer will
+// UnsafeDocumentProcessingServiceV1Server may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DocumentProcessingServiceV1Server will
 // result in compilation errors.
-type UnsafeDocumentProcessingServiceServer interface {
-	mustEmbedUnimplementedDocumentProcessingServiceServer()
+type UnsafeDocumentProcessingServiceV1Server interface {
+	mustEmbedUnimplementedDocumentProcessingServiceV1Server()
 }
 
-func RegisterDocumentProcessingServiceServer(s grpc.ServiceRegistrar, srv DocumentProcessingServiceServer) {
-	// If the following call pancis, it indicates UnimplementedDocumentProcessingServiceServer was
+func RegisterDocumentProcessingServiceV1Server(s grpc.ServiceRegistrar, srv DocumentProcessingServiceV1Server) {
+	// If the following call pancis, it indicates UnimplementedDocumentProcessingServiceV1Server was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&DocumentProcessingService_ServiceDesc, srv)
+	s.RegisterService(&DocumentProcessingServiceV1_ServiceDesc, srv)
 }
 
-func _DocumentProcessingService_ProcessDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ProcessDocumentRequest)
+func _DocumentProcessingServiceV1_ProcessBatchFilesV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchFileProcessingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DocumentProcessingServiceServer).ProcessDocument(ctx, in)
+		return srv.(DocumentProcessingServiceV1Server).ProcessBatchFilesV1(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DocumentProcessingService_ProcessDocument_FullMethodName,
+		FullMethod: DocumentProcessingServiceV1_ProcessBatchFilesV1_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DocumentProcessingServiceServer).ProcessDocument(ctx, req.(*ProcessDocumentRequest))
+		return srv.(DocumentProcessingServiceV1Server).ProcessBatchFilesV1(ctx, req.(*BatchFileProcessingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// DocumentProcessingService_ServiceDesc is the grpc.ServiceDesc for DocumentProcessingService service.
+func _DocumentProcessingServiceV1_GetBatchStatusV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DocumentProcessingServiceV1Server).GetBatchStatusV1(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DocumentProcessingServiceV1_GetBatchStatusV1_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DocumentProcessingServiceV1Server).GetBatchStatusV1(ctx, req.(*BatchStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// DocumentProcessingServiceV1_ServiceDesc is the grpc.ServiceDesc for DocumentProcessingServiceV1 service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var DocumentProcessingService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "documentprocessing.DocumentProcessingService",
-	HandlerType: (*DocumentProcessingServiceServer)(nil),
+var DocumentProcessingServiceV1_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "documentprocessing.DocumentProcessingServiceV1",
+	HandlerType: (*DocumentProcessingServiceV1Server)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ProcessDocument",
-			Handler:    _DocumentProcessingService_ProcessDocument_Handler,
+			MethodName: "ProcessBatchFilesV1",
+			Handler:    _DocumentProcessingServiceV1_ProcessBatchFilesV1_Handler,
+		},
+		{
+			MethodName: "GetBatchStatusV1",
+			Handler:    _DocumentProcessingServiceV1_GetBatchStatusV1_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
