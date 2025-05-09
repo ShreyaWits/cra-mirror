@@ -39,6 +39,7 @@ func (grpc *GRPCServer) GetCache(ctx context.Context, req *proto.GetCacheRequest
 			Message: message.RD0001,
 		}, nil
 	}
+
 	value, err := grpc.service.GetCache(&payload)
 	if err != nil || value == "" {
 		return &proto.GetCacheResponse{Value: value, Found: false, Message: message.RD0002}, nil
