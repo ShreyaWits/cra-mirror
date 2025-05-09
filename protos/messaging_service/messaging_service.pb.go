@@ -265,6 +265,128 @@ func (x *KafkaMessage) GetTimestamp() int64 {
 	return 0
 }
 
+// Request for creating a new topic.
+type CreateTopicRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Topic             string                 `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
+	NumPartitions     int32                  `protobuf:"varint,2,opt,name=num_partitions,json=numPartitions,proto3" json:"num_partitions,omitempty"`                                       // Number of partitions for the topic
+	ReplicationFactor int32                  `protobuf:"varint,3,opt,name=replication_factor,json=replicationFactor,proto3" json:"replication_factor,omitempty"`                           // Replication factor for the topic
+	Config            map[string]string      `protobuf:"bytes,4,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Optional topic configuration parameters
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CreateTopicRequest) Reset() {
+	*x = CreateTopicRequest{}
+	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTopicRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTopicRequest) ProtoMessage() {}
+
+func (x *CreateTopicRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTopicRequest.ProtoReflect.Descriptor instead.
+func (*CreateTopicRequest) Descriptor() ([]byte, []int) {
+	return file_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CreateTopicRequest) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *CreateTopicRequest) GetNumPartitions() int32 {
+	if x != nil {
+		return x.NumPartitions
+	}
+	return 0
+}
+
+func (x *CreateTopicRequest) GetReplicationFactor() int32 {
+	if x != nil {
+		return x.ReplicationFactor
+	}
+	return 0
+}
+
+func (x *CreateTopicRequest) GetConfig() map[string]string {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+// Response after creating a topic.
+type CreateTopicResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateTopicResponse) Reset() {
+	*x = CreateTopicResponse{}
+	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTopicResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTopicResponse) ProtoMessage() {}
+
+func (x *CreateTopicResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_messaging_service_messaging_service_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTopicResponse.ProtoReflect.Descriptor instead.
+func (*CreateTopicResponse) Descriptor() ([]byte, []int) {
+	return file_protos_messaging_service_messaging_service_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CreateTopicResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CreateTopicResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_protos_messaging_service_messaging_service_proto protoreflect.FileDescriptor
 
 const file_protos_messaging_service_messaging_service_proto_rawDesc = "" +
@@ -293,10 +415,22 @@ const file_protos_messaging_service_messaging_service_proto_rawDesc = "" +
 	"\n" +
 	"ValueEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xbe\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x84\x02\n" +
+	"\x12CreateTopicRequest\x12\x14\n" +
+	"\x05topic\x18\x01 \x01(\tR\x05topic\x12%\n" +
+	"\x0enum_partitions\x18\x02 \x01(\x05R\rnumPartitions\x12-\n" +
+	"\x12replication_factor\x18\x03 \x01(\x05R\x11replicationFactor\x12G\n" +
+	"\x06config\x18\x04 \x03(\v2/.messaging_proto.CreateTopicRequest.ConfigEntryR\x06config\x1a9\n" +
+	"\vConfigEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"G\n" +
+	"\x13CreateTopicResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\x98\x02\n" +
 	"\x10MessagingService\x12S\n" +
 	"\x0ePublishMessage\x12\x1f.messaging_proto.PublishRequest\x1a .messaging_proto.PublishResponse\x12U\n" +
-	"\x0fSubscribeStream\x12!.messaging_proto.SubscribeRequest\x1a\x1d.messaging_proto.KafkaMessage0\x01B@Z>github.com/shubhpreet/protos/messaging_service;messaging_protob\x06proto3"
+	"\x0fSubscribeStream\x12!.messaging_proto.SubscribeRequest\x1a\x1d.messaging_proto.KafkaMessage0\x01\x12X\n" +
+	"\vCreateTopic\x12#.messaging_proto.CreateTopicRequest\x1a$.messaging_proto.CreateTopicResponseB@Z>github.com/shubhpreet/protos/messaging_service;messaging_protob\x06proto3"
 
 var (
 	file_protos_messaging_service_messaging_service_proto_rawDescOnce sync.Once
@@ -310,27 +444,33 @@ func file_protos_messaging_service_messaging_service_proto_rawDescGZIP() []byte 
 	return file_protos_messaging_service_messaging_service_proto_rawDescData
 }
 
-var file_protos_messaging_service_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_protos_messaging_service_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_protos_messaging_service_messaging_service_proto_goTypes = []any{
-	(*PublishRequest)(nil),   // 0: messaging_proto.PublishRequest
-	(*PublishResponse)(nil),  // 1: messaging_proto.PublishResponse
-	(*SubscribeRequest)(nil), // 2: messaging_proto.SubscribeRequest
-	(*KafkaMessage)(nil),     // 3: messaging_proto.KafkaMessage
-	nil,                      // 4: messaging_proto.PublishRequest.ValueEntry
-	nil,                      // 5: messaging_proto.KafkaMessage.ValueEntry
+	(*PublishRequest)(nil),      // 0: messaging_proto.PublishRequest
+	(*PublishResponse)(nil),     // 1: messaging_proto.PublishResponse
+	(*SubscribeRequest)(nil),    // 2: messaging_proto.SubscribeRequest
+	(*KafkaMessage)(nil),        // 3: messaging_proto.KafkaMessage
+	(*CreateTopicRequest)(nil),  // 4: messaging_proto.CreateTopicRequest
+	(*CreateTopicResponse)(nil), // 5: messaging_proto.CreateTopicResponse
+	nil,                         // 6: messaging_proto.PublishRequest.ValueEntry
+	nil,                         // 7: messaging_proto.KafkaMessage.ValueEntry
+	nil,                         // 8: messaging_proto.CreateTopicRequest.ConfigEntry
 }
 var file_protos_messaging_service_messaging_service_proto_depIdxs = []int32{
-	4, // 0: messaging_proto.PublishRequest.value:type_name -> messaging_proto.PublishRequest.ValueEntry
-	5, // 1: messaging_proto.KafkaMessage.value:type_name -> messaging_proto.KafkaMessage.ValueEntry
-	0, // 2: messaging_proto.MessagingService.PublishMessage:input_type -> messaging_proto.PublishRequest
-	2, // 3: messaging_proto.MessagingService.SubscribeStream:input_type -> messaging_proto.SubscribeRequest
-	1, // 4: messaging_proto.MessagingService.PublishMessage:output_type -> messaging_proto.PublishResponse
-	3, // 5: messaging_proto.MessagingService.SubscribeStream:output_type -> messaging_proto.KafkaMessage
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	6, // 0: messaging_proto.PublishRequest.value:type_name -> messaging_proto.PublishRequest.ValueEntry
+	7, // 1: messaging_proto.KafkaMessage.value:type_name -> messaging_proto.KafkaMessage.ValueEntry
+	8, // 2: messaging_proto.CreateTopicRequest.config:type_name -> messaging_proto.CreateTopicRequest.ConfigEntry
+	0, // 3: messaging_proto.MessagingService.PublishMessage:input_type -> messaging_proto.PublishRequest
+	2, // 4: messaging_proto.MessagingService.SubscribeStream:input_type -> messaging_proto.SubscribeRequest
+	4, // 5: messaging_proto.MessagingService.CreateTopic:input_type -> messaging_proto.CreateTopicRequest
+	1, // 6: messaging_proto.MessagingService.PublishMessage:output_type -> messaging_proto.PublishResponse
+	3, // 7: messaging_proto.MessagingService.SubscribeStream:output_type -> messaging_proto.KafkaMessage
+	5, // 8: messaging_proto.MessagingService.CreateTopic:output_type -> messaging_proto.CreateTopicResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_protos_messaging_service_messaging_service_proto_init() }
@@ -344,7 +484,7 @@ func file_protos_messaging_service_messaging_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_messaging_service_messaging_service_proto_rawDesc), len(file_protos_messaging_service_messaging_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

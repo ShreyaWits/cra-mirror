@@ -17,24 +17,23 @@ type Container struct {
 
 // NewContainer creates a new dependency injection container
 func NewContainer() (*Container, error) {
-	container := &Container{}
-	cfg, err := config.LoadConfig()
+	// Initialize logger
+	logger.InitLogger()
+
 	// Load configuration
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
-	container.Config = cfg
 
-	logger.InitLogger()
-	// Messaging service server instance
-	msgHandler := handler.MessagingHandler{}
-	container.MessagingHandler = &msgHandler
+	// Initialize dependencies
+	msgHandler := handler.NewMessagingHandler(cfg)
+
+	// Build container
+	container := &Container{
+		Config:           cfg,
+		MessagingHandler: msgHandler,
+	}
 
 	return container, nil
 }
-
-// // SetupRoutes sets up all the routes for the application
-// func (c *Container) SetupRoutes(app *fiber.App) {
-
-// 	routes.SetupAPIRoutes(app, c.EncryptionHandler)
-// }

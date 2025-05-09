@@ -4,12 +4,25 @@ package messaging_proto;
 
 option go_package = "github.com/shubhpreet/protos/messaging_service;messaging_proto";
 
+// Define an enum for Kafka delivery semantics
+enum DeliverySemantics {
+  // Unspecified delivery semantics (use server default)
+  DELIVERY_SEMANTICS_UNSPECIFIED = 0;
+  // At-least-once delivery
+  DELIVERY_SEMANTICS_AT_LEAST_ONCE = 1;
+  // Exactly-once delivery (requires transactional producer)
+  DELIVERY_SEMANTICS_EXACTLY_ONCE = 2;
+}
+
 service MessagingService {
   // Publishes a binary message to the specified Kafka topic.
   rpc PublishMessage(PublishRequest) returns (PublishResponse);
 
   // Streams messages from a Kafka topic to the consumer.
   rpc SubscribeStream(SubscribeRequest) returns (stream KafkaMessage);
+
+  // Creates a new Kafka topic with specified configuration.
+  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
 }
 
 // Request for publishing a message.
@@ -19,6 +32,9 @@ message PublishRequest {
   string group_id = 3;
   int32 min_bytes = 4; // Optional, default: 10 * 1024 (10 KB)
   int32 max_bytes = 5; // Optional, default: 10 * 1024 * 1024 (10 MB)
+
+  // Add a field to specify the desired delivery semantics
+  DeliverySemantics semantics = 6; // Assigned next available field number
 }
 
 // Response after publishing.
@@ -38,4 +54,18 @@ message SubscribeRequest {
 message KafkaMessage {
   map<string,string> value = 1;
   int64 timestamp = 2;
+}
+
+// Request for creating a new topic.
+message CreateTopicRequest {
+  string topic = 1;
+  int32 num_partitions = 2; // Number of partitions for the topic
+  int32 replication_factor = 3; // Replication factor for the topic
+  map<string, string> config = 4; // Optional topic configuration parameters
+}
+
+// Response after creating a topic.
+message CreateTopicResponse {
+  string status = 1;
+  string message = 2;
 }

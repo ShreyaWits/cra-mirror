@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	MessagingService_PublishMessage_FullMethodName  = "/messaging_proto.MessagingService/PublishMessage"
 	MessagingService_SubscribeStream_FullMethodName = "/messaging_proto.MessagingService/SubscribeStream"
+	MessagingService_CreateTopic_FullMethodName     = "/messaging_proto.MessagingService/CreateTopic"
 )
 
 // MessagingServiceClient is the client API for MessagingService service.
@@ -31,6 +32,8 @@ type MessagingServiceClient interface {
 	PublishMessage(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
 	// Streams messages from a Kafka topic to the consumer.
 	SubscribeStream(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[KafkaMessage], error)
+	// Creates a new Kafka topic with specified configuration.
+	CreateTopic(ctx context.Context, in *CreateTopicRequest, opts ...grpc.CallOption) (*CreateTopicResponse, error)
 }
 
 type messagingServiceClient struct {
@@ -70,6 +73,16 @@ func (c *messagingServiceClient) SubscribeStream(ctx context.Context, in *Subscr
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MessagingService_SubscribeStreamClient = grpc.ServerStreamingClient[KafkaMessage]
 
+func (c *messagingServiceClient) CreateTopic(ctx context.Context, in *CreateTopicRequest, opts ...grpc.CallOption) (*CreateTopicResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateTopicResponse)
+	err := c.cc.Invoke(ctx, MessagingService_CreateTopic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessagingServiceServer is the server API for MessagingService service.
 // All implementations must embed UnimplementedMessagingServiceServer
 // for forward compatibility.
@@ -78,6 +91,8 @@ type MessagingServiceServer interface {
 	PublishMessage(context.Context, *PublishRequest) (*PublishResponse, error)
 	// Streams messages from a Kafka topic to the consumer.
 	SubscribeStream(*SubscribeRequest, grpc.ServerStreamingServer[KafkaMessage]) error
+	// Creates a new Kafka topic with specified configuration.
+	CreateTopic(context.Context, *CreateTopicRequest) (*CreateTopicResponse, error)
 	mustEmbedUnimplementedMessagingServiceServer()
 }
 
@@ -93,6 +108,9 @@ func (UnimplementedMessagingServiceServer) PublishMessage(context.Context, *Publ
 }
 func (UnimplementedMessagingServiceServer) SubscribeStream(*SubscribeRequest, grpc.ServerStreamingServer[KafkaMessage]) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeStream not implemented")
+}
+func (UnimplementedMessagingServiceServer) CreateTopic(context.Context, *CreateTopicRequest) (*CreateTopicResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTopic not implemented")
 }
 func (UnimplementedMessagingServiceServer) mustEmbedUnimplementedMessagingServiceServer() {}
 func (UnimplementedMessagingServiceServer) testEmbeddedByValue()                          {}
@@ -144,6 +162,24 @@ func _MessagingService_SubscribeStream_Handler(srv interface{}, stream grpc.Serv
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MessagingService_SubscribeStreamServer = grpc.ServerStreamingServer[KafkaMessage]
 
+func _MessagingService_CreateTopic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTopicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).CreateTopic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_CreateTopic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).CreateTopic(ctx, req.(*CreateTopicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MessagingService_ServiceDesc is the grpc.ServiceDesc for MessagingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -154,6 +190,10 @@ var MessagingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PublishMessage",
 			Handler:    _MessagingService_PublishMessage_Handler,
+		},
+		{
+			MethodName: "CreateTopic",
+			Handler:    _MessagingService_CreateTopic_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

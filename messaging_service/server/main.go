@@ -3,7 +3,7 @@ package main
 import (
 	pb "cra-protos/messaging_service"
 	"log"
-	"messaging_service/internal/messaging_service/handler"
+	"messaging_service/internal/di"
 	"net"
 	"os"
 	"os/signal"
@@ -14,43 +14,39 @@ import (
 )
 
 func main() {
+	// Initialize dependency container
+	container, err := di.NewContainer()
+	if err != nil {
+		log.Fatalf("Failed to initialize container: %v", err)
+	}
 
-	// container, err := di.NewContainer()
-	// if err != nil {
-	// 	log.Fatal("Error Loadin Container", err)
-	// }
-	// Set up a TCP listener on the specified port
-	listener, err := net.Listen("tcp", ":"+"50051") // Change the port as needed
+	// Set up a TCP listener
+	listener, err := net.Listen("tcp", ":"+container.Config.GrpcPort)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
+	// Create and configure gRPC server
 	grpcServer := grpc.NewServer()
+	pb.RegisterMessagingServiceServer(grpcServer, container.MessagingHandler)
 
-	msgHandler := &handler.MessagingHandler{}
-	// Register the messaging service
-	pb.RegisterMessagingServiceServer(grpcServer, msgHandler)
-
-	// Start the gRPC server in a goroutine
+	// Start the gRPC server
 	go func() {
-		log.Println("Starting gRPC server on :", "50051")
+		log.Println("Starting gRPC server on:", container.Config.GrpcPort)
 		if err = grpcServer.Serve(listener); err != nil {
 			log.Fatalf("Failed to serve: %v", err)
 		}
 	}()
 
-	// Graceful shutdown handling
+	// Set up graceful shutdown
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Wait for interrupt signal to gracefully shutdown the server
 	<-signalChan
-	log.Println("Shutting down gRPC server...")
 
-	// Gracefully stop the gRPC server
+	log.Println("Shutting down gRPC server...")
 	grpcServer.GracefulStop()
 
-	// Optionally, you can add a timeout for the shutdown process
-	time.Sleep(1 * time.Second) // Allow some time for ongoing requests to complete
+	// Allow time for ongoing requests to complete
+	time.Sleep(1 * time.Second)
 	log.Println("gRPC server stopped")
 }
