@@ -1,0 +1,43 @@
+version: '3.8'  # Docker Compose file format version
+
+services:
+  messaging_service:
+    build:
+      context: .                      # Current directory used for build context
+      dockerfile: Dockerfile             # Dockerfile path for building the service
+    ports:
+      - "${GRPC_PORT}:${GRPC_PORT}"      # gRPC port exposed to host
+    environment:
+      - GRPC_PORT=${GRPC_PORT}           # gRPC server port from .env
+    depends_on:
+      - kafka                            # Ensure Kafka is running before starting this service
+      - zookeeper                        # Optional: only needed if service talks to Zookeeper
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:${ZOOKEEPER_VERSION}  # Zookeeper image and version from .env
+    environment:
+      ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_CLIENT_PORT}       # Port for Zookeeper client connections
+      ZOOKEEPER_TICK_TIME: ${ZOOKEEPER_TICK_TIME}           # Heartbeat interval for Zookeeper
+    ports:
+      - "${ZOOKEEPER_CLIENT_PORT}:${ZOOKEEPER_CLIENT_PORT}" # Expose Zookeeper port to host
+
+  kafka:
+    image: confluentinc/cp-kafka:${KAFKA_VERSION}           # Kafka image and version from .env
+    depends_on:
+      - zookeeper                                           # Kafka starts only after Zookeeper is ready
+    ports:
+      - "${KAFKA_PORT}:${KAFKA_PORT}"                       # Expose Kafka broker port
+    environment:
+      KAFKA_BROKER_ID: ${KAFKA_BROKER_ID}                   # Unique ID for Kafka broker
+      KAFKA_ZOOKEEPER_CONNECT: ${KAFKA_ZOOKEEPER_CONNECT}   # Zookeeper connection string
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:${KAFKA_PORT}
+      KAFKA_LISTENERS: PLAINTEXT://kafka:${KAFKA_PORT}
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_REPLICATION_FACTOR}
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" 
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+                      # Mount local code into container (useful in development)
+
+volumes:
+  kafka_data:   
+                           # Named volume declared for potential Kafka persistence
