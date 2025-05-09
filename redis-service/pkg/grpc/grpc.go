@@ -2,33 +2,23 @@ package grpc
 
 import (
 	"log"
-	"net"
-
-	"google.golang.org/grpc"
 )
 
 type GRPCServerInstance struct {
-	server   *grpc.Server
+	server   GRPCServerInterface
 	listener GRPCListenerInterface
 }
 
-func NewGRPCServer(port string) (*GRPCServerInstance, error) {
-	// start the gRPC server
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		return nil, err
-	}
-	s := grpc.NewServer()
+func NewGRPCServer(server GRPCServerInterface, listener GRPCListenerInterface) (*GRPCServerInstance, error) {
 
 	return &GRPCServerInstance{
-		server:   s,
-		listener: lis,
+		server:   server,
+		listener: listener,
 	}, nil
 }
 
 func (s *GRPCServerInstance) Start() error {
 	if err := s.server.Serve(s.listener); err != nil {
-		log.Fatalf("failed to serve: %v", err)
 		return err
 	}
 	log.Println("gRPC server started on port", s.listener.Addr())
@@ -40,6 +30,6 @@ func (s *GRPCServerInstance) Stop() {
 	log.Println("gRPC server stopped")
 }
 
-func (s *GRPCServerInstance) GetServer() *grpc.Server {
+func (s *GRPCServerInstance) GetServer() GRPCServerInterface {
 	return s.server
 }

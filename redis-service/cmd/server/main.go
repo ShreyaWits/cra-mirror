@@ -2,9 +2,10 @@ package main
 
 import (
 	"log"
+	"net"
 	"os"
 	"os/signal"
-	"redis-service/internal/interface/grpc"
+	handler "redis-service/internal/interface/grpc"
 	"redis-service/internal/interface/http"
 	"redis-service/pkg/config"
 	server "redis-service/pkg/grpc"
@@ -12,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/gofiber/fiber/v2"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -24,13 +26,22 @@ func main() {
 
 	// create a new grpc server instance
 	log.Println("Creating gRPC server instance...")
-	grpcServer, err := server.NewGRPCServer(config.GRPC_PORT)
+
+	// create a new grpc server instance
+	lis, err := net.Listen("tcp", config.GRPC_PORT)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+
+	s := grpc.NewServer()
+
+	grpcServer, err := server.NewGRPCServer(s, lis)
 
 	if err != nil {
 		log.Fatalf("gRPC server failed to listen: %v", err)
 	}
 
-	grpcHandler := grpc.NewGRPCHandler()
+	grpcHandler := handler.NewGRPCHandler()
 	log.Println("Registering gRPC services...")
 	proto.RegisterCacheServiceServer(grpcServer.GetServer(), grpcHandler)
 
