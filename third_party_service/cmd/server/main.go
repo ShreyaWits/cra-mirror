@@ -1,14 +1,28 @@
 package main
 
+import (
+	"context"
+	"fmt"
+	"third_party_service/internal/configs"
+	pb "third_party_service/thirdparty-client-service/proto" // Import the generated proto package
+)
+
 func main() {
 
-	// Load config
-	// configs.LoadEnv()
+	application := configs.NewApp()
+	// Example usage
+	response, err := application.ThirdPartyClient.Client.SendEmail(
+		context.Background(),
+		&pb.EmailRequest{
+			To:      "test@example.com",
+			Subject: "Hello",
+			Body:    "This is a test",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
 
-	// di.InitDependencies()
-
-	// if err := app.SetupRoutes(app); err != nil {
-	// 	log.Fatalf("error setting application routes: %v\n", err)
-	// }
+	fmt.Println("Email sent:", response.Success)
 
 }

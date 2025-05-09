@@ -2,9 +2,8 @@ package di
 
 import (
 	"fmt"
-	"third_party_service/internal/common/middleware"
-	"third_party_service/internal/modules/third_party/repositories"
-	"third_party_service/internal/modules/third_party/services"
+	"third_party_service/internal/repositories"
+	"third_party_service/internal/services"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -17,7 +16,7 @@ var (
 
 // InitializeApp initializes the application with all dependencies
 func InitializeApp() (*fiber.App, error) {
-	app := fiber.New(fiber.Config{ErrorHandler: middleware.FiberErrorHandler})
+	app := fiber.New(fiber.Config{})
 
 	// initialize application dependencies
 	if err := initializeDeps(); err != nil {

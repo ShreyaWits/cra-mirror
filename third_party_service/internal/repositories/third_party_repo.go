@@ -1,6 +1,7 @@
 package repositories
 
-import "third_party_service/internal/modules/third_party/models"
+import "third_party_service/internal/models"
+
 
 type ThirdPartyRepository interface {
 	// SendEmail(emailRequest models.EmailRequest) error
