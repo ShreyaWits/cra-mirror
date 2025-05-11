@@ -52,11 +52,19 @@ func (a *Admin) CreateTopic(ctx context.Context, topic string, numPartitions, re
 			ConfigValue: v,
 		})
 	}
-
+	var conn *kafka.Conn
+	var err error
 	// Create a connection to the kafka controller
-	conn, err := a.dialer.DialContext(ctx, "tcp", a.brokers[0])
+	for _, broker := range a.brokers {
+		conn, err = a.dialer.DialContext(ctx, "tcp", broker)
+		if err == nil {
+			break // Successful connection
+		}
+		// Log the error for the failed connection attempt
+		fmt.Printf("Failed to connect to broker %s: %v\n", broker, err)
+	}
 	if err != nil {
-		return fmt.Errorf("failed to connect to kafka: %w", err)
+		return fmt.Errorf("failed to connect to any kafka broker: %w", err)
 	}
 	defer conn.Close()
 

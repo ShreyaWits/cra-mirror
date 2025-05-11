@@ -11,6 +11,9 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+type KafkaPkg struct {
+}
+
 type Producer struct {
 	Writer           *kafka.Writer
 	Config           KafkaConfig
