@@ -150,3 +150,6 @@ volumes:
   zookeeper3_data:
   # Keep the original kafka_data volume if you had data there you want to migrate or keep
   # kafka_data:
+
+
+  #[NOTE:- docker compose -f 'docker/docker-compose.yml' up --build 'messaging_service'   ]

@@ -1,5 +1,9 @@
 package kafka
 
+import (
+	"time"
+)
+
 // DeliverySemantics defines the message delivery guarantee
 type DeliverySemantics string
 
@@ -17,11 +21,8 @@ const (
 type KafkaClusterMode string
 
 const (
-	// ZookeeperMode uses Zookeeper for broker coordination (legacy)
+	// ZookeeperMode uses Zookeeper for broker coordination
 	ZookeeperMode KafkaClusterMode = "zookeeper"
-
-	// KRaftMode uses Kafka Raft (KRaft) for broker coordination (modern, no Zookeeper)
-	KRaftMode KafkaClusterMode = "kraft"
 )
 
 type ConsumerMode string
@@ -32,6 +33,10 @@ const (
 
 	// Default number of partitions for scalability
 	DefaultPartitions = 3
+
+	// Consumer group behaviors
+	LatestOffset   ConsumerMode = "latest"   // Only read new messages after joining
+	EarliestOffset ConsumerMode = "earliest" // Read all unprocessed messages
 )
 
 // ExactlyOnceConfig holds configuration for exactly-once semantics
@@ -71,6 +76,59 @@ func DefaultExactlyOnceConfig() ExactlyOnceConfig {
 	}
 }
 
+// ConsumerConfig holds configuration for consumer behavior
+type ConsumerConfig struct {
+	// MaxWait is the maximum amount of time to wait for a batch of messages
+	MaxWait time.Duration
+
+	// ReadBackoffMin is the minimum amount of time to wait before retrying a read
+	ReadBackoffMin time.Duration
+
+	// ReadBackoffMax is the maximum amount of time to wait before retrying a read
+	ReadBackoffMax time.Duration
+
+	// CommitInterval is the interval at which offsets are committed to the broker
+	CommitInterval time.Duration
+
+	// HeartbeatInterval is the interval at which heartbeats are sent to the broker
+	HeartbeatInterval time.Duration
+
+	// SessionTimeout is the timeout used to detect consumer failures
+	SessionTimeout time.Duration
+
+	// RebalanceTimeout is the maximum time allowed for the group to rebalance
+	RebalanceTimeout time.Duration
+
+	// RetentionTime is the time to retain messages in the topic
+	RetentionTime time.Duration
+
+	// MaxAttempts is the maximum number of attempts to read a message
+	MaxAttempts int
+
+	// IsolationLevel determines whether to read committed, uncommitted, or both
+	IsolationLevel string
+
+	// AutoOffsetReset determines where to start reading when no offset is stored
+	AutoOffsetReset string
+}
+
+// DefaultConsumerConfig returns a default configuration for consumer behavior
+func DefaultConsumerConfig() ConsumerConfig {
+	return ConsumerConfig{
+		MaxWait:           500 * time.Millisecond,
+		ReadBackoffMin:    50 * time.Millisecond,
+		ReadBackoffMax:    200 * time.Millisecond,
+		CommitInterval:    1 * time.Second,
+		HeartbeatInterval: 3 * time.Second,
+		SessionTimeout:    10 * time.Second,
+		RebalanceTimeout:  60 * time.Second,
+		RetentionTime:     3 * time.Second, // Changed to 3 seconds to match retention.ms
+		MaxAttempts:       5,
+		IsolationLevel:    "read_committed",
+		AutoOffsetReset:   "latest",
+	}
+}
+
 type KafkaConfig struct {
 	Brokers           []string
 	Topic             string
@@ -84,6 +142,7 @@ type KafkaConfig struct {
 	NumPartitions     int
 	ClusterMode       KafkaClusterMode
 	ExactlyOnceConfig ExactlyOnceConfig
+	ConsumerConfig    ConsumerConfig // New field for consumer configuration
 }
 
 // NewDefaultKafkaConfig creates a new KafkaConfig with sensible defaults for production use
@@ -91,15 +150,16 @@ func NewDefaultKafkaConfig(brokers []string, topic string) KafkaConfig {
 	return KafkaConfig{
 		Brokers:           brokers,
 		Topic:             topic,
-		Mode:              "", // Will be set based on usage
+		Mode:              LatestOffset, // Default to latest offset - only receive new messages after consumer starts
 		BalancerType:      "round_robin",
 		MinBytes:          10 * 1024,        // 10KB
 		MaxBytes:          10 * 1024 * 1024, // 10MB
 		DeliverySemantics: AtLeastOnce,      // Default to at-least-once for safety
 		ReplicationFactor: DefaultReplicationFactor,
 		NumPartitions:     DefaultPartitions,
-		ClusterMode:       ZookeeperMode, // Default to Zookeeper for backward compatibility
+		ClusterMode:       ZookeeperMode, // Default to Zookeeper
 		ExactlyOnceConfig: DefaultExactlyOnceConfig(),
+		ConsumerConfig:    DefaultConsumerConfig(),
 	}
 }
 
@@ -129,8 +189,81 @@ func (c KafkaConfig) WithHighAvailability(replicationFactor int) KafkaConfig {
 	return c
 }
 
-// WithKRaftMode configures the Kafka client to use KRaft mode (no Zookeeper)
-func (c KafkaConfig) WithKRaftMode() KafkaConfig {
-	c.ClusterMode = KRaftMode
+// WithLatestOffset configures the consumer to only read new messages after joining
+func (c KafkaConfig) WithLatestOffset() KafkaConfig {
+	c.Mode = LatestOffset
+	return c
+}
+
+// WithEarliestOffset configures the consumer to read all unprocessed messages
+func (c KafkaConfig) WithEarliestOffset() KafkaConfig {
+	c.Mode = EarliestOffset
+	return c
+}
+
+// WithConsumerConfig sets custom consumer configuration
+func (c KafkaConfig) WithConsumerConfig(config ConsumerConfig) KafkaConfig {
+	c.ConsumerConfig = config
+	return c
+}
+
+// WithMaxWait sets the maximum wait time for a batch of messages
+func (c KafkaConfig) WithMaxWait(duration time.Duration) KafkaConfig {
+	c.ConsumerConfig.MaxWait = duration
+	return c
+}
+
+// WithReadBackoff sets the read backoff configuration
+func (c KafkaConfig) WithReadBackoff(min, max time.Duration) KafkaConfig {
+	c.ConsumerConfig.ReadBackoffMin = min
+	c.ConsumerConfig.ReadBackoffMax = max
+	return c
+}
+
+// WithCommitInterval sets the commit interval
+func (c KafkaConfig) WithCommitInterval(duration time.Duration) KafkaConfig {
+	c.ConsumerConfig.CommitInterval = duration
+	return c
+}
+
+// WithHeartbeatInterval sets the heartbeat interval
+func (c KafkaConfig) WithHeartbeatInterval(duration time.Duration) KafkaConfig {
+	c.ConsumerConfig.HeartbeatInterval = duration
+	return c
+}
+
+// WithSessionTimeout sets the session timeout
+func (c KafkaConfig) WithSessionTimeout(duration time.Duration) KafkaConfig {
+	c.ConsumerConfig.SessionTimeout = duration
+	return c
+}
+
+// WithRebalanceTimeout sets the rebalance timeout
+func (c KafkaConfig) WithRebalanceTimeout(duration time.Duration) KafkaConfig {
+	c.ConsumerConfig.RebalanceTimeout = duration
+	return c
+}
+
+// WithRetentionTime sets the message retention time
+func (c KafkaConfig) WithRetentionTime(duration time.Duration) KafkaConfig {
+	c.ConsumerConfig.RetentionTime = duration
+	return c
+}
+
+// WithMaxAttempts sets the maximum number of read attempts
+func (c KafkaConfig) WithMaxAttempts(attempts int) KafkaConfig {
+	c.ConsumerConfig.MaxAttempts = attempts
+	return c
+}
+
+// WithIsolationLevel sets the isolation level
+func (c KafkaConfig) WithIsolationLevel(level string) KafkaConfig {
+	c.ConsumerConfig.IsolationLevel = level
+	return c
+}
+
+// WithAutoOffsetReset sets the auto offset reset behavior
+func (c KafkaConfig) WithAutoOffsetReset(reset string) KafkaConfig {
+	c.ConsumerConfig.AutoOffsetReset = reset
 	return c
 }

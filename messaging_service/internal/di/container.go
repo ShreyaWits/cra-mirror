@@ -3,6 +3,7 @@ package di
 import (
 	"messaging_service/internal/config"
 	"messaging_service/internal/messaging_service/handler"
+	"messaging_service/internal/messaging_service/service"
 	"messaging_service/pkg/kafka"
 	"messaging_service/pkg/logger"
 )
@@ -15,7 +16,7 @@ type Container struct {
 	// Key Manager
 	MessagingHandler *handler.MessagingHandler
 
-	Kafka *kafka.KafkaPkg
+	Producer *kafka.Producer
 }
 
 // NewContainer creates a new dependency injection container
@@ -30,14 +31,19 @@ func NewContainer() (*Container, error) {
 	}
 
 	// Initialize dependencies
-	msgHandler := handler.NewMessagingHandler(cfg)
-	kafka := &kafka.KafkaPkg{}
+	producer := kafka.NewProducer()
+	admin := kafka.NewAdmin(kafka.KafkaConfig{
+		Brokers: cfg.KafkaBrokers,
+	})
+
+	messagingService := service.NewMessagingService(producer, admin)
+	msgHandler := handler.NewMessagingHandler(cfg, messagingService)
 
 	// Build container
 	container := &Container{
 		Config:           cfg,
 		MessagingHandler: msgHandler,
-		Kafka:            kafka,
+		Producer:         producer,
 	}
 
 	return container, nil

@@ -12,139 +12,173 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// ConsumerError represents an error that can occur during message processing
-type ConsumerError struct {
+// ConsumerImplError represents an error that can occur during message processing
+type ConsumerImplError struct {
 	Err       error
 	Permanent bool
 	Reason    string
 }
 
-func (e ConsumerError) Error() string {
+func (e *ConsumerImplError) Error() string {
 	return fmt.Sprintf("%s: %v", e.Reason, e.Err)
 }
 
-// NewConsumerError creates a new consumer error
-func NewConsumerError(err error, permanent bool, reason string) ConsumerError {
-	return ConsumerError{
+// NewConsumerImplError creates a new ConsumerImpl error
+func NewConsumerImplError(err error, permanent bool, reason string) *ConsumerImplError {
+	return &ConsumerImplError{
 		Err:       err,
 		Permanent: permanent,
 		Reason:    reason,
 	}
 }
 
-type Consumer struct {
+type Consumer interface {
+	Start(ctx context.Context)
+}
+
+type ConsumerImpl struct {
 	Reader       *kafka.Reader
 	Handler      func([]byte) error
 	RetryHandler *RetryHandler
 	DLQProducer  *DLQProducer
 	Topic        string
 	MaxRetries   int
+	RetryTimeout time.Duration
 }
 
-func NewConsumer(cfg KafkaConfig, handler func([]byte) error) *Consumer {
-	// Check if this topic has a registered DLQ configuration
+func NewConsumer(cfg KafkaConfig, handler func([]byte) error) Consumer {
 	dlqConfig, exists := GetDLQConfig(cfg.Topic)
-	maxRetries := 5 // default
-
+	maxRetries := 5
 	if exists {
 		maxRetries = dlqConfig.MaxRetries
 	}
 
-	return &Consumer{
+	return &ConsumerImpl{
 		Reader:       NewKafkaReader(cfg),
 		Handler:      handler,
 		RetryHandler: NewRetryHandler(maxRetries, 500*time.Millisecond),
 		DLQProducer:  NewDLQProducer(cfg),
 		Topic:        cfg.Topic,
 		MaxRetries:   maxRetries,
+		RetryTimeout: 5 * time.Second,
 	}
 }
 
-func (c *Consumer) Start(ctx context.Context) {
+func (c *ConsumerImpl) Start(ctx context.Context) {
 	defer c.Reader.Close()
 	defer c.DLQProducer.Close()
 
-	log.Printf("[Kafka][%s] Consumer started", c.Topic)
+	log.Printf("[Kafka][%s] ConsumerImpl started", c.Topic)
+
+	// Create a buffered channel for message processing
+	msgChan := make(chan kafka.Message, 100)
+
+	// Start message processor goroutine
+	go func() {
+		for msg := range msgChan {
+			messageID := string(msg.Key)
+			if messageID == "" {
+				messageID = fmt.Sprintf("%s-%d", c.Topic, msg.Time.UnixNano())
+			}
+			c.processMessageWithRetries(ctx, messageID, msg)
+		}
+	}()
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("[Kafka][%s] Consumer stopped due to context cancellation", c.Topic)
+			close(msgChan)
+			log.Printf("[Kafka][%s] ConsumerImpl stopped due to context cancellation", c.Topic)
 			return
 		default:
-			log.Printf("[Kafka][%s] Waiting for message...", c.Topic)
 			m, err := c.Reader.ReadMessage(ctx)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					log.Printf("[Kafka][%s] Context done: %v", c.Topic, err)
+					close(msgChan)
 					return
 				}
-
-				log.Printf("[Kafka][%s] Read error: %v", c.Topic, err)
-				time.Sleep(500 * time.Millisecond) // avoid tight loop on error
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 
-			messageID := string(m.Key)
-			if messageID == "" {
-				messageID = fmt.Sprintf("%s-%d", c.Topic, m.Time.UnixNano())
+			// Check message timestamp
+			if time.Since(m.Time) > 3*time.Second {
+				continue
 			}
 
-			c.processMessageWithRetries(ctx, messageID, m)
+			select {
+			case msgChan <- m:
+			default:
+				// If channel is full, process message in current goroutine
+				messageID := string(m.Key)
+				if messageID == "" {
+					messageID = fmt.Sprintf("%s-%d", c.Topic, m.Time.UnixNano())
+				}
+				c.processMessageWithRetries(ctx, messageID, m)
+			}
 		}
 	}
 }
 
-func (c *Consumer) processMessageWithRetries(ctx context.Context, messageID string, m kafka.Message) {
+func (c *ConsumerImpl) processMessageWithRetries(ctx context.Context, messageID string, m kafka.Message) {
 	var attempt int
 	var failureReason string
 
 	for {
-		err := c.Handler(m.Value)
-
-		if err == nil {
-			// Successfully processed
+		handlerErr := c.invokeHandlerWithTimeout(ctx, m.Value)
+		if handlerErr == nil {
 			return
 		}
 
-		// Check if this is a Consumer Error with additional metadata
-		var consumerErr ConsumerError
-		if ce, ok := err.(ConsumerError); ok {
-			consumerErr = ce // Use the variable to avoid linter error
+		var consumerErr *ConsumerImplError
+		if errors.As(handlerErr, &consumerErr) {
 			failureReason = consumerErr.Reason
-
-			// If it's a permanent error, don't retry, send directly to DLQ
 			if consumerErr.Permanent {
-				log.Printf("[Kafka][%s] Permanent error, sending to DLQ: %v", c.Topic, consumerErr.Error())
 				c.sendToDLQ(ctx, messageID, m, failureReason)
 				return
 			}
 		} else {
-			// Generic error
-			failureReason = "Unknown error"
+			failureReason = "unknown error"
 		}
 
-		// Calculate retry delay based on attempt number
 		delay := c.RetryHandler.HandleRetry(attempt)
 		if delay < 0 {
-			// Max retries exceeded, send to DLQ
-			log.Printf("[Kafka][%s] Max retries (%d) exceeded, sending to DLQ: %s",
-				c.Topic, c.MaxRetries, failureReason)
 			c.sendToDLQ(ctx, messageID, m, failureReason)
 			return
 		}
 
-		log.Printf("[Kafka][%s] Retrying attempt %d in %v: %s",
-			c.Topic, attempt+1, delay, failureReason)
 		time.Sleep(delay)
 		attempt++
 	}
 }
 
-func (c *Consumer) sendToDLQ(ctx context.Context, messageID string, m kafka.Message, reason string) {
+func (c *ConsumerImpl) invokeHandlerWithTimeout(ctx context.Context, payload []byte) error {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	resultChan := make(chan error, 1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				resultChan <- NewConsumerImplError(fmt.Errorf("panic: %v", r), true, "panic in handler")
+			}
+		}()
+		resultChan <- c.Handler(payload)
+	}()
+
+	select {
+	case <-ctxWithTimeout.Done():
+		return NewConsumerImplError(ctxWithTimeout.Err(), false, "handler timeout")
+	case err := <-resultChan:
+		return err
+	}
+}
+
+func (c *ConsumerImpl) sendToDLQ(ctx context.Context, messageID string, m kafka.Message, reason string) {
 	err := c.DLQProducer.SendToDLQ(ctx, messageID, m.Value, m.Headers, reason)
 	if err != nil {
-		log.Printf("[Kafka][%s] Failed to send to DLQ: %v", c.Topic, err)
+		log.Printf("[Kafka][%s] Failed to send messageID=%s to DLQ at offset=%d: %v",
+			c.Topic, messageID, m.Offset, err)
 		logger.LogErrorEvent("", "kafka_dlq_send_failed", "", "error",
 			fmt.Sprintf("Failed to send message to DLQ: %v", err))
 	}

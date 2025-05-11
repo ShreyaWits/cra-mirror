@@ -7,244 +7,139 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
+	"messaging_service/pkg/logger"
+
 	"github.com/segmentio/kafka-go"
 )
 
-type KafkaPkg struct {
+type BaseProducer interface {
+	Write(ctx context.Context, writer *kafka.Writer, key, value []byte, headers []kafka.Header) error
+	WriteWithRetry(ctx context.Context, writer *kafka.Writer, key, value []byte, headers []kafka.Header, maxRetries int) error
+	Close(writer *kafka.Writer) error
+	GetWriter(cfg KafkaConfig) *kafka.Writer
 }
 
 type Producer struct {
-	Writer           *kafka.Writer
-	Config           KafkaConfig
-	transactionMu    sync.Mutex
-	transactionalID  string
-	isTransactional  bool
-	transactionState string
+	mu sync.RWMutex
+	// Removed writers map
 }
 
-// NewProducer creates a new Kafka producer with appropriate configuration
-func NewProducer(cfg KafkaConfig) *Producer {
+// createWriter initializes the Kafka writer with the provided config.
+// It should be done once during the application startup.
+func CreateWriter(cfg KafkaConfig) *kafka.Writer {
 	writer := &kafka.Writer{
 		Addr:     kafka.TCP(cfg.Brokers...),
 		Topic:    cfg.Topic,
 		Balancer: GetBalancer(cfg.BalancerType),
+		// Performance optimizations
+		BatchSize:              1000,                  // Increased batch size for better throughput
+		BatchTimeout:           10 * time.Millisecond, // Slightly increased to allow more batching
+		BatchBytes:             2 * 1024 * 1024,       // 2MB batch size for better compression
+		RequiredAcks:           kafka.RequireOne,      // Only wait for leader acknowledgment
+		MaxAttempts:            3,                     // Reduced retry attempts
+		ReadTimeout:            50 * time.Millisecond, // Reduced read timeout
+		WriteTimeout:           50 * time.Millisecond, // Reduced write timeout
+		Async:                  true,                  // Enable async publishing
+		Compression:            kafka.Snappy,          // Enable compression
+		AllowAutoTopicCreation: true,                  // Allow auto topic creation
 	}
 
-	// Configure delivery semantics - only at-least-once and exactly-once supported
+	// Set delivery semantics based on configuration
 	switch cfg.DeliverySemantics {
 	case ExactlyOnce:
-		// Exactly-once requires idempotence and transactions
 		writer.RequiredAcks = kafka.RequireAll
 		writer.MaxAttempts = 10
+		writer.Async = false // Exactly-once requires synchronous publishing
 
-		// Configure for idempotent delivery
-		// Note: The actual transaction API is handled separately since
-		// kafka-go library doesn't have direct transaction support
+		// Configure exactly-once settings
+		if cfg.ExactlyOnceConfig.EnableIdempotence {
+			// Enable idempotence by requiring all acks and disabling async
+			writer.RequiredAcks = kafka.RequireAll
+			writer.Async = false
+		}
+		if cfg.ExactlyOnceConfig.EnableTransactions {
+			// For transactions, we need to use a transactional producer
+			// This is handled at the application level by using BeginTransaction/CommitTransaction
+			writer.RequiredAcks = kafka.RequireAll
+			writer.Async = false
+		}
 	default:
-		// Default to safer at-least-once semantics
-		writer.RequiredAcks = kafka.RequireAll
-		writer.MaxAttempts = 5
-		writer.Async = false // Synchronous writes
+		// At-least-once with performance optimizations
+		writer.RequiredAcks = kafka.RequireOne
+		writer.MaxAttempts = 3
+		writer.Async = true
 	}
 
-	transactionalID := ""
-	isTransactional := false
-
-	// Set up transactions for exactly-once semantics if configured
-	if cfg.DeliverySemantics == ExactlyOnce && cfg.ExactlyOnceConfig.EnableTransactions {
-		transactionalID = fmt.Sprintf("%s-%s",
-			cfg.ExactlyOnceConfig.TransactionalIDPrefix,
-			uuid.New().String())
-		isTransactional = true
-
-		// In a real implementation, we would set up the transaction coordinator here
-		log.Printf("Creating transactional producer with ID: %s", transactionalID)
-	}
-
-	return &Producer{
-		Writer:          writer,
-		Config:          cfg,
-		transactionalID: transactionalID,
-		isTransactional: isTransactional,
-	}
+	return writer
 }
 
-// BeginTransaction starts a new Kafka transaction for exactly-once processing
-func (p *Producer) BeginTransaction(ctx context.Context) error {
-	if !p.isTransactional {
-		return fmt.Errorf("producer is not configured for transactions")
-	}
-
-	p.transactionMu.Lock()
-	defer p.transactionMu.Unlock()
-
-	if p.transactionState == "in_transaction" {
-		return fmt.Errorf("transaction already in progress")
-	}
-
-	// In a real implementation, we would initiate a transaction with the Kafka transaction coordinator
-	// For now, we'll just log and set state
-	log.Printf("Beginning transaction for producer %s", p.transactionalID)
-	p.transactionState = "in_transaction"
-
-	return nil
+// NewProducer initializes a new producer
+func NewProducer() *Producer {
+	return &Producer{}
 }
 
-// CommitTransaction commits the current Kafka transaction
-func (p *Producer) CommitTransaction(ctx context.Context) error {
-	if !p.isTransactional {
-		return fmt.Errorf("producer is not configured for transactions")
-	}
-
-	p.transactionMu.Lock()
-	defer p.transactionMu.Unlock()
-
-	if p.transactionState != "in_transaction" {
-		return fmt.Errorf("no transaction in progress")
-	}
-
-	// In a real implementation, we would commit the transaction with the Kafka transaction coordinator
-	// For now, we'll just log and set state
-	log.Printf("Committing transaction for producer %s", p.transactionalID)
-	p.transactionState = "no_transaction"
-
-	return nil
+// GetWriter creates a new writer for each call
+func (p *Producer) GetWriter(cfg KafkaConfig) *kafka.Writer {
+	return CreateWriter(cfg)
 }
 
-// AbortTransaction aborts the current Kafka transaction
-func (p *Producer) AbortTransaction(ctx context.Context) error {
-	if !p.isTransactional {
-		return fmt.Errorf("producer is not configured for transactions")
-	}
-
-	p.transactionMu.Lock()
-	defer p.transactionMu.Unlock()
-
-	if p.transactionState != "in_transaction" {
-		return fmt.Errorf("no transaction in progress")
-	}
-
-	// In a real implementation, we would abort the transaction with the Kafka transaction coordinator
-	// For now, we'll just log and set state
-	log.Printf("Aborting transaction for producer %s", p.transactionalID)
-	p.transactionState = "no_transaction"
-
-	return nil
-}
-
-// WriteTransactional sends a message within the current transaction
-func (p *Producer) WriteTransactional(ctx context.Context, key, value []byte) error {
-	if !p.isTransactional {
-		return fmt.Errorf("producer is not configured for transactions")
-	}
-
-	p.transactionMu.Lock()
-	defer p.transactionMu.Unlock()
-
-	if p.transactionState != "in_transaction" {
-		return fmt.Errorf("no transaction in progress")
-	}
-
-	// In a real implementation, we would send the message with the transaction
-	// For now, we'll just do a regular write
-	err := p.Writer.WriteMessages(ctx, kafka.Message{
-		Key:   key,
-		Value: value,
+// Write sends a message to Kafka with the provided writer.
+func (p *Producer) Write(ctx context.Context, writer *kafka.Writer, key, value []byte, headers []kafka.Header) error {
+	err := writer.WriteMessages(ctx, kafka.Message{
+		Key:     key,
+		Value:   value,
+		Headers: headers,
+		Time:    time.Now(), // Add timestamp for better monitoring
 	})
-
-	if err != nil {
-		log.Printf("Failed to write transactional message: %v", err)
-		return err
-	}
-
-	return nil
-}
-
-// Write sends a message to Kafka with appropriate error handling
-func (p *Producer) Write(ctx context.Context, key, value []byte) error {
-	// If exactly-once semantics with transactions is enabled, use transactions
-	if p.isTransactional {
-		if err := p.BeginTransaction(ctx); err != nil {
-			return err
-		}
-
-		err := p.WriteTransactional(ctx, key, value)
-		if err != nil {
-			p.AbortTransaction(ctx)
-			return err
-		}
-
-		return p.CommitTransaction(ctx)
-	}
-
-	// Otherwise, use at-least-once semantics with standard writes
-	err := p.Writer.WriteMessages(ctx, kafka.Message{
-		Key:   key,
-		Value: value,
-	})
-
 	if err != nil {
 		log.Printf("Kafka write error: %v", err)
-		return err
+		return fmt.Errorf("failed to write message: %w", err)
 	}
-
 	return nil
 }
 
-// WriteWithRetry attempts to write a message with exponential backoff retries
-func (p *Producer) WriteWithRetry(ctx context.Context, key, value []byte, maxRetries int) error {
-	// For exactly-once with transactions, use transactional writes
-	if p.isTransactional {
-		return p.Write(ctx, key, value) // Already includes transaction handling
+// WriteWithRetry tries to send a message to Kafka with optimized retry logic.
+func (p *Producer) WriteWithRetry(ctx context.Context, writer *kafka.Writer, key, value []byte, headers []kafka.Header, maxRetries int) error {
+	// Add timestamp header
+	headers = append(headers, kafka.Header{
+		Key:   "timestamp",
+		Value: []byte(time.Now().Format(time.RFC3339)),
+	})
+
+	msg := kafka.Message{
+		Key:     key,
+		Value:   value,
+		Headers: headers,
+		Time:    time.Now(), // Set message timestamp
 	}
 
-	// For at-least-once, use standard writes with retries
 	var err error
-	attempt := 0
+	for i := 0; i < maxRetries; i++ {
+		err = writer.WriteMessages(ctx, msg)
+		if err == nil {
+			return nil
+		}
 
-	for attempt <= maxRetries {
-		// Break if context is canceled
+		// Log retry attempt
+		logger.LogWarnEvent("", "publish_retry", writer.Topic, "attempt", fmt.Sprintf("%d/%d", i+1, maxRetries))
+
+		// Wait before retrying
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
+		case <-time.After(time.Duration(i+1) * 100 * time.Millisecond):
+			continue
 		}
-
-		err = p.Writer.WriteMessages(ctx, kafka.Message{
-			Key:   key,
-			Value: value,
-		})
-
-		if err == nil {
-			return nil // Success
-		}
-
-		attempt++
-		if attempt > maxRetries {
-			break
-		}
-
-		// Exponential backoff with jitter
-		backoff := time.Duration(100*attempt*attempt) * time.Millisecond
-		log.Printf("Kafka write failed, retrying in %v (attempt %d of %d): %v",
-			backoff, attempt, maxRetries, err)
-		time.Sleep(backoff)
 	}
 
-	log.Printf("Kafka write failed after %d attempts: %v", attempt, err)
-	return err
+	return fmt.Errorf("failed to publish message after %d retries: %w", maxRetries, err)
 }
 
-func (p *Producer) Close() error {
-	// If in a transaction, abort it
-	if p.isTransactional && p.transactionState == "in_transaction" {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := p.AbortTransaction(ctx); err != nil {
-			log.Printf("Failed to abort transaction on close: %v", err)
-		}
+// Close safely closes the Kafka writer.
+func (p *Producer) Close(writer *kafka.Writer) error {
+	if err := writer.Close(); err != nil {
+		log.Printf("Error closing writer: %v", err)
+		return fmt.Errorf("failed to close writer: %w", err)
 	}
-
-	return p.Writer.Close()
+	return nil
 }

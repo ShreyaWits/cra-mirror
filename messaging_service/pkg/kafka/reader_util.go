@@ -1,13 +1,12 @@
 package kafka
 
 import (
-	"time"
-
 	kafka "github.com/segmentio/kafka-go"
 )
 
 type BrokerMessage = kafka.Message
 type Header = kafka.Header
+type Writer = kafka.Writer
 
 // NewKafkaReader creates a kafka reader with appropriate configuration based on delivery semantics
 func NewKafkaReader(cfg KafkaConfig) *kafka.Reader {
@@ -16,7 +15,9 @@ func NewKafkaReader(cfg KafkaConfig) *kafka.Reader {
 		Topic:           cfg.Topic,
 		MinBytes:        cfg.MinBytes,
 		MaxBytes:        cfg.MaxBytes,
-		MaxWait:         500 * time.Millisecond,
+		MaxWait:         cfg.ConsumerConfig.MaxWait,
+		ReadBackoffMin:  cfg.ConsumerConfig.ReadBackoffMin,
+		ReadBackoffMax:  cfg.ConsumerConfig.ReadBackoffMax,
 		ReadLagInterval: -1,
 	}
 
@@ -26,13 +27,36 @@ func NewKafkaReader(cfg KafkaConfig) *kafka.Reader {
 		// Configure delivery semantics
 		switch cfg.DeliverySemantics {
 		case ExactlyOnce:
-			// Exactly-once requires additional tracking; set a reasonable commit interval
-			readerCfg.CommitInterval = time.Second
-			// Application needs to implement idempotent processing for exactly-once
+			// Exactly-once requires additional tracking
+			readerCfg.CommitInterval = cfg.ConsumerConfig.CommitInterval
+			readerCfg.IsolationLevel = kafka.ReadCommitted
 		default:
-			// For at-least-once, commit after processing to ensure we don't miss messages
-			readerCfg.CommitInterval = time.Second * 5
-			readerCfg.StartOffset = kafka.FirstOffset // Start from earliest unprocessed message
+			// For at-least-once, commit after processing
+			readerCfg.CommitInterval = cfg.ConsumerConfig.CommitInterval
+			readerCfg.IsolationLevel = kafka.ReadUncommitted
+		}
+
+		// Set the starting offset based on the consumer mode
+		switch cfg.Mode {
+		case EarliestOffset:
+			readerCfg.StartOffset = kafka.FirstOffset // Read all unprocessed messages
+		case LatestOffset:
+			readerCfg.StartOffset = kafka.LastOffset // Only read new messages after joining
+		default:
+			readerCfg.StartOffset = kafka.LastOffset // Default to latest offset
+		}
+
+		// Set consumer group specific configurations
+		readerCfg.HeartbeatInterval = cfg.ConsumerConfig.HeartbeatInterval
+		readerCfg.SessionTimeout = cfg.ConsumerConfig.SessionTimeout
+		readerCfg.RebalanceTimeout = cfg.ConsumerConfig.RebalanceTimeout
+		readerCfg.MaxAttempts = cfg.ConsumerConfig.MaxAttempts
+
+		// Set isolation level based on configuration
+		if cfg.ConsumerConfig.IsolationLevel == "read_committed" {
+			readerCfg.IsolationLevel = kafka.ReadCommitted
+		} else {
+			readerCfg.IsolationLevel = kafka.ReadUncommitted
 		}
 	} else {
 		// Stateless consumer
