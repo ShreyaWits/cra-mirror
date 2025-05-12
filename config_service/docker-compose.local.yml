@@ -59,11 +59,11 @@ services:
   yugabyte-db:
     image: yugabytedb/yugabyte:2.21.1.0-b271
     container_name: yugabyte-db
-    # ports:
+    ports:
       # - "7001:7000"
       # - "9000:9000"
       # - "15433:15433"
-      # - "5433:5433"
+      - "5433:5433"
       # - "9042:9042"
     command: bin/yugabyted start --base_dir=/home/yugabyte/yb_data --background=false
     # restart: always
