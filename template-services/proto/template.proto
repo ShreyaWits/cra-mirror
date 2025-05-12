@@ -9,15 +9,14 @@ service TemplateService {
 }
 
 message GetTemplateRequest {
-  string id = 1;
-  string name = 2;
-  string channel = 4;
-  string language = 5;
+  string name = 1;
+  string channel = 2;
+  string language = 3;
 }
 
 message TemplateResponse {
-  bool Success = 1;
-  string Message = 2;
-  string Error= 3;
+  bool success = 1;
+  map<string,string> message = 2;
+  map <string,string> error= 3;
   map<string, string> data = 4;
 }

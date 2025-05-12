@@ -2,24 +2,27 @@ package routes
 
 import (
 	"template-services/internal/template/handler"
+	"template-services/internal/template/dto"
+	"template-services/internal/template/middleware" // assuming location
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// SetupTemplateRoutes configures all template-related routes
 func SetupTemplateRoutes(app *fiber.App, h *handler.TemplateHandler) {
-	// Template CRUD operations
 	templates := app.Group("v1/templates")
 
-	// Create template
-	templates.Post("/", h.CreateTemplate)
+	// Create template with validation
+	templates.Post("/", middleware.ValidateBody[dto.CreateTemplateRequest](), h.CreateTemplate)
 
-	// Get template by name/channel/language
-	templates.Get("/", h.GetTemplate)
+	// Get template with validation on query
+	templates.Get("/", middleware.ValidateBody[dto.GetTemplateRequest](), h.GetTemplate)
 
-	// Update template
-	templates.Put("/:id", h.UpdateTemplate)
+	// Update template with validation
+	templates.Put("/:id", middleware.ValidateBody[dto.UpdateTemplateRequest](), h.UpdateTemplate)
 
-	// Delete template
-	templates.Delete("/:id", h.DeleteTemplate)
+	// Delete doesn’t need validation middleware unless you use a struct
+	templates.Delete("/:id", h.DeleteTemplate) // No validation middleware here
 }
+
+	
+

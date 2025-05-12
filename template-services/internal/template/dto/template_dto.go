@@ -1,13 +1,16 @@
 package dto
 
+import (
+	"time"
+)
+
 // CreateTemplateRequest represents the request body for creating a template
 type CreateTemplateRequest struct {
-	Name           string   `json:"name" validate:"required"`
-	Channel        string   `json:"channel" validate:"required,,oneof=email sms push"`
-	Language       string   `json:"language" validate:"required"`
-	Content        string   `json:"content" validate:"required"`
-	RequiredFields []string `json:"required_fields"`
-	IsActive       bool     `json:"is_active"`
+	Name     string `json:"name" validate:"required" error_code:"TmpErrmissingName"`
+	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
+	Language string `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
+	Content  string `json:"content" validate:"required" error_code:"TmpErrmissingContent"`
+	IsActive bool   `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
 }
 
 // CreateTemplateResponse represents the response for template creation
@@ -21,24 +24,28 @@ type CreateTemplateResponse struct {
 
 // GetTemplateRequest represents the request for getting a template
 type GetTemplateRequest struct {
-	Name     string `query:"name"`
-	Channel  string `query:"channel"`
-	Language string `query:"language"`
-	ID       string `params:"id"`
+	Name       string `query:"name" validate:"required"  error_code:"TmpErrmissingName"`
+	Channel    string `query:"channel" validate:"required" error_code:"TmpErrmissingChannel"`
+	Language   string `query:"language" validate:"required" error_code:"TmpErrmissingLanguage"`
+	TemplateID string `param:"id" validate:"required" error_code:"TmpErrmissingTemplateID"`
+}
+type GetTemplateRequestV1 struct {
+	Name     string `query:"name" validate:"required"  error_code:"TmpErrmissingName"`
+	Channel  string `query:"channel" validate:"required" error_code:"TmpErrmissingChannel"`
+	Language string `query:"language" validate:"required" error_code:"TmpErrmissingLanguage"`
 }
 
 // TemplateResponse represents the template data in responses
 type TemplateResponse struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Channel        string   `json:"channel"`
-	Language       string   `json:"language"`
-	Version        int      `json:"version"`
-	IsActive       bool     `json:"is_active"`
-	Content        string   `json:"content"`
-	RequiredFields []string `json:"required_fields"`
-	CreatedAt      string   `json:"created_at"`
-	UpdatedAt      string   `json:"updated_at"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Channel   string    `json:"channel"`
+	Language  string    `json:"language"`
+	Content   string    `json:"content"`
+	Version   int       `json:"version"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // GetTemplateResponse represents the response for getting a template
@@ -50,8 +57,8 @@ type GetTemplateResponse struct {
 
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
-	RequiredFields []string `json:"required_fields"`
-	IsActive       bool     `json:"is_active"`
+	IsActive   bool   `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
+	TemplateID string `param:"id" validate:"required" error_code:"TmpErrmissingTemplateID"`
 }
 
 // UpdateTemplateResponse represents the response for template update
@@ -63,7 +70,7 @@ type UpdateTemplateResponse struct {
 
 // DeleteTemplateRequest represents the request for deleting a template
 type DeleteTemplateRequest struct {
-	ID string `params:"id" validate:"required"`
+	TemplateID string `param:"id" validate:"required" error_code:"TmpErrmissingTemplateID"`
 }
 
 // DeleteTemplateResponse represents the response for template deletion
@@ -89,7 +96,8 @@ type InterpolateTemplateResponse struct {
 
 // ErrorResponse represents an error response
 type ErrorResponse struct {
-	Success      bool   `json:"success"`
-	ErrorMessage string `json:"message"`
-	ErrorCode    string `json:"error_code"`
+	Success      bool        `json:"success"`
+	ErrorMessage string      `json:"message"`
+	ErrorCode    string      `json:"error_code"`
+	Data         interface{} `json:"data,omitempty"`
 }

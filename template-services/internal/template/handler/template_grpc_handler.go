@@ -2,7 +2,11 @@ package handler
 
 import (
 	"context"
-	"log"
+	"strings"
+
+	appErrors "template-services/internal/pkg/errors"
+	"template-services/internal/template/dto"
+	"template-services/internal/template/middleware"
 	"template-services/internal/template/service"
 	pb "template-services/proto"
 )
@@ -19,31 +23,62 @@ func NewTemplateGRPCHandler(service *service.TemplateService) *TemplateGRPCHandl
 }
 
 func (h *TemplateGRPCHandler) GetTemplateV1(ctx context.Context, req *pb.GetTemplateRequest) (*pb.TemplateResponse, error) {
-	// {
-	// 	"name": "welcome_sms",
-	// 	"channel": "sms",
-	// 	"language": "en"
-	// }
-
-	resp, err := h.service.GetTemplate(ctx, req.Id, req.Name, req.Channel, req.Language)
-	log.Println("🚀 ~ func ~ resp:", resp)
-	if err != nil {
-		return &pb.TemplateResponse{
-			Success: false,
-			Message: "Validation failed",
-			Data:    nil,
-			Error:   err.Error(),
-		}, nil
+	// Map gRPC request to DTO
+	dtoReq := dto.GetTemplateRequestV1{
+		Name:     req.Name,
+		Channel:  req.Channel,
+		Language: req.Language,
 	}
 
+	// Validate input using middleware
+	if errMap, isValid := middleware.ValidateStruct(dtoReq); !isValid {
+		sanitized := make(map[string]string)
+		for k, v := range errMap {
+			sanitized[k] = sanitize(v)
+		}
+		return buildErrorResponse(sanitized, appErrors.TmpErrInvalidRequestBody), nil
+	}
+
+	// Call the service
+	resp, err := h.service.GetTemplate(ctx, "", req.Name, req.Channel, req.Language)
+	if err != nil {
+		return buildErrorResponse(
+			map[string]string{
+				"template": appErrors.GetAppErrorMessage(appErrors.TmpErrTemplateNotFound),
+			},
+			appErrors.TmpErrTemplateNotFound,
+		), nil
+	}
+
+	// Return success
 	return &pb.TemplateResponse{
 		Success: true,
-		Message: "Template retrieved successfully",
+		Message: map[string]string{
+			"info": "Template retrieved successfully",
+		},
+		Error: nil,
 		Data: map[string]string{
-			"ID":       resp.ID.String(),
-			"Name":     resp.Name,
-			"Channel":  resp.Channel,
-			"Language": resp.Language,
+			"id":       resp.ID.String(),
+			"name":     resp.Name,
+			"channel":  resp.Channel,
+			"language": resp.Language,
 		},
 	}, nil
+}
+
+// Helper function to build error response
+func buildErrorResponse(message map[string]string, errorCode string) *pb.TemplateResponse {
+	return &pb.TemplateResponse{
+		Success: false,
+		Message: message,
+		Error: map[string]string{
+			"code": errorCode,
+		},
+		Data: map[string]string{},
+	}
+}
+
+// Sanitize message to remove unwanted characters
+func sanitize(input string) string {
+	return strings.ReplaceAll(strings.TrimSpace(input), "\n", "")
 }

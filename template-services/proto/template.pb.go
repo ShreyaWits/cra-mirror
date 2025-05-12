@@ -23,10 +23,9 @@ const (
 
 type GetTemplateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Channel       string                 `protobuf:"bytes,4,opt,name=channel,proto3" json:"channel,omitempty"`
-	Language      string                 `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Channel       string                 `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`
+	Language      string                 `protobuf:"bytes,3,opt,name=language,proto3" json:"language,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -61,13 +60,6 @@ func (*GetTemplateRequest) Descriptor() ([]byte, []int) {
 	return file_proto_template_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GetTemplateRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
 func (x *GetTemplateRequest) GetName() string {
 	if x != nil {
 		return x.Name
@@ -91,9 +83,9 @@ func (x *GetTemplateRequest) GetLanguage() string {
 
 type TemplateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=Success,proto3" json:"Success,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=Message,proto3" json:"Message,omitempty"`
-	Error         string                 `protobuf:"bytes,3,opt,name=Error,proto3" json:"Error,omitempty"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       map[string]string      `protobuf:"bytes,2,rep,name=message,proto3" json:"message,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Error         map[string]string      `protobuf:"bytes,3,rep,name=error,proto3" json:"error,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Data          map[string]string      `protobuf:"bytes,4,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -136,18 +128,18 @@ func (x *TemplateResponse) GetSuccess() bool {
 	return false
 }
 
-func (x *TemplateResponse) GetMessage() string {
+func (x *TemplateResponse) GetMessage() map[string]string {
 	if x != nil {
 		return x.Message
 	}
-	return ""
+	return nil
 }
 
-func (x *TemplateResponse) GetError() string {
+func (x *TemplateResponse) GetError() map[string]string {
 	if x != nil {
 		return x.Error
 	}
-	return ""
+	return nil
 }
 
 func (x *TemplateResponse) GetData() map[string]string {
@@ -161,17 +153,23 @@ var File_proto_template_proto protoreflect.FileDescriptor
 
 const file_proto_template_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/template.proto\x12\btemplate\"n\n" +
-	"\x12GetTemplateRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
-	"\achannel\x18\x04 \x01(\tR\achannel\x12\x1a\n" +
-	"\blanguage\x18\x05 \x01(\tR\blanguage\"\xcf\x01\n" +
+	"\x14proto/template.proto\x12\btemplate\"^\n" +
+	"\x12GetTemplateRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\achannel\x18\x02 \x01(\tR\achannel\x12\x1a\n" +
+	"\blanguage\x18\x03 \x01(\tR\blanguage\"\x95\x03\n" +
 	"\x10TemplateResponse\x12\x18\n" +
-	"\aSuccess\x18\x01 \x01(\bR\aSuccess\x12\x18\n" +
-	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x14\n" +
-	"\x05Error\x18\x03 \x01(\tR\x05Error\x128\n" +
-	"\x04data\x18\x04 \x03(\v2$.template.TemplateResponse.DataEntryR\x04data\x1a7\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12A\n" +
+	"\amessage\x18\x02 \x03(\v2'.template.TemplateResponse.MessageEntryR\amessage\x12;\n" +
+	"\x05error\x18\x03 \x03(\v2%.template.TemplateResponse.ErrorEntryR\x05error\x128\n" +
+	"\x04data\x18\x04 \x03(\v2$.template.TemplateResponse.DataEntryR\x04data\x1a:\n" +
+	"\fMessageEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a8\n" +
+	"\n" +
+	"ErrorEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a7\n" +
 	"\tDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\\\n" +
@@ -190,21 +188,25 @@ func file_proto_template_proto_rawDescGZIP() []byte {
 	return file_proto_template_proto_rawDescData
 }
 
-var file_proto_template_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_proto_template_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_proto_template_proto_goTypes = []any{
 	(*GetTemplateRequest)(nil), // 0: template.GetTemplateRequest
 	(*TemplateResponse)(nil),   // 1: template.TemplateResponse
-	nil,                        // 2: template.TemplateResponse.DataEntry
+	nil,                        // 2: template.TemplateResponse.MessageEntry
+	nil,                        // 3: template.TemplateResponse.ErrorEntry
+	nil,                        // 4: template.TemplateResponse.DataEntry
 }
 var file_proto_template_proto_depIdxs = []int32{
-	2, // 0: template.TemplateResponse.data:type_name -> template.TemplateResponse.DataEntry
-	0, // 1: template.TemplateService.GetTemplateV1:input_type -> template.GetTemplateRequest
-	1, // 2: template.TemplateService.GetTemplateV1:output_type -> template.TemplateResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 0: template.TemplateResponse.message:type_name -> template.TemplateResponse.MessageEntry
+	3, // 1: template.TemplateResponse.error:type_name -> template.TemplateResponse.ErrorEntry
+	4, // 2: template.TemplateResponse.data:type_name -> template.TemplateResponse.DataEntry
+	0, // 3: template.TemplateService.GetTemplateV1:input_type -> template.GetTemplateRequest
+	1, // 4: template.TemplateService.GetTemplateV1:output_type -> template.TemplateResponse
+	4, // [4:5] is the sub-list for method output_type
+	3, // [3:4] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_template_proto_init() }
@@ -218,7 +220,7 @@ func file_proto_template_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_template_proto_rawDesc), len(file_proto_template_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
