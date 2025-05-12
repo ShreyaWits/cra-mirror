@@ -9,11 +9,14 @@ import (
 
 // Exported variables
 var (
-	REDIS_URL      string
-	REDIS_PASSWORD string
-	REDIS_DB       string
-	PORT           string
-	GRPC_PORT      string
+	REDIS_URL          string
+	REDIS_PASSWORD     string
+	REDIS_DB           string
+	PORT               string
+	GRPC_PORT          string
+	OTEL_COLLECTOR_URL string
+	SERVICE_NAME       string
+	DEPLOYMENT_ENV     string
 )
 
 // LoadEnv reads from .env and sets global config variables
@@ -28,6 +31,9 @@ func LoadEnv() {
 	REDIS_DB = getEnv("REDIS_DB", "0")
 	PORT = getEnv("PORT", ":8080")
 	GRPC_PORT = getEnv("GRPC_PORT", ":50051")
+	OTEL_COLLECTOR_URL = getEnv("OTEL_COLLECTOR_URL", "")
+	SERVICE_NAME = getEnv("SERVICE_NAME", "config-service")
+	DEPLOYMENT_ENV = getEnv("DEPLOYMENT_ENV", "development")
 }
 
 func getEnv(key, fallback string) string {

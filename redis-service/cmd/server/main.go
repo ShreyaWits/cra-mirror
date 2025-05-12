@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	app_module "redis-service/internal/app"
 	handler "redis-service/internal/interface/grpc"
 	"redis-service/internal/interface/http"
 	"redis-service/pkg/config"
 	server "redis-service/pkg/grpc"
+	opentelemetry "redis-service/pkg/otel"
 	"redis-service/proto"
 	"syscall"
 
@@ -17,26 +20,41 @@ import (
 )
 
 func main() {
-
-	log.Println("Loading env variables...")
 	// load environment variables
 	config.LoadEnv()
 
+	// init otel sdk
+	shutdown, err := opentelemetry.SetupOTelSDK(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to initialize OpenTelemetry: %v", err)
+	}
+	defer func() {
+		if err := shutdown(context.Background()); err != nil {
+			log.Fatalf("Failed to shutdown OpenTelemetry: %v", err)
+		}
+	}()
+
+	// init container
+	app_module.InitContainer()
+
+	// Create Fiber app with tracing middleware
 	app := fiber.New()
+	app.Use(http.TraceMiddleware())
 
 	// create a new grpc server instance
 	log.Println("Creating gRPC server instance...")
 
-	// create a new grpc server instance
+	// create a new grpc server instance with tracing interceptor
 	lis, err := net.Listen("tcp", config.GRPC_PORT)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(server.TraceInterceptor()),
+	)
 
 	grpcServer, err := server.NewGRPCServer(s, lis)
-
 	if err != nil {
 		log.Fatalf("gRPC server failed to listen: %v", err)
 	}
@@ -63,5 +81,4 @@ func main() {
 	<-stop
 	log.Println("Stopping gRPC server...")
 	grpcServer.Stop()
-
 }
