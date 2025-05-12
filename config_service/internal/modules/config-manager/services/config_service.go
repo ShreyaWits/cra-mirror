@@ -46,11 +46,11 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err != nil {
 		fmt.Printf("No webhook found for %s: %v", key, err)
-		return nil, &dtos.ServiceErrorResponse{
-			StatusCode: 404,
-			ErrorCode:    "Webhook not found",
-			ErrorMessage:      err.Error(),
-		}
+		return &dtos.SuccessResponse{
+			StatusCode: 201,
+			Message:    "Config stored successfully: NOTE - No webhooks found",
+			Data:       response,
+		}, nil
 	}
 
 	var hooks []dtos.RegisterWebhookRequest
