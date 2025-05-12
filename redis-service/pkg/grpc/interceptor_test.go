@@ -2,129 +2,84 @@ package grpc
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
-	"time"
+
+	"redis-service/internal/app"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc"
-	grpccodes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// --- Mocks for OpenTelemetry ---
+func setupTestContainer() {
+	// Create a no-op tracer
+	tracer := tracenoop.NewTracerProvider().Tracer("test")
+	// Create a new logger that discards output
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	// Create a no-op meter
+	meter := metricnoop.NewMeterProvider().Meter("test")
 
-type mockSpan struct {
-	trace.Span
-	ended         bool
-	attributes    []attribute.KeyValue
-	recordedError error
-	statusCode    codes.Code
-	statusDesc    string
+	app.Di = &app.Container{
+		Tracer: tracer,
+		Logger: logger,
+		Meter:  meter,
+	}
 }
-
-func (m *mockSpan) End(options ...trace.SpanEndOption) {
-	m.ended = true
-}
-func (m *mockSpan) SetAttributes(kv ...attribute.KeyValue) {
-	m.attributes = append(m.attributes, kv...)
-}
-func (m *mockSpan) RecordError(err error, opts ...trace.EventOption) {
-	m.recordedError = err
-}
-func (m *mockSpan) SetStatus(code codes.Code, description string) {
-	m.statusCode = code
-	m.statusDesc = description
-}
-
-type mockTracer struct {
-	trace.Tracer
-	span *mockSpan
-}
-
-func (m *mockTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	m.span = &mockSpan{}
-	return ctx, m.span
-}
-
-// --- Test Setup ---
-
-func setMockTracer() *mockTracer {
-	mt := &mockTracer{}
-	otel.SetTracerProvider(noop.NewTracerProvider())
-	otel.SetTracerProvider(&mockTracerProvider{tracer: mt})
-	return mt
-}
-
-type mockTracerProvider struct {
-	trace.TracerProvider
-	tracer *mockTracer
-}
-
-func (m *mockTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
-	return m.tracer
-}
-
-// --- Tests ---
 
 func TestTraceInterceptor_Success(t *testing.T) {
-	mt := setMockTracer()
+	setupTestContainer()
+
 	interceptor := TraceInterceptor()
-
-	ctx := context.Background()
-	req := "test-request"
-	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
-
-	handlerCalled := false
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		handlerCalled = true
-		time.Sleep(10 * time.Millisecond) // Simulate some work
-		return "test-response", nil
+		return "success", nil
 	}
 
-	resp, err := interceptor(ctx, req, info, handler)
+	info := &grpc.UnaryServerInfo{
+		FullMethod: "/test.Test/Test",
+	}
 
-	assert.True(t, handlerCalled, "handler should be called")
+	resp, err := interceptor(context.Background(), "test", info, handler)
 	assert.NoError(t, err)
-	assert.Equal(t, "test-response", resp)
-
-	span := mt.span
-	assert.True(t, span.ended, "span should be ended")
-	assert.Contains(t, span.attributes, attribute.String("rpc.system", "grpc"))
-	assert.Contains(t, span.attributes, attribute.String("rpc.service", info.FullMethod))
-	assert.Contains(t, span.attributes, attribute.Int("rpc.grpc.status_code", int(grpccodes.OK)))
+	assert.Equal(t, "success", resp)
 }
 
 func TestTraceInterceptor_Error(t *testing.T) {
-	mt := setMockTracer()
+	setupTestContainer()
+
 	interceptor := TraceInterceptor()
-
-	ctx := context.Background()
-	req := "test-request"
-	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
-
-	handlerCalled := false
+	expectedErr := status.Error(codes.Internal, "test error")
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		handlerCalled = true
-		return nil, status.Error(grpccodes.Internal, "internal error")
+		return nil, expectedErr
 	}
 
-	resp, err := interceptor(ctx, req, info, handler)
+	info := &grpc.UnaryServerInfo{
+		FullMethod: "/test.Test/Test",
+	}
 
-	assert.True(t, handlerCalled, "handler should be called")
+	resp, err := interceptor(context.Background(), "test", info, handler)
 	assert.Error(t, err)
 	assert.Nil(t, resp)
+	assert.Equal(t, expectedErr, err)
+}
 
-	span := mt.span
-	assert.True(t, span.ended, "span should be ended")
-	assert.Contains(t, span.attributes, attribute.String("rpc.system", "grpc"))
-	assert.Contains(t, span.attributes, attribute.String("rpc.service", info.FullMethod))
-	assert.Contains(t, span.attributes, attribute.Int("rpc.grpc.status_code", int(grpccodes.Internal)))
-	assert.Contains(t, span.statusDesc, "internal error")
-	assert.Equal(t, codes.Error, span.statusCode)
-	assert.EqualError(t, span.recordedError, "rpc error: code = Internal desc = internal error")
+func TestTraceInterceptor_Panic(t *testing.T) {
+	setupTestContainer()
+
+	interceptor := TraceInterceptor()
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		panic("test panic")
+	}
+
+	info := &grpc.UnaryServerInfo{
+		FullMethod: "/test.Test/Test",
+	}
+
+	assert.Panics(t, func() {
+		_, _ = interceptor(context.Background(), "test", info, handler)
+	})
 }

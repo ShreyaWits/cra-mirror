@@ -10,6 +10,7 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
+	setupTestContainer()
 	app := fiber.New()
 	app.Get("/health", HealthCheck)
 

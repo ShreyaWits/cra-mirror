@@ -14,7 +14,6 @@ message SetCacheRequest {
   string key = 2;           // Redis key
   string value = 3;         // Serialized value (JSON/String)
   int64 ttl = 4;            // Time-to-live in seconds
-  string tracking_id = 5;   // Tracking ID to trace requests across services
 }
 
 // Response for SetCache
@@ -27,7 +26,6 @@ message SetCacheResponse {
 message GetCacheRequest {
   string namespace = 1;
   string key = 2;
-  string tracking_id = 3; // Optional tracking ID for observability
 }
 
 // Response for GetCache
@@ -42,7 +40,6 @@ message GetCacheResponse {
 message InvalidateCacheRequest {
   string namespace = 1;
   string key = 2;
-  string tracking_id = 3; // Optional tracking ID
 }
 
 // Response for InvalidateCache

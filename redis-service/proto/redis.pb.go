@@ -24,11 +24,10 @@ const (
 // Payload for setting a cache entry
 type SetCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`                     // Service namespace (e.g., serviceA)
-	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`                                 // Redis key
-	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`                             // Serialized value (JSON/String)
-	Ttl           int64                  `protobuf:"varint,4,opt,name=ttl,proto3" json:"ttl,omitempty"`                                // Time-to-live in seconds
-	TrackingId    string                 `protobuf:"bytes,5,opt,name=tracking_id,json=trackingId,proto3" json:"tracking_id,omitempty"` // Tracking ID to trace requests across services
+	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"` // Service namespace (e.g., serviceA)
+	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`             // Redis key
+	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`         // Serialized value (JSON/String)
+	Ttl           int64                  `protobuf:"varint,4,opt,name=ttl,proto3" json:"ttl,omitempty"`            // Time-to-live in seconds
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -91,13 +90,6 @@ func (x *SetCacheRequest) GetTtl() int64 {
 	return 0
 }
 
-func (x *SetCacheRequest) GetTrackingId() string {
-	if x != nil {
-		return x.TrackingId
-	}
-	return ""
-}
-
 // Response for SetCache
 type SetCacheResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -156,7 +148,6 @@ type GetCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	TrackingId    string                 `protobuf:"bytes,3,opt,name=tracking_id,json=trackingId,proto3" json:"tracking_id,omitempty"` // Optional tracking ID for observability
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -201,13 +192,6 @@ func (x *GetCacheRequest) GetNamespace() string {
 func (x *GetCacheRequest) GetKey() string {
 	if x != nil {
 		return x.Key
-	}
-	return ""
-}
-
-func (x *GetCacheRequest) GetTrackingId() string {
-	if x != nil {
-		return x.TrackingId
 	}
 	return ""
 }
@@ -286,7 +270,6 @@ type InvalidateCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	TrackingId    string                 `protobuf:"bytes,3,opt,name=tracking_id,json=trackingId,proto3" json:"tracking_id,omitempty"` // Optional tracking ID
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -331,13 +314,6 @@ func (x *InvalidateCacheRequest) GetNamespace() string {
 func (x *InvalidateCacheRequest) GetKey() string {
 	if x != nil {
 		return x.Key
-	}
-	return ""
-}
-
-func (x *InvalidateCacheRequest) GetTrackingId() string {
-	if x != nil {
-		return x.TrackingId
 	}
 	return ""
 }
@@ -399,32 +375,26 @@ var File_proto_redis_proto protoreflect.FileDescriptor
 
 const file_proto_redis_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/redis.proto\x12\x0eredis.cache.v1\"\x8a\x01\n" +
+	"\x11proto/redis.proto\x12\x0eredis.cache.v1\"i\n" +
 	"\x0fSetCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\tR\x05value\x12\x10\n" +
-	"\x03ttl\x18\x04 \x01(\x03R\x03ttl\x12\x1f\n" +
-	"\vtracking_id\x18\x05 \x01(\tR\n" +
-	"trackingId\"F\n" +
+	"\x03ttl\x18\x04 \x01(\x03R\x03ttl\"F\n" +
 	"\x10SetCacheResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"b\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"A\n" +
 	"\x0fGetCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1f\n" +
-	"\vtracking_id\x18\x03 \x01(\tR\n" +
-	"trackingId\"n\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"n\n" +
 	"\x10GetCacheResponse\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x14\n" +
 	"\x05found\x18\x02 \x01(\bR\x05found\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x12\x14\n" +
-	"\x05error\x18\x04 \x01(\tR\x05error\"i\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"H\n" +
 	"\x16InvalidateCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1f\n" +
-	"\vtracking_id\x18\x03 \x01(\tR\n" +
-	"trackingId\"M\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"M\n" +
 	"\x17InvalidateCacheResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage2\x90\x02\n" +

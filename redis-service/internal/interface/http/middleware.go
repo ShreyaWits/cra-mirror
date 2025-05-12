@@ -1,8 +1,9 @@
 package http
 
 import (
+	"redis-service/internal/app"
+
 	"github.com/gofiber/fiber/v2"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -10,7 +11,8 @@ import (
 func TraceMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		tracer := otel.Tracer("fiber-middleware")
+		tracer := app.Di.Tracer
+		logger := app.Di.Logger
 
 		spanName := c.Path()
 		spanCtx, span := tracer.Start(ctx, spanName)
@@ -23,6 +25,13 @@ func TraceMiddleware() fiber.Handler {
 			attribute.String("http.user_agent", c.Get("User-Agent")),
 		)
 
+		// Log request
+		logger.Info("incoming request",
+			"method", c.Method(),
+			"path", c.Path(),
+			"user_agent", c.Get("User-Agent"),
+		)
+
 		// Store span context in Fiber context
 		c.Locals("spanContext", spanCtx)
 
@@ -30,13 +39,26 @@ func TraceMiddleware() fiber.Handler {
 		err := c.Next()
 
 		// Add response attributes
+		statusCode := c.Response().StatusCode()
 		span.SetAttributes(
-			attribute.Int("http.status_code", c.Response().StatusCode()),
+			attribute.Int("http.status_code", statusCode),
 		)
 
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			logger.Error("request failed",
+				"error", err.Error(),
+				"method", c.Method(),
+				"path", c.Path(),
+				"status_code", statusCode,
+			)
+		} else {
+			logger.Info("request completed",
+				"method", c.Method(),
+				"path", c.Path(),
+				"status_code", statusCode,
+			)
 		}
 
 		return err

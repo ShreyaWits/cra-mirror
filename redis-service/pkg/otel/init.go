@@ -8,7 +8,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -18,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -42,43 +42,74 @@ func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 		return err
 	}
 
-	// handleErr calls shutdown for cleanup and makes sure that all errors are returned.
-	handleErr := func(inErr error) {
-		err = errors.Join(inErr, shutdown(ctx))
-	}
-	grpcEndpoint := config.OTEL_COLLECTOR_URL
 	// Set up propagator.
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	// Set up trace provider.
+	grpcEndpoint := config.OTEL_COLLECTOR_URL
+
+	// Create a resource with service information
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(config.SERVICE_NAME),
+			semconv.ServiceVersionKey.String("v0.1.0"),
+			semconv.DeploymentEnvironmentKey.String(config.DEPLOYMENT_ENV),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set up trace provider with fallback to no-op
 	tracerProvider, err := newTracerProvider(ctx, grpcEndpoint)
 	if err != nil {
-		handleErr(err)
-		return
+		// If trace provider setup fails, use no-op provider
+		noopProvider := noop.NewTracerProvider()
+		otel.SetTracerProvider(noopProvider)
+	} else {
+		shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+		otel.SetTracerProvider(tracerProvider)
 	}
-	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
-	otel.SetTracerProvider(tracerProvider)
 
-	// Set up meter provider.
-	meterProvider, err := newMeterProvider(grpcEndpoint)
-	if err != nil {
-		handleErr(err)
-		return
+	// Set up meter provider with fallback to no-op
+	if grpcEndpoint == "" {
+		// Use no-op meter provider if no endpoint is configured
+		otel.SetMeterProvider(metric.NewMeterProvider(
+			metric.WithResource(res),
+		))
+	} else {
+		meterProvider, err := newMeterProvider(grpcEndpoint)
+		if err != nil {
+			// If meter provider setup fails, use no-op provider
+			otel.SetMeterProvider(metric.NewMeterProvider(
+				metric.WithResource(res),
+			))
+		} else {
+			shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+			otel.SetMeterProvider(meterProvider)
+		}
 	}
-	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	otel.SetMeterProvider(meterProvider)
 
-	// Set up logger provider.
-	loggerProvider, err := newLoggerProvider(grpcEndpoint)
-	if err != nil {
-		handleErr(err)
-		return
+	// Set up logger provider with fallback to no-op
+	if grpcEndpoint == "" {
+		// Use no-op logger provider if no endpoint is configured
+		global.SetLoggerProvider(log.NewLoggerProvider(
+			log.WithResource(res),
+		))
+	} else {
+		loggerProvider, err := newLoggerProvider(grpcEndpoint)
+		if err != nil {
+			// If logger provider setup fails, use no-op provider
+			global.SetLoggerProvider(log.NewLoggerProvider(
+				log.WithResource(res),
+			))
+		} else {
+			shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+			global.SetLoggerProvider(loggerProvider)
+		}
 	}
-	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
-	global.SetLoggerProvider(loggerProvider)
 
-	return
+	return shutdown, nil
 }
 
 func newPropagator() propagation.TextMapPropagator {
@@ -89,34 +120,40 @@ func newPropagator() propagation.TextMapPropagator {
 }
 
 func newTracerProvider(ctx context.Context, endpoint string) (*trace.TracerProvider, error) {
+	if endpoint == "" {
+		return nil, errors.New("OTEL_COLLECTOR_URL is not set")
+	}
+
 	traceGrpcExporter, err := otlptracegrpc.New(
 		ctx,
-		otlptracegrpc.WithInsecure(), //remove in production
+		otlptracegrpc.WithInsecure(),
 		otlptracegrpc.WithEndpoint(endpoint),
+		otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
 	)
 	if err != nil {
 		return nil, err
 	}
-	//this can be used to export traces to stdout remove in production only for testing
-	traceStdoutExporter, err := stdouttrace.New(
-		stdouttrace.WithPrettyPrint())
-	if err != nil {
-		return nil, err
-	}
-	// Default is 5s. Set to 1s for demonstrative purposes.
-	tracerProvider := trace.NewTracerProvider(
-		trace.WithBatcher(traceGrpcExporter,
-			// Default is 5s. Set to 1s for demonstrative purposes.
-			trace.WithBatchTimeout(time.Second)),
-		trace.WithBatcher(traceStdoutExporter,
-			trace.WithBatchTimeout(time.Second)),
-		trace.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
+
+	// Create a resource with service information
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
 			semconv.ServiceNameKey.String(config.SERVICE_NAME),
 			semconv.ServiceVersionKey.String("v0.1.0"),
 			semconv.DeploymentEnvironmentKey.String(config.DEPLOYMENT_ENV),
 		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithBatcher(traceGrpcExporter,
+			trace.WithBatchTimeout(time.Second),
+			trace.WithMaxExportBatchSize(512),
+			trace.WithMaxQueueSize(2048),
 		),
+		trace.WithResource(res),
+		trace.WithSampler(trace.AlwaysSample()),
 	)
 	return tracerProvider, nil
 }
@@ -144,6 +181,7 @@ func newMeterProvider(grpcEndpoint string) (*metric.MeterProvider, error) {
 	)
 	return meterProvider, nil
 }
+
 func newResource() (*resource.Resource, error) {
 	return resource.Merge(resource.Default(),
 		resource.NewWithAttributes(semconv.SchemaURL,
@@ -151,6 +189,7 @@ func newResource() (*resource.Resource, error) {
 			// semconv.ServiceVersion("0.1.0"),
 		))
 }
+
 func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 	logExporter, err := otlploggrpc.New(
 		context.Background(),

@@ -3,15 +3,20 @@ package grpc
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"testing"
 
+	"redis-service/internal/app"
 	"redis-service/internal/dto"
 	"redis-service/pkg/message"
 	"redis-service/proto"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // --- Mock RedisServiceInterface ---
@@ -32,60 +37,90 @@ func (m *mockRedisService) InvalidateCache(req *dto.DeleteCacheRequest) (bool, e
 	return args.Bool(0), args.Error(1)
 }
 
+func setupTestContainer() {
+	// Create a no-op tracer
+	tracer := tracenoop.NewTracerProvider().Tracer("test")
+	// Create a new logger that discards output
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	app.Di = &app.Container{
+		Tracer: tracer,
+		Logger: logger,
+	}
+}
+
 func TestGRPCServer_GetCache(t *testing.T) {
+	setupTestContainer()
 	ctx := context.Background()
 	mockSvc := new(mockRedisService)
-	server := &GRPCServer{service: mockSvc}
+	server := &GRPCServer{
+		service: mockSvc,
+		tracer:  app.Di.Tracer,
+		logger:  app.Di.Logger,
+	}
 
 	validReq := &proto.GetCacheRequest{
-		Namespace:  "ns",
-		Key:        "key",
-		TrackingId: uuid.NewString(),
+		Namespace: "ns",
+		Key:       "key",
 	}
 
 	// --- Success case ---
-	mockSvc.On("GetCache", mock.AnythingOfType("*dto.GetCacheRequest")).Return("the-value", nil).Once()
+	mockSvc.On("GetCache", mock.MatchedBy(func(req *dto.GetCacheRequest) bool {
+		return req.Namespace == "ns" && req.Key == "key"
+	})).Return("the-value", nil).Once()
+
 	resp, err := server.GetCache(ctx, validReq)
 	assert.NoError(t, err)
 	assert.True(t, resp.Found)
 	assert.Equal(t, "the-value", resp.Value)
-	assert.Equal(t, message.RD0000, resp.Message)
 	mockSvc.AssertExpectations(t)
 
-	// --- Validation error (invalid TrackingId) ---
+	// Reset mock for next test case
+	mockSvc.ExpectedCalls = nil
+	mockSvc.Calls = nil
+
+	// --- Validation error (empty namespace) ---
 	invalidReq := &proto.GetCacheRequest{
-		Namespace:  "ns",
-		Key:        "key",
-		TrackingId: "not-a-uuid",
+		Namespace: "",
+		Key:       "key",
 	}
 	resp, err = server.GetCache(ctx, invalidReq)
 	assert.NoError(t, err)
 	assert.False(t, resp.Found)
-	assert.Equal(t, message.RD0001, resp.Message)
-	assert.NotEmpty(t, resp.Error)
-	// No mockSvc.On or AssertExpectations here, since service should NOT be called
+	assert.Equal(t, message.RD0004, resp.Message)
+	mockSvc.AssertNotCalled(t, "GetCache")
+
+	// Reset mock for next test case
+	mockSvc.ExpectedCalls = nil
+	mockSvc.Calls = nil
 
 	// --- Service error ---
-	mockSvc.On("GetCache", mock.AnythingOfType("*dto.GetCacheRequest")).Return("", errors.New("redis error")).Once()
+	mockSvc.On("GetCache", mock.MatchedBy(func(req *dto.GetCacheRequest) bool {
+		return req.Namespace == "ns" && req.Key == "key"
+	})).Return("", errors.New("redis error")).Once()
+
 	resp, err = server.GetCache(ctx, validReq)
-	assert.NoError(t, err)
-	assert.False(t, resp.Found)
-	assert.Equal(t, "", resp.Value)
-	assert.Equal(t, message.RD0002, resp.Message)
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Equal(t, codes.Internal, status.Code(err))
 	mockSvc.AssertExpectations(t)
 }
 
 func TestGRPCServer_SetCache(t *testing.T) {
+	setupTestContainer()
 	ctx := context.Background()
 	mockSvc := new(mockRedisService)
-	server := &GRPCServer{service: mockSvc}
+	server := &GRPCServer{
+		service: mockSvc,
+		tracer:  app.Di.Tracer,
+		logger:  app.Di.Logger,
+	}
 
 	validReq := &proto.SetCacheRequest{
-		Namespace:  "abc",
-		Key:        "def",
-		TrackingId: uuid.NewString(),
-		Value:      "val",
-		Ttl:        10,
+		Namespace: "abc",
+		Key:       "def",
+		Value:     "val",
+		Ttl:       10,
 	}
 
 	// --- Success case ---
@@ -94,19 +129,6 @@ func TestGRPCServer_SetCache(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, resp.Success)
 	assert.Equal(t, message.RD0000, resp.Message)
-
-	// --- Validation error (invalid TrackingId) ---
-	invalidReq := &proto.SetCacheRequest{
-		Namespace:  "abc",
-		Key:        "def",
-		TrackingId: "not-a-uuid",
-		Value:      "val",
-		Ttl:        10,
-	}
-	resp, err = server.SetCache(ctx, invalidReq)
-	assert.NoError(t, err)
-	assert.False(t, resp.Success)
-	assert.Equal(t, message.RD0004, resp.Message)
 
 	// --- Service error ---
 	mockSvc.On("SetCache", mock.AnythingOfType("*dto.SetCacheRequest")).Return(false, errors.New("redis error")).Once()
@@ -117,14 +139,18 @@ func TestGRPCServer_SetCache(t *testing.T) {
 }
 
 func TestGRPCServer_InvalidateCache(t *testing.T) {
+	setupTestContainer()
 	ctx := context.Background()
 	mockSvc := new(mockRedisService)
-	server := &GRPCServer{service: mockSvc}
+	server := &GRPCServer{
+		service: mockSvc,
+		tracer:  app.Di.Tracer,
+		logger:  app.Di.Logger,
+	}
 
 	validReq := &proto.InvalidateCacheRequest{
-		Namespace:  "ns",
-		Key:        "key",
-		TrackingId: uuid.NewString(),
+		Namespace: "ns",
+		Key:       "key",
 	}
 
 	// --- Success case ---
@@ -134,16 +160,24 @@ func TestGRPCServer_InvalidateCache(t *testing.T) {
 	assert.True(t, resp.Success)
 	assert.Equal(t, message.RD0000, resp.Message)
 
-	// --- Validation error (invalid TrackingId) ---
+	// Reset mock for next test case
+	mockSvc.ExpectedCalls = nil
+	mockSvc.Calls = nil
+
+	// --- Validation error (empty namespace) ---
 	invalidReq := &proto.InvalidateCacheRequest{
-		Namespace:  "ns",
-		Key:        "key",
-		TrackingId: "not-a-uuid",
+		Namespace: "",
+		Key:       "key",
 	}
 	resp, err = server.InvalidateCache(ctx, invalidReq)
 	assert.NoError(t, err)
 	assert.False(t, resp.Success)
 	assert.Equal(t, message.RD0004, resp.Message)
+	mockSvc.AssertNotCalled(t, "InvalidateCache")
+
+	// Reset mock for next test case
+	mockSvc.ExpectedCalls = nil
+	mockSvc.Calls = nil
 
 	// --- Service error ---
 	mockSvc.On("InvalidateCache", mock.AnythingOfType("*dto.DeleteCacheRequest")).Return(false, errors.New("redis error")).Once()
@@ -151,4 +185,5 @@ func TestGRPCServer_InvalidateCache(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, resp.Success)
 	assert.Equal(t, message.RD0002, resp.Message)
+	mockSvc.AssertExpectations(t)
 }

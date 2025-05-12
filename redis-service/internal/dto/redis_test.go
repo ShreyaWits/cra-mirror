@@ -17,22 +17,17 @@ func TestGetCacheRequest_Validation(t *testing.T) {
 	}{
 		{
 			name:    "valid",
-			req:     GetCacheRequest{Namespace: "ns", Key: "key", TrackingId: "123e4567-e89b-42d3-a456-426614174000"},
+			req:     GetCacheRequest{Namespace: "ns", Key: "key"},
 			wantErr: false,
 		},
 		{
 			name:    "missing namespace",
-			req:     GetCacheRequest{Namespace: "", Key: "key", TrackingId: "123e4567-e89b-42d3-a456-426614174000"},
+			req:     GetCacheRequest{Namespace: "", Key: "key"},
 			wantErr: true,
 		},
 		{
 			name:    "missing key",
-			req:     GetCacheRequest{Namespace: "ns", Key: "", TrackingId: "123e4567-e89b-42d3-a456-426614174000"},
-			wantErr: true,
-		},
-		{
-			name:    "missing tracking id",
-			req:     GetCacheRequest{Namespace: "ns", Key: "key", TrackingId: ""},
+			req:     GetCacheRequest{Namespace: "ns", Key: ""},
 			wantErr: true,
 		},
 	}
@@ -48,7 +43,6 @@ func TestGetCacheRequest_Validation(t *testing.T) {
 }
 
 func TestSetCacheRequest_Validation(t *testing.T) {
-	validUUIDv4 := "123e4567-e89b-42d3-a456-426614174000"
 	tests := []struct {
 		name    string
 		req     SetCacheRequest
@@ -57,66 +51,50 @@ func TestSetCacheRequest_Validation(t *testing.T) {
 		{
 			name: "valid",
 			req: SetCacheRequest{
-				Namespace:  "abc",
-				Key:        "def",
-				Value:      "some value",
-				TTL:        10,
-				TrackingId: validUUIDv4,
+				Namespace: "abc",
+				Key:       "def",
+				Value:     "some value",
+				TTL:       10,
 			},
 			wantErr: false,
 		},
 		{
 			name: "namespace too short",
 			req: SetCacheRequest{
-				Namespace:  "ab",
-				Key:        "def",
-				Value:      "some value",
-				TTL:        10,
-				TrackingId: validUUIDv4,
+				Namespace: "ab",
+				Key:       "def",
+				Value:     "some value",
+				TTL:       10,
 			},
 			wantErr: true,
 		},
 		{
 			name: "key too short",
 			req: SetCacheRequest{
-				Namespace:  "abc",
-				Key:        "de",
-				Value:      "some value",
-				TTL:        10,
-				TrackingId: validUUIDv4,
+				Namespace: "abc",
+				Key:       "de",
+				Value:     "some value",
+				TTL:       10,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing value",
 			req: SetCacheRequest{
-				Namespace:  "abc",
-				Key:        "def",
-				Value:      "",
-				TTL:        10,
-				TrackingId: validUUIDv4,
+				Namespace: "abc",
+				Key:       "def",
+				Value:     "",
+				TTL:       10,
 			},
 			wantErr: true,
 		},
 		{
 			name: "ttl zero",
 			req: SetCacheRequest{
-				Namespace:  "abc",
-				Key:        "def",
-				Value:      "some value",
-				TTL:        0,
-				TrackingId: validUUIDv4,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid tracking id",
-			req: SetCacheRequest{
-				Namespace:  "abc",
-				Key:        "def",
-				Value:      "some value",
-				TTL:        10,
-				TrackingId: "not-a-uuid",
+				Namespace: "abc",
+				Key:       "def",
+				Value:     "some value",
+				TTL:       0,
 			},
 			wantErr: true,
 		},
@@ -140,22 +118,17 @@ func TestDeleteCacheRequest_Validation(t *testing.T) {
 	}{
 		{
 			name:    "valid",
-			req:     DeleteCacheRequest{Namespace: "ns", Key: "key", TrackingId: "123e4567-e89b-42d3-a456-426614174000"},
+			req:     DeleteCacheRequest{Namespace: "ns", Key: "key"},
 			wantErr: false,
 		},
 		{
 			name:    "missing namespace",
-			req:     DeleteCacheRequest{Namespace: "", Key: "key", TrackingId: "123e4567-e89b-42d3-a456-426614174000"},
+			req:     DeleteCacheRequest{Namespace: "", Key: "key"},
 			wantErr: true,
 		},
 		{
 			name:    "missing key",
-			req:     DeleteCacheRequest{Namespace: "ns", Key: "", TrackingId: "123e4567-e89b-42d3-a456-426614174000"},
-			wantErr: true,
-		},
-		{
-			name:    "missing tracking id",
-			req:     DeleteCacheRequest{Namespace: "ns", Key: "key", TrackingId: ""},
+			req:     DeleteCacheRequest{Namespace: "ns", Key: ""},
 			wantErr: true,
 		},
 	}
