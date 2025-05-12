@@ -32,6 +32,17 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if template with same name already exists
+	existingTemplate, err := h.service.GetTemplate(c.Context(), "", req.Name, req.Channel, req.Language)
+	if existingTemplate != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
+			Success:      false,
+			ErrorMessage: "Template name already exists",
+			ErrorCode:    errors.TmpErrTemplateNameAlreadyExists,
+			Data:         nil,
+		})
+	}
+
 	// Convert to proto request
 	protoReq := &models.Template{
 		Name:     req.Name,
