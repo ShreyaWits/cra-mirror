@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MessagingService_PublishMessage_FullMethodName = "/messaging_proto.MessagingService/PublishMessage"
-	MessagingService_Subscribe_FullMethodName      = "/messaging_proto.MessagingService/Subscribe"
-	MessagingService_CreateTopic_FullMethodName    = "/messaging_proto.MessagingService/CreateTopic"
+	MessagingService_PublishMessageV1_FullMethodName = "/messaging_proto.MessagingService/PublishMessageV1"
+	MessagingService_SubscribeV1_FullMethodName      = "/messaging_proto.MessagingService/SubscribeV1"
+	MessagingService_CreateTopicV1_FullMethodName    = "/messaging_proto.MessagingService/CreateTopicV1"
 )
 
 // MessagingServiceClient is the client API for MessagingService service.
@@ -31,11 +31,11 @@ const (
 // The messaging service definition
 type MessagingServiceClient interface {
 	// Publish a message to a Kafka topic
-	PublishMessage(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
+	PublishMessageV1(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
 	// Subscribe to messages from a Kafka topic
-	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[KafkaMessage], error)
+	SubscribeV1(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[KafkaMessage], error)
 	// Create a new Kafka topic
-	CreateTopic(ctx context.Context, in *CreateTopicRequest, opts ...grpc.CallOption) (*CreateTopicResponse, error)
+	CreateTopicV1(ctx context.Context, in *CreateTopicRequest, opts ...grpc.CallOption) (*CreateTopicResponse, error)
 }
 
 type messagingServiceClient struct {
@@ -46,19 +46,19 @@ func NewMessagingServiceClient(cc grpc.ClientConnInterface) MessagingServiceClie
 	return &messagingServiceClient{cc}
 }
 
-func (c *messagingServiceClient) PublishMessage(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error) {
+func (c *messagingServiceClient) PublishMessageV1(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PublishResponse)
-	err := c.cc.Invoke(ctx, MessagingService_PublishMessage_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MessagingService_PublishMessageV1_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *messagingServiceClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[KafkaMessage], error) {
+func (c *messagingServiceClient) SubscribeV1(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[KafkaMessage], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &MessagingService_ServiceDesc.Streams[0], MessagingService_Subscribe_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &MessagingService_ServiceDesc.Streams[0], MessagingService_SubscribeV1_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -73,12 +73,12 @@ func (c *messagingServiceClient) Subscribe(ctx context.Context, in *SubscribeReq
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MessagingService_SubscribeClient = grpc.ServerStreamingClient[KafkaMessage]
+type MessagingService_SubscribeV1Client = grpc.ServerStreamingClient[KafkaMessage]
 
-func (c *messagingServiceClient) CreateTopic(ctx context.Context, in *CreateTopicRequest, opts ...grpc.CallOption) (*CreateTopicResponse, error) {
+func (c *messagingServiceClient) CreateTopicV1(ctx context.Context, in *CreateTopicRequest, opts ...grpc.CallOption) (*CreateTopicResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateTopicResponse)
-	err := c.cc.Invoke(ctx, MessagingService_CreateTopic_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MessagingService_CreateTopicV1_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -92,11 +92,11 @@ func (c *messagingServiceClient) CreateTopic(ctx context.Context, in *CreateTopi
 // The messaging service definition
 type MessagingServiceServer interface {
 	// Publish a message to a Kafka topic
-	PublishMessage(context.Context, *PublishRequest) (*PublishResponse, error)
+	PublishMessageV1(context.Context, *PublishRequest) (*PublishResponse, error)
 	// Subscribe to messages from a Kafka topic
-	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[KafkaMessage]) error
+	SubscribeV1(*SubscribeRequest, grpc.ServerStreamingServer[KafkaMessage]) error
 	// Create a new Kafka topic
-	CreateTopic(context.Context, *CreateTopicRequest) (*CreateTopicResponse, error)
+	CreateTopicV1(context.Context, *CreateTopicRequest) (*CreateTopicResponse, error)
 	mustEmbedUnimplementedMessagingServiceServer()
 }
 
@@ -107,14 +107,14 @@ type MessagingServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMessagingServiceServer struct{}
 
-func (UnimplementedMessagingServiceServer) PublishMessage(context.Context, *PublishRequest) (*PublishResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PublishMessage not implemented")
+func (UnimplementedMessagingServiceServer) PublishMessageV1(context.Context, *PublishRequest) (*PublishResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PublishMessageV1 not implemented")
 }
-func (UnimplementedMessagingServiceServer) Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[KafkaMessage]) error {
-	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
+func (UnimplementedMessagingServiceServer) SubscribeV1(*SubscribeRequest, grpc.ServerStreamingServer[KafkaMessage]) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeV1 not implemented")
 }
-func (UnimplementedMessagingServiceServer) CreateTopic(context.Context, *CreateTopicRequest) (*CreateTopicResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateTopic not implemented")
+func (UnimplementedMessagingServiceServer) CreateTopicV1(context.Context, *CreateTopicRequest) (*CreateTopicResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTopicV1 not implemented")
 }
 func (UnimplementedMessagingServiceServer) mustEmbedUnimplementedMessagingServiceServer() {}
 func (UnimplementedMessagingServiceServer) testEmbeddedByValue()                          {}
@@ -137,49 +137,49 @@ func RegisterMessagingServiceServer(s grpc.ServiceRegistrar, srv MessagingServic
 	s.RegisterService(&MessagingService_ServiceDesc, srv)
 }
 
-func _MessagingService_PublishMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MessagingService_PublishMessageV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PublishRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MessagingServiceServer).PublishMessage(ctx, in)
+		return srv.(MessagingServiceServer).PublishMessageV1(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MessagingService_PublishMessage_FullMethodName,
+		FullMethod: MessagingService_PublishMessageV1_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MessagingServiceServer).PublishMessage(ctx, req.(*PublishRequest))
+		return srv.(MessagingServiceServer).PublishMessageV1(ctx, req.(*PublishRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MessagingService_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _MessagingService_SubscribeV1_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(SubscribeRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(MessagingServiceServer).Subscribe(m, &grpc.GenericServerStream[SubscribeRequest, KafkaMessage]{ServerStream: stream})
+	return srv.(MessagingServiceServer).SubscribeV1(m, &grpc.GenericServerStream[SubscribeRequest, KafkaMessage]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MessagingService_SubscribeServer = grpc.ServerStreamingServer[KafkaMessage]
+type MessagingService_SubscribeV1Server = grpc.ServerStreamingServer[KafkaMessage]
 
-func _MessagingService_CreateTopic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MessagingService_CreateTopicV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateTopicRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MessagingServiceServer).CreateTopic(ctx, in)
+		return srv.(MessagingServiceServer).CreateTopicV1(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MessagingService_CreateTopic_FullMethodName,
+		FullMethod: MessagingService_CreateTopicV1_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MessagingServiceServer).CreateTopic(ctx, req.(*CreateTopicRequest))
+		return srv.(MessagingServiceServer).CreateTopicV1(ctx, req.(*CreateTopicRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -192,18 +192,18 @@ var MessagingService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MessagingServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "PublishMessage",
-			Handler:    _MessagingService_PublishMessage_Handler,
+			MethodName: "PublishMessageV1",
+			Handler:    _MessagingService_PublishMessageV1_Handler,
 		},
 		{
-			MethodName: "CreateTopic",
-			Handler:    _MessagingService_CreateTopic_Handler,
+			MethodName: "CreateTopicV1",
+			Handler:    _MessagingService_CreateTopicV1_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Subscribe",
-			Handler:       _MessagingService_Subscribe_Handler,
+			StreamName:    "SubscribeV1",
+			Handler:       _MessagingService_SubscribeV1_Handler,
 			ServerStreams: true,
 		},
 	},

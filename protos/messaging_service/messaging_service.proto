@@ -4,16 +4,41 @@ package messaging_proto;
 
 option go_package = "messaging_service/protos/messaging_service";
 
+// Enums for configuration values
+enum CleanupPolicy {
+  CLEANUP_POLICY_UNSPECIFIED = 0;
+  CLEANUP_POLICY_DELETE = 1;
+  CLEANUP_POLICY_COMPACT = 2;
+}
+
+enum DeliverySemantics {
+  DELIVERY_SEMANTICS_UNSPECIFIED = 0;
+  DELIVERY_SEMANTICS_AT_LEAST_ONCE = 1;
+  DELIVERY_SEMANTICS_EXACTLY_ONCE = 2;
+}
+
+enum IsolationLevel {
+  ISOLATION_LEVEL_UNSPECIFIED = 0;
+  ISOLATION_LEVEL_READ_COMMITTED = 1;
+  ISOLATION_LEVEL_READ_UNCOMMITTED = 2;
+}
+
+enum AutoOffsetReset {
+  AUTO_OFFSET_RESET_UNSPECIFIED = 0;
+  AUTO_OFFSET_RESET_LATEST = 1;
+  AUTO_OFFSET_RESET_EARLIEST = 2;
+}
+
 // The messaging service definition
 service MessagingService {
   // Publish a message to a Kafka topic
-  rpc PublishMessage(PublishRequest) returns (PublishResponse) {}
+  rpc PublishMessageV1(PublishRequest) returns (PublishResponse) {}
   
   // Subscribe to messages from a Kafka topic
-  rpc Subscribe(SubscribeRequest) returns (stream KafkaMessage) {}
+  rpc SubscribeV1(SubscribeRequest) returns (stream KafkaMessage) {}
   
   // Create a new Kafka topic
-  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse) {}
+  rpc CreateTopicV1(CreateTopicRequest) returns (CreateTopicResponse) {}
 }
 
 // Request to publish a message
@@ -23,15 +48,32 @@ message PublishRequest {
   ProducerConfig producer_config = 3;  // Optional: Producer configuration
   map<string, string> headers = 4;  // Optional: Message headers
   string key = 5;  // Optional: Message key for partitioning
+
+  // Example default message
+  // {
+  //   "topic": "my-temporary-topic",
+  //   "value": {
+  //     "action": "login",
+  //     "timestamp": "2023-10-01T12:00:00Z"
+  //   },
+  //   "producer_config": {
+  //     "enable_idempotence": true,
+  //     "retries": 3,
+  //     "retry_backoff_ms": 100,
+  //     "delivery_semantics": "DELIVERY_SEMANTICS_AT_LEAST_ONCE"
+  //   },
+  //   "headers": {
+  //     "Content-Type": "application/json",
+  //     "Source": "web-app"
+  //   },
+  //   "key": "user123"
+  // }
 }
 
 // Response after publishing a message
 message PublishResponse {
   string status = 1;  // Success or error status
   string message = 2;  // Status message
-  int32 partition = 3;  // Partition where the message was published
-  int64 offset = 4;  // Offset of the published message
-  int64 timestamp = 5;  // Timestamp when the message was published
 }
 
 // Request to subscribe to a topic
@@ -39,6 +81,17 @@ message SubscribeRequest {
   string topic = 1;  // Required: The Kafka topic to subscribe to
   string group_id = 2;  // Required: Consumer group ID
   ConsumerConfig consumer_config = 3;  // Optional: Consumer configuration
+    // Example default message
+  // {
+  //   "topic": "my-temporary-topic",
+  //   "group_id": "my-consumer-group",
+  //   "consumer_config": {
+  //     "max_wait_ms": 5000,
+  //     "commit_interval_ms": 5000,
+  //     "isolation_level": "ISOLATION_LEVEL_READ_COMMITTED",
+  //     "auto_offset_reset": "AUTO_OFFSET_RESET_LATEST"
+  //   }
+  // }
 }
 
 // Kafka message structure
@@ -49,19 +102,34 @@ message KafkaMessage {
   map<string, string> headers = 4;  // Message headers
 }
 
+// Topic configuration
+message TopicConfig {
+  int64 retention_ms = 1;  // Message retention time in milliseconds
+  CleanupPolicy cleanup_policy = 2;  // Topic cleanup policy
+}
+
 // Request to create a new topic
 message CreateTopicRequest {
   string topic = 1;  // Required: Name of the topic to create
   int32 num_partitions = 2;  // Required: Number of partitions
   int32 replication_factor = 3;  // Required: Replication factor
-  map<string, string> config = 4;  // Optional: Topic configuration
+  TopicConfig config = 4;  // Optional: Topic configuration
+    // Example default message
+  // {
+  //   "topic": "my-temporary-topic",
+  //   "num_partitions": 1,
+  //   "replication_factor": 1,
+  //   "config": {
+  //     "retention_ms": 3000,
+  //     "cleanup_policy": "CLEANUP_POLICY_DELETE"
+  //   }
+  // }
 }
 
 // Response after creating a topic
 message CreateTopicResponse {
   string status = 1;  // Success or error status
   string message = 2;  // Status message
-  repeated string validation_errors = 4;  // Any validation errors
 }
 
 // Producer configuration
@@ -69,23 +137,18 @@ message ProducerConfig {
   bool enable_idempotence = 1;  // Enable idempotent producer
   int32 retries = 2;  // Number of retries
   int32 retry_backoff_ms = 3;  // Backoff time between retries
-  int32 request_timeout_ms = 4;  // Request timeout
-  int32 max_in_flight_requests = 5;  // Max in-flight requests
-  bool enable_compression = 6;  // Enable message compression
-  string compression_type = 7;  // Compression type (gzip, snappy, etc.)
-  string delivery_semantics = 8;  // Delivery semantics: "at-least-once" (default) or "exactly-once"
+  DeliverySemantics delivery_semantics = 4;  // Delivery semantics
 }
 
 // Consumer configuration
 message ConsumerConfig {
   int32 max_wait_ms = 1;  // Maximum time to wait for messages
-  int32 read_backoff_min_ms = 2;  // Minimum backoff between reads
-  int32 read_backoff_max_ms = 3;  // Maximum backoff between reads
-  int32 commit_interval_ms = 4;  // Offset commit interval
-  int32 heartbeat_interval_ms = 5;  // Consumer group heartbeat interval
-  int32 session_timeout_ms = 6;  // Session timeout
-  int32 rebalance_timeout_ms = 7;  // Rebalance timeout
-  int32 max_attempts = 8;  // Maximum read attempts
-  string isolation_level = 9;  // Kafka isolation level: "read_committed" or "read_uncommitted" (default)
-  string auto_offset_reset = 10;  // Offset reset behavior: "latest" or "earliest"
+  int32 commit_interval_ms = 2;  // Offset commit interval
+  IsolationLevel isolation_level = 3;  // Kafka isolation level
+  AutoOffsetReset auto_offset_reset = 4;  // Offset reset behavior
+}
+message ErrorResponse{
+  bool success = 1;
+  string message = 2;
+  string errorCode = 3;
 }

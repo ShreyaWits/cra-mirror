@@ -23,8 +23,8 @@ Creates a new Kafka topic with specified configuration.
   "num_partitions": 1,
   "replication_factor": 1,
   "config": {
-    "retention.ms": "3000",
-    "cleanup.policy": "delete"
+    "retention_ms": 3000,
+    "cleanup_policy": "CLEANUP_POLICY_DELETE"
   }
 }
 ```
@@ -33,9 +33,12 @@ Creates a new Kafka topic with specified configuration.
 - `topic` (string, required): Name of the topic to create
 - `num_partitions` (int, required): Number of partitions
 - `replication_factor` (int, required): Replication factor
-- `config` (map, optional): Kafka-native topic configuration
-  - `retention.ms` (string): Message retention time in milliseconds
-  - `cleanup.policy` (string): Topic cleanup policy ("delete" or "compact")
+- `config` (object, optional): Topic configuration
+  - `retention_ms` (int64): Message retention time in milliseconds
+  - `cleanup_policy` (enum): Topic cleanup policy
+    - `CLEANUP_POLICY_UNSPECIFIED` (0)
+    - `CLEANUP_POLICY_DELETE` (1)
+    - `CLEANUP_POLICY_COMPACT` (2)
 
 **Response:**
 ```json
@@ -59,15 +62,9 @@ Publishes a message to a Kafka topic.
   },
   "producer_config": {
     "enable_idempotence": true,
-    "delivery_semantics": "at-least-once",
     "retries": 3,
     "retry_backoff_ms": 100,
-    "timeout_ms": 30000,
-    "enable_compression": true,
-    "compression_type": "gzip",
-    "dlq_topic": "my-temporary-topic-dlq",
-    "max_retries": 3,
-    "retry_delay_ms": 1000
+    "delivery_semantics": "DELIVERY_SEMANTICS_AT_LEAST_ONCE"
   },
   "headers": {
     "Content-Type": "application/json",
@@ -81,21 +78,15 @@ Publishes a message to a Kafka topic.
 - `topic` (string, required): Topic to publish to
 - `value` (map, required): Message content
 - `producer_config` (object, optional): Producer configuration
-  - **Kafka-native settings:**
-    - `enable_idempotence` (boolean): Enable idempotent producer
-    - `delivery_semantics` (string): "at-least-once" (default) or "exactly-once"
-  - **Client-library settings:**
-    - `retries` (int): Number of retries (kafka-go specific)
-    - `retry_backoff_ms` (int): Backoff time between retries
-    - `timeout_ms` (int): Overall operation timeout
-    - `enable_compression` (boolean): Enable message compression
-    - `compression_type` (string): "gzip", "snappy", "lz4", "zstd"
-  - **Service-level settings:**
-    - `dlq_topic` (string): Dead Letter Queue topic name
-    - `max_retries` (int): Maximum retries before DLQ
-    - `retry_delay_ms` (int): Delay between retries
+  - `enable_idempotence` (boolean): Enable idempotent producer
+  - `retries` (int32): Number of retries
+  - `retry_backoff_ms` (int32): Backoff time between retries
+  - `delivery_semantics` (enum): Delivery semantics
+    - `DELIVERY_SEMANTICS_UNSPECIFIED` (0)
+    - `DELIVERY_SEMANTICS_AT_LEAST_ONCE` (1)
+    - `DELIVERY_SEMANTICS_EXACTLY_ONCE` (2)
 - `headers` (map, optional): Message headers
-- `key` (string, optional): Message key for partitioning (uses hash-based partitioning)
+- `key` (string, optional): Message key for partitioning
 
 **Response:**
 ```json
@@ -117,16 +108,10 @@ Subscribes to a topic and receives messages via gRPC stream.
   "topic": "my-temporary-topic",
   "group_id": "my-consumer-group",
   "consumer_config": {
-    "isolation_level": "read_committed",
-    "auto_offset_reset": "latest",
     "max_wait_ms": 5000,
-    "read_backoff_min_ms": 100,
-    "read_backoff_max_ms": 1000,
     "commit_interval_ms": 5000,
-    "heartbeat_interval_ms": 3000,
-    "session_timeout_ms": 30000,
-    "rebalance_timeout_ms": 60000,
-    "max_attempts": 3
+    "isolation_level": "ISOLATION_LEVEL_READ_COMMITTED",
+    "auto_offset_reset": "AUTO_OFFSET_RESET_LATEST"
   }
 }
 ```
@@ -135,18 +120,16 @@ Subscribes to a topic and receives messages via gRPC stream.
 - `topic` (string, required): Topic to subscribe to
 - `group_id` (string, required): Consumer group ID
 - `consumer_config` (object, optional): Consumer configuration
-  - **Kafka-native settings:**
-    - `isolation_level` (string): "read_committed" or "read_uncommitted" (default)
-    - `auto_offset_reset` (string): "latest" or "earliest"
-  - **Client-library settings:**
-    - `max_wait_ms` (int): Maximum time to wait for messages
-    - `read_backoff_min_ms` (int): Minimum backoff between reads
-    - `read_backoff_max_ms` (int): Maximum backoff between reads
-    - `commit_interval_ms` (int): Offset commit interval
-    - `heartbeat_interval_ms` (int): Consumer group heartbeat interval
-    - `session_timeout_ms` (int): Session timeout
-    - `rebalance_timeout_ms` (int): Rebalance timeout
-    - `max_attempts` (int): Maximum read attempts
+  - `max_wait_ms` (int32): Maximum time to wait for messages
+  - `commit_interval_ms` (int32): Offset commit interval
+  - `isolation_level` (enum): Kafka isolation level
+    - `ISOLATION_LEVEL_UNSPECIFIED` (0)
+    - `ISOLATION_LEVEL_READ_COMMITTED` (1)
+    - `ISOLATION_LEVEL_READ_UNCOMMITTED` (2)
+  - `auto_offset_reset` (enum): Offset reset behavior
+    - `AUTO_OFFSET_RESET_UNSPECIFIED` (0)
+    - `AUTO_OFFSET_RESET_LATEST` (1)
+    - `AUTO_OFFSET_RESET_EARLIEST` (2)
 
 **Stream Response:**
 ```json
@@ -164,64 +147,45 @@ Subscribes to a topic and receives messages via gRPC stream.
 }
 ```
 
-## Message Partitioning
-
-The service uses hash-based partitioning:
-- Messages with the same key go to the same partition
-- Keys are hashed using a consistent hashing algorithm
-- Ensures message ordering within a partition
-- No custom partitioning strategies are supported
-
-## Dead Letter Queue (DLQ)
-
-Failed messages are handled as follows:
-1. Message processing fails
-2. Retry up to `max_retries` times with `retry_delay_ms` between attempts
-3. If all retries fail, message is sent to the DLQ topic
-4. DLQ topic name is specified in `dlq_topic`
-5. Original message headers are preserved with additional error information
-
 ## Delivery Semantics
 
 1. **At-Least-Once Delivery** (Default)
    - Messages are guaranteed to be delivered at least once
    - May result in duplicate messages
    - Use when message ordering is important
-   - Set `delivery_semantics` to "at-least-once"
+   - Set `delivery_semantics` to `DELIVERY_SEMANTICS_AT_LEAST_ONCE`
 
 2. **Exactly-Once Delivery**
    - Messages are delivered exactly once
    - Requires transactional producer
    - Higher latency but stronger guarantees
-   - Set `delivery_semantics` to "exactly-once"
+   - Set `delivery_semantics` to `DELIVERY_SEMANTICS_EXACTLY_ONCE`
 
 ## Consumer Modes
 
 ### Offset Reset Behavior
-- `latest`: Start consuming from the latest offset
-- `earliest`: Start consuming from the earliest offset
+- `AUTO_OFFSET_RESET_LATEST`: Start consuming from the latest offset
+- `AUTO_OFFSET_RESET_EARLIEST`: Start consuming from the earliest offset
 
 ### Isolation Levels
-- `read_uncommitted` (default): Reads all messages, including those from aborted transactions
-- `read_committed`: Only reads messages from committed transactions
+- `ISOLATION_LEVEL_READ_UNCOMMITTED` (default): Reads all messages, including those from aborted transactions
+- `ISOLATION_LEVEL_READ_COMMITTED`: Only reads messages from committed transactions
 
 ## Best Practices
 
 1. **Topic Configuration**
-   - Set appropriate retention period
-   - Choose correct cleanup policy
+   - Set appropriate retention period using `retention_ms`
+   - Choose correct cleanup policy using `cleanup_policy` enum
    - Configure proper replication factor
 
 2. **Producer Configuration**
    - Enable idempotence for critical operations
    - Configure appropriate retry settings
-   - Use compression for large messages
    - Choose appropriate delivery semantics
-   - Always configure DLQ for failed messages
 
 3. **Consumer Configuration**
-   - Set appropriate timeouts
-   - Configure proper backoff settings
+   - Set appropriate timeouts using `max_wait_ms`
+   - Configure proper commit intervals using `commit_interval_ms`
    - Choose correct isolation level
    - Set appropriate offset reset behavior
 
@@ -233,21 +197,21 @@ Failed messages are handled as follows:
 ## Error Handling
 
 1. **Producer Errors**
-   - Retry on transient failures
-   - Use DLQ for failed messages
+   - Retry on transient failures using configured retry settings
    - Monitor error rates
+   - Use appropriate delivery semantics
 
 2. **Consumer Errors**
    - Handle message processing failures
-   - Implement retry logic
    - Monitor consumer lag
+   - Use appropriate isolation levels
 
 ## Performance Considerations
 
 1. **Message Size**
    - Keep messages under 1MB
-   - Use compression for large messages
-   - Batch small messages
+   - Use appropriate batch sizes
+   - Monitor consumer lag
 
 2. **Throughput**
    - Configure appropriate batch sizes
@@ -265,6 +229,23 @@ Failed messages are handled as follows:
 - Maximum batch size: 1000 messages
 - Maximum topics per cluster: 1000
 - Maximum consumer groups: 1000
+
+## Message Partitioning
+
+The service uses hash-based partitioning:
+- Messages with the same key go to the same partition
+- Keys are hashed using a consistent hashing algorithm
+- Ensures message ordering within a partition
+- No custom partitioning strategies are supported
+
+## Dead Letter Queue (DLQ)
+
+Failed messages are handled as follows:
+1. Message processing fails
+2. Retry up to `max_retries` times with `retry_delay_ms` between attempts
+3. If all retries fail, message is sent to the DLQ topic
+4. DLQ topic name is specified in `dlq_topic`
+5. Original message headers are preserved with additional error information
 
 ## Message Keys Usage
 
@@ -401,13 +382,6 @@ Message keys are used for:
 - `404`: Topic Not Found
 - `409`: Conflict
 - `500`: Internal Server Error
-
-## Rate Limits
-
-- Maximum message size: 1MB
-- Maximum batch size: 1000 messages
-- Maximum retention period: 7 days
-- Maximum topics per cluster: 1000
 
 ## Glossary
 
