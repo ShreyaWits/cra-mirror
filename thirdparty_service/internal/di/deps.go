@@ -3,6 +3,7 @@ package di
 import (
 	"log"
 
+	"thirdparty_service/internal/config"
 	"thirdparty_service/internal/repositories"
 	"thirdparty_service/internal/services"
 
@@ -14,7 +15,6 @@ var (
 )
 
 func initializeDeps() error {
-
 	userRepository := repositories.NewPostgresUserRepository()
 	if err := Container.Provide(func() repositories.UserRepository {
 		return userRepository
@@ -30,7 +30,7 @@ func initializeDeps() error {
 	}
 
 	// ✅ Redis-based WebhookRepository
-	redisRepo := repositories.NewRedisRepo("localhost:6379")
+	redisRepo := repositories.NewRedisRepo(config.AppConfig.GetRedisAddress())
 	if err := Container.Provide(func() repositories.WebhookRepository {
 		return redisRepo
 	}); err != nil {

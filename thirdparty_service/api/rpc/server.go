@@ -1,10 +1,10 @@
 package rpc
 
 import (
-	"thirdparty_service/api/rpc/methods"
-	"thirdparty_service/internal/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"thirdparty_service/api/rpc/methods"
+	"thirdparty_service/internal/pb"
 )
 
 func InitializeGRPCServer() (*grpc.Server, error) {
