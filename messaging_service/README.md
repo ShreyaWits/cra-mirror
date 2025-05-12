@@ -1,118 +1,50 @@
-# CRA (Cloud Resource Automation)
+# Kafka Messaging Service
 
-A robust, production-ready cloud resource automation system with Kafka-based messaging for reliable event processing.
+A high-performance Kafka messaging service implementation with support for topic creation, message publishing, and message subscription.
 
-## Architecture
+## Features
 
-### Messaging System
-The system uses Apache Kafka with ZooKeeper for reliable message processing:
-
-- **Producer**
-  - At-least-once delivery semantics
-  - Exactly-once delivery for critical operations
-  - Configurable batching and compression
-  - Automatic retry with backoff
-
-- **Consumer**
-  - Consumer group support
-  - Configurable offset management
-  - Automatic rebalancing
-  - Dead Letter Queue (DLQ) support
-
-- **Topic Management**
-  - Automatic topic creation
-  - Configurable retention policies
-  - Proper partition management
-  - Replication factor control
-
-### Key Components
-
-1. **Messaging Service**
-   - Kafka-based message processing
-   - ZooKeeper for cluster coordination
-   - Configurable delivery semantics
-   - Consumer group management
-
-2. **Resource Management**
-   - Cloud resource provisioning
-   - State management
-   - Event-driven updates
-   - Resource lifecycle handling
-
-3. **Event Processing**
-   - Reliable message delivery
-   - Event ordering
-   - Error handling
-   - Retry mechanisms
+- Topic management with configurable retention policies
+- High-performance message publishing with compression
+- Real-time message subscription via gRPC streams
+- Dead Letter Queue (DLQ) support for failed messages
+- Message retry mechanism with exponential backoff
+- Comprehensive monitoring and logging
 
 ## Prerequisites
 
-- Go 1.21 or later
-- Apache Kafka 2.8 or later
-- Apache ZooKeeper 3.7 or later
+- Go 1.19 or higher
 - Docker and Docker Compose
 - Make (optional, for using Makefile commands)
 - Protocol Buffers compiler (protoc)
 
-## Quick Start
+## Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/CRA.git
-   cd CRA
-   ```
+1. **Clone the repository:**
+```bash
+git clone <repository-url>
+cd messaging_service
+```
 
-2. **Install dependencies**
-   ```bash
-   go mod download
-   ```
+2. **Install dependencies:**
+```bash
+go mod download
+```
 
-3. **Generate protobuf files**
-   ```bash
-   make proto
-   ```
+3. **Generate protobuf files:**
+```bash
+make proto
+```
 
-4. **Start dependencies**
-   ```bash
-   docker-compose up -d
-   ```
-
-5. **Build the project**
-   ```bash
-   make build
-   ```
-
-6. **Run the service**
-   ```bash
-   ./bin/cra
-   ```
+4. **Build the service:**
+```bash
+make build
+```
 
 ## Configuration
 
-### Kafka Configuration
-```yaml
-kafka:
-  brokers:
-    - localhost:9092
-  zookeeper:
-    - localhost:2181
-  topics:
-    resource_events:
-      partitions: 3
-      replication_factor: 3
-      retention_ms: 604800000  # 7 days
-```
+The service can be configured using environment variables or a `.env` file:
 
-### Service Configuration
-```yaml
-service:
-  name: cra
-  port: 8080
-  log_level: info
-  metrics_port: 9090
-```
-
-### Environment Variables
 ```env
 # Kafka Configuration
 KAFKA_BROKERS=localhost:9092
@@ -128,6 +60,41 @@ LOG_LEVEL=info
 MAX_BATCH_SIZE=1000
 MAX_MESSAGE_SIZE=1048576
 CONSUMER_POOL_SIZE=10
+```
+
+## Running the Service
+
+### Using Docker Compose
+
+1. **Start the service with Kafka:**
+```bash
+docker-compose up -d
+```
+
+2. **Check service status:**
+```bash
+docker-compose ps
+```
+
+3. **View logs:**
+```bash
+docker-compose logs -f
+```
+
+### Running Locally
+
+1. **Start Kafka (if not using Docker):**
+```bash
+# Start Zookeeper
+bin/zookeeper-server-start.sh config/zookeeper.properties
+
+# Start Kafka
+bin/kafka-server-start.sh config/server.properties
+```
+
+2. **Run the service:**
+```bash
+go run cmd/server/main.go
 ```
 
 ## API Usage
@@ -185,16 +152,15 @@ grpcurl -plaintext -d '{
 ### Project Structure
 
 ```
-CRA/
+messaging_service/
 ├── cmd/
 │   └── server/
 │       └── main.go
 ├── internal/
-│   ├── messaging_service/
-│   │   ├── handler/
-│   │   ├── service/
-│   │   └── repository/
-│   └── resource_manager/
+│   └── messaging_service/
+│       ├── handler/
+│       ├── service/
+│       └── repository/
 ├── pkg/
 │   ├── kafka/
 │   └── logger/
@@ -240,8 +206,6 @@ The service exposes Prometheus metrics at `/metrics`:
 - Consumer lag
 - Error rates
 - Processing latency
-- Resource operation metrics
-- System health metrics
 
 ### Logging
 
@@ -250,23 +214,6 @@ Logs are available in JSON format with the following levels:
 - WARN: For potentially harmful situations
 - INFO: For general operational information
 - DEBUG: For detailed debugging information
-
-## Security
-
-### Authentication
-- SASL/PLAIN
-- SASL/SCRAM
-- SSL/TLS
-
-### Authorization
-- ACLs
-- RBAC
-- ZooKeeper ACLs
-
-### Encryption
-- SSL/TLS
-- Message encryption
-- Secure communication
 
 ## Troubleshooting
 
@@ -304,23 +251,10 @@ docker-compose logs kafka
 kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --all-groups
 ```
 
-## Deployment
-
-### Docker
-```bash
-docker build -t cra .
-docker run -p 8080:8080 cra
-```
-
-### Kubernetes
-```bash
-kubectl apply -f k8s/
-```
-
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch
+2. Create a feature branch
 3. Commit your changes
 4. Push to the branch
 5. Create a Pull Request
@@ -338,4 +272,4 @@ For support, please:
 
 ## API Documentation
 
-For detailed API documentation, see [API.md](docs/API.md).
+For detailed API documentation, see [API.md](docs/API.md). 

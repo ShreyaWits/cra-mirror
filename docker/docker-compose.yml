@@ -1,46 +1,155 @@
-version: '3.8'  # Docker Compose file format version
+version: '3.8'
 
 services:
   messaging_service:
     build:
-      context: ../                      # Current directory used for build context
-      dockerfile: ./docker/Dockerfile             # Dockerfile path for building the service
+      context: ../
+      dockerfile: ./docker/Dockerfile
     ports:
-      - "50051:50051"      # gRPC port exposed to host
+      - "50051:50051"
     environment:
-      - GRPC_PORT=50051 
-    env_file:
-      - ../messaging_service/.env          # gRPC server port from .env
+      GRPC_PORT: 50051
+      # Update the Kafka brokers list to include all brokers
+      KAFKA_BROKERS: kafka1:9092,kafka2:9093,kafka3:9094
     depends_on:
-      - kafka                            # Ensure Kafka is running before starting this service
-      - zookeeper                        # Optional: only needed if service talks to Zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+      - zookeeper1 # Depend on all zookeepers
+      - zookeeper2
+      - zookeeper3
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest # Zookeeper image and version from .env
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181     # Port for Zookeeper client connections
-      ZOOKEEPER_TICK_TIME: 2000          # Heartbeat interval for Zookeeper
+  # Define the first Zookeeper node
+  zookeeper1:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper1
+    hostname: zookeeper1
     ports:
-      - "2181:2181" # Expose Zookeeper port to host
-
-  kafka:
-    image: confluentinc/cp-kafka:latest          # Kafka image and version from .env
-    depends_on:
-      - zookeeper                                           # Kafka starts only after Zookeeper is ready
-    ports:
-      - "9092:9092"                       # Expose Kafka broker port
+      - "2181:2181"
     environment:
-      KAFKA_BROKER_ID: 1                  # Unique ID for Kafka broker
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181  # Zookeeper connection string
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" 
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      # Unique ID for this zookeeper node
+      ZOOKEEPER_SERVER_ID: 1
+      # List all zookeeper nodes in the ensemble
+      ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      # Use a unique volume for each zookeeper's data
+      - zookeeper1_data:/var/lib/zookeeper/data
+
+  # Define the second Zookeeper node
+  zookeeper2:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper2
+    hostname: zookeeper2
+    ports:
+      - "2182:2182" # Map to a different host port if needed
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2182 # Listen on a different internal port if needed
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SERVER_ID: 2
+      ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
+    volumes:
+      - zookeeper2_data:/var/lib/zookeeper/data
+
+  # Define the third Zookeeper node
+  zookeeper3:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper3
+    hostname: zookeeper3
+    ports:
+      - "2183:2183" # Map to a different host port if needed
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2183 # Listen on a different internal port if needed
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SERVER_ID: 3
+      ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
+    volumes:
+      - zookeeper3_data:/var/lib/zookeeper/data
+
+  # Define the first Kafka broker
+  kafka1:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka1
+    hostname: kafka1
+    depends_on:
+      - zookeeper1 # Depend on all zookeepers
+      - zookeeper2
+      - zookeeper3
+    ports:
+      - "9092:9092" # Expose to host on port 9092
+    environment:
+      KAFKA_BROKER_ID: 1 # Unique ID for this broker
+      # Update Zookeeper connection string to include all Zookeeper nodes
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181,zookeeper2:2182,zookeeper3:2183
+      # Advertised listener uses the hostname within the Docker network
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092
+      # Listen internally on all interfaces
+      KAFKA_LISTENERS: PLAINTEXT://kafka1:9092
+      # Replication factor for internal topics should be at least the number of brokers
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # It's generally recommended to disable auto topic creation in production
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Set to "false" for production
+    volumes:
+      # Use a unique volume for each broker's data
+      - kafka1_data:/var/lib/kafka/data
+
+  # Define the second Kafka broker
+  kafka2:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka2
+    hostname: kafka2
+    depends_on:
+      - zookeeper1 # Depend on all zookeepers
+      - zookeeper2
+      - zookeeper3
+    ports:
+      - "9093:9093" # Expose to host on a different port
+    environment:
+      KAFKA_BROKER_ID: 2 # Unique ID for this broker
+      # Update Zookeeper connection string to include all Zookeeper nodes
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181,zookeeper2:2182,zookeeper3:2183
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9093
+      KAFKA_LISTENERS: PLAINTEXT://kafka2:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Set to "false" for production
+    volumes:
+      - kafka2_data:/var/lib/kafka/data
+
+  # Define the third Kafka broker
+  kafka3:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka3
+    hostname: kafka3
+    depends_on:
+      - zookeeper1 # Depend on all zookeepers
+      - zookeeper2
+      - zookeeper3
+    ports:
+      - "9094:9094" # Expose to host on another different port
+    environment:
+      KAFKA_BROKER_ID: 3 # Unique ID for this broker
+      # Update Zookeeper connection string to include all Zookeeper nodes
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181,zookeeper2:2182,zookeeper3:2183
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9094
+      KAFKA_LISTENERS: PLAINTEXT://kafka3:9094
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Set to "false" for production
+    volumes:
+      - kafka3_data:/var/lib/kafka/data
 
 volumes:
-  kafka_data:   
+  kafka1_data:
+  kafka2_data:
+  kafka3_data:
+  zookeeper1_data: # Add volumes for each zookeeper node
+  zookeeper2_data:
+  zookeeper3_data:
+  # Keep the original kafka_data volume if you had data there you want to migrate or keep
+  # kafka_data:
 
-##[NOTE : Don't remove this line] :- docker compose -f 'docker/docker-compose.yml' up -d --build 
-##docker build -f docker/Dockerfile -t messaging_service .                           
+
+  #[NOTE:- docker compose -f 'docker/docker-compose.yml' up --build 'messaging_service'   ]

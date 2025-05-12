@@ -1,96 +1,174 @@
 package service
 
-// import (
-// 	"context"
-// 	pb "cra-protos/messaging_service"
-// 	"time"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
-// 	"messaging_service/pkg/kafka"
-// )
+	pb "cra-protos/messaging_service"
+	kafkapkg "messaging_service/pkg/kafka"
+	"messaging_service/pkg/logger"
 
-// type MessagingServer struct {
-// 	pb.UnimplementedMessagingServiceServer
-// }
+	kafka "github.com/segmentio/kafka-go"
+)
 
-// func (s *MessagingServer) PublishMessage(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
-// 	headers := make([]kafka.Header, 0, len(req.Headers))
-// 	for k, v := range req.Headers {
-// 		headers = append(headers, kafka.Header{
-// 			Key:   k,
-// 			Value: []byte(v),
-// 		})
-// 	}
-// 	// Generate timestamp for message ID
-// 	timestamp := time.Now()
+type MessagingService interface {
+	PublishMessage(ctx context.Context, cfg kafkapkg.KafkaConfig, req *pb.PublishRequest) (*pb.PublishResponse, error)
+	ConsumeMessage(stream pb.MessagingService_SubscribeServer, cfg kafkapkg.KafkaConfig)
+	CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg kafkapkg.KafkaConfig) (*pb.CreateTopicResponse, error)
+}
 
-// 	cfg := kafka.KafkaConfig{
-// 		Brokers:  []string{"kafka:9092"}, // Optional: make this dynamic
-// 		Topic:    req.Topic,
-// 		GroupID:  req.GroupId,
-// 		Mode:     kafka.CompetingConsumer,
-// 		MinBytes: int(req.MinBytes),
-// 		MaxBytes: int(req.MaxBytes),
-// 	}
+type MessagingServiceImpl struct {
+	producer *kafkapkg.Producer
+	admin    kafkapkg.KafkaAdmin
+}
 
-// 	producer := kafka.NewDLQProducer(cfg)
+func NewMessagingService(producer *kafkapkg.Producer, admin kafkapkg.KafkaAdmin) MessagingService {
+	return &MessagingServiceImpl{
+		producer: producer,
+		admin:    admin,
+	}
+}
 
-// 	// Call DLQProducer.SendToDLQ (assumes all messages go to DLQ for now)
-// 	err := producer.SendToDLQ(ctx, "", req.Value, headers)
-// 	if err != nil {
-// 		return &pb.PublishResponse{
-// 			Status:    "failed",
-// 			MessageId: "",
-// 		}, err
-// 	}
+func (s *MessagingServiceImpl) PublishMessage(ctx context.Context, cfg kafkapkg.KafkaConfig, req *pb.PublishRequest) (res *pb.PublishResponse, err error) {
+	// Validate required fields
+	if req.Topic == "" {
+		return nil, fmt.Errorf("topic is required")
+	}
+	if req.Value == nil {
+		return nil, fmt.Errorf("message content is required")
+	}
 
-// 	return &pb.PublishResponse{
-// 		Status:    "success",
-// 		MessageId: timestamp.Format(time.RFC3339Nano),
-// 	}, nil
-// }
+	// Serialize the message value
+	valueBytes, err := json.Marshal(req.Value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize message: %w", err)
+	}
 
-// func (s *MessagingServer) SubscribeStream(req *pb.SubscribeRequest, stream pb.MessagingService_SubscribeStreamServer) error {
-// 	const defaultMinBytes = 10 * 1024
-// 	const defaultMaxBytes = 10 * 1024 * 1024
+	// Get or create writer
+	writer := s.producer.GetWriter(cfg)
+	defer func() {
+		if err := s.producer.Close(writer); err != nil {
+			logger.LogErrorEvent("", "kafka_close_writer_failed", req.Topic, "error", fmt.Sprintf("Failed to close writer: %v", err))
+		}
+	}()
+	// Convert headers
+	headers := make([]kafka.Header, 0, len(req.Headers))
+	for k, v := range req.Headers {
+		headers = append(headers, kafka.Header{
+			Key:   k,
+			Value: []byte(v),
+		})
+	}
 
-// 	cfg := kafka.KafkaConfig{
-// 		Brokers:  req.Brokers, // Optional: make this dynamic
-// 		Topic:    req.Topic,
-// 		GroupID:  req.GroupId,
-// 		Mode:     kafka.CompetingConsumer,
-// 		MinBytes: int(req.MinBytes),
-// 		MaxBytes: int(req.MaxBytes),
-// 	}
+	// Generate message key if not provided
+	key := []byte(req.Key)
+	if len(key) == 0 {
+		key = []byte(fmt.Sprintf("%s-%d", req.Topic, time.Now().UnixNano()))
+	}
 
-// 	if cfg.MinBytes <= 0 {
-// 		cfg.MinBytes = defaultMinBytes
-// 	}
-// 	if cfg.MaxBytes <= 0 {
-// 		cfg.MaxBytes = defaultMaxBytes
-// 	}
+	// Publish message with retry
+	err = s.producer.WriteWithRetry(ctx, writer, key, valueBytes, headers, 3)
+	if err != nil {
+		logger.LogErrorEvent("", "kafka_publish_failed", req.Topic, "error", fmt.Sprintf("Failed to publish message: %v", err))
+		return &pb.PublishResponse{
+			Status:  "failed",
+			Message: fmt.Sprintf("Failed to publish message: %v", err),
+		}, err
+	}
 
-// 	// Initialize the consumer
-// 	consumer := kafka.NewConsumer(cfg, func(message []byte) error {
-// 		// Here you can define how to handle the incoming message
-// 		// For example, you can send it to the gRPC stream
-// 		headers := make(map[string]string)
-// 		// Assuming you have a way to extract headers from the message
-// 		// Send the message to the stream
-// 		return stream.Send(&pb.KafkaMessage{
-// 			Key:       "", // Set the key if available
-// 			Value:     message,
-// 			Headers:   headers,
-// 			Timestamp: time.Now().UnixMilli(), // Set the current timestamp
-// 		})
-// 	})
+	return &pb.PublishResponse{
+		Status:  "success",
+		Message: "Message published successfully",
+	}, nil
+}
 
-// 	// Start the consumer
-// 	go func() {
-// 		consumer.Start(stream.Context()) // No need to check for a return value
-// 		// Handle any additional logic if needed
-// 	}()
+func (s *MessagingServiceImpl) ConsumeMessage(stream pb.MessagingService_SubscribeServer, cfg kafkapkg.KafkaConfig) {
+	// Create a buffered channel for messages
+	msgChan := make(chan *pb.KafkaMessage, 1000)
 
-// 	// Keep the stream open
-// 	<-stream.Context().Done()
-// 	return nil
-// }
+	// Start a goroutine to handle message sending
+	go func() {
+		for msg := range msgChan {
+			if err := stream.Send(msg); err != nil {
+				logger.LogErrorEvent("", "stream_send_failed", cfg.Topic, "error", err.Error())
+				return
+			}
+		}
+	}()
+
+	// Create consumer with handler
+	consumer := kafkapkg.NewConsumer(cfg, func(payload []byte) error {
+		// Deserialize the message
+		var value map[string]string
+		if err := json.Unmarshal(payload, &value); err != nil {
+			return fmt.Errorf("failed to deserialize message: %w", err)
+		}
+
+		// Create message
+		msg := &pb.KafkaMessage{
+			Value:     value,
+			Timestamp: time.Now().UnixMilli(),
+		}
+
+		// Send message to channel
+		select {
+		case msgChan <- msg:
+		default:
+			// If channel is full, try to send directly
+			if err := stream.Send(msg); err != nil {
+				return fmt.Errorf("failed to send message to stream: %w", err)
+			}
+		}
+		return nil
+	})
+
+	// Start consuming
+	consumer.Start(stream.Context())
+	close(msgChan)
+}
+
+func (s *MessagingServiceImpl) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg kafkapkg.KafkaConfig) (*pb.CreateTopicResponse, error) {
+	// Validate required fields
+	if req.Topic == "" {
+		return nil, fmt.Errorf("topic name is required")
+	}
+
+	// Set default values if not provided
+	if req.NumPartitions <= 0 {
+		req.NumPartitions = 1
+	}
+	if req.ReplicationFactor <= 0 {
+		req.ReplicationFactor = 1
+	}
+
+	// Enforce strict retention settings
+	if req.Config == nil {
+		req.Config = make(map[string]string)
+	}
+
+	// Set retention settings
+	req.Config["retention.ms"] = "3000"
+	req.Config["cleanup.policy"] = "delete"
+	req.Config["delete.retention.ms"] = "1000"
+	req.Config["segment.ms"] = "1000"
+	req.Config["log.retention.check.interval.ms"] = "1000"
+	req.Config["log.cleanup.interval.mins"] = "1"
+	req.Config["log.segment.delete.delay.ms"] = "1000"
+
+	// Create topic
+	err := s.admin.CreateTopic(ctx, req.Topic, int(req.NumPartitions), int(req.ReplicationFactor), req.Config)
+	if err != nil {
+		logger.LogErrorEvent("kafka", "create_topic_failed", req.Topic, "error", err.Error())
+		return &pb.CreateTopicResponse{
+			Status:  "failed",
+			Message: fmt.Sprintf("Failed to create topic: %v", err),
+		}, err
+	}
+
+	return &pb.CreateTopicResponse{
+		Status:  "success",
+		Message: fmt.Sprintf("Topic %s created successfully", req.Topic),
+	}, nil
+}

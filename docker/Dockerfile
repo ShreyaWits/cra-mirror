@@ -31,6 +31,8 @@
     
     # Copy built binary from builder
     COPY --from=builder /app/messaging_service/messaging_service .
+    # Copy env file from builder 
+    COPY --from=builder /app/.env .
     
     RUN chmod +x ./messaging_service
     

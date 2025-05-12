@@ -137,3 +137,21 @@ func LogInfo(EventType string, Message string) {
 		zap.String("timestamp", time.Now().Format(time.RFC3339)),
 	)
 }
+
+// LogDLQEvent logs a message that was sent to a Dead Letter Queue
+func LogDLQEvent(RequestID string, Topic string, MessageID string, Reason string, Message string) {
+	if Logger == nil {
+		fmt.Println("Logger not initialized")
+		return
+	}
+
+	Logger.Error("Message sent to DLQ",
+		zap.String("requestId", RequestID),
+		zap.String("topic", Topic),
+		zap.String("messageId", MessageID),
+		zap.String("reason", Reason),
+		zap.String("message", Message),
+		zap.String("ipAddress", srcIP),
+		zap.String("timestamp", time.Now().Format(time.RFC3339)),
+	)
+}

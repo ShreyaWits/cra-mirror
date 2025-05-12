@@ -1,56 +1,83 @@
 package main
 
 import (
+	"context"
 	pb "cra-protos/messaging_service"
 	"log"
-	"messaging_service/internal/messaging_service/handler"
+	"messaging_service/internal/di"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
-func main() {
+const (
+	shutdownTimeout = 5 * time.Second
+)
 
-	// container, err := di.NewContainer()
-	// if err != nil {
-	// 	log.Fatal("Error Loadin Container", err)
-	// }
-	// Set up a TCP listener on the specified port
-	listener, err := net.Listen("tcp", ":"+"50051") // Change the port as needed
+func main() {
+	// Initialize logger
+	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+	sugar := logger.Sugar()
+
+	// Initialize dependency container
+	container, err := di.NewContainer()
+	if err != nil {
+		sugar.Fatalw("Failed to initialize container", "error", err)
 	}
 
+	// Set up a TCP listener
+	listener, err := net.Listen("tcp", ":"+container.Config.GrpcPort)
+	if err != nil {
+		sugar.Fatalw("Failed to listen", "error", err, "port", container.Config.GrpcPort)
+	}
+
+	// Create and configure gRPC server
 	grpcServer := grpc.NewServer()
+	pb.RegisterMessagingServiceServer(grpcServer, container.MessagingHandler)
 
-	msgHandler := &handler.MessagingHandler{}
-	// Register the messaging service
-	pb.RegisterMessagingServiceServer(grpcServer, msgHandler)
-
-	// Start the gRPC server in a goroutine
+	// Start the gRPC server
 	go func() {
-		log.Println("Starting gRPC server on :", "50051")
+		sugar.Infow("Starting gRPC server", "port", container.Config.GrpcPort)
 		if err = grpcServer.Serve(listener); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
+			sugar.Fatalw("Failed to serve", "error", err)
 		}
 	}()
 
-	// Graceful shutdown handling
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	// Set up graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	<-quit
 
-	// Wait for interrupt signal to gracefully shutdown the server
-	<-signalChan
-	log.Println("Shutting down gRPC server...")
+	sugar.Info("Shutting down gRPC server...")
 
-	// Gracefully stop the gRPC server
-	grpcServer.GracefulStop()
+	// Create shutdown context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
 
-	// Optionally, you can add a timeout for the shutdown process
-	time.Sleep(1 * time.Second) // Allow some time for ongoing requests to complete
-	log.Println("gRPC server stopped")
+	// Graceful shutdown of gRPC server
+	done := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(done)
+	}()
+
+	// Wait for either graceful shutdown or timeout
+	select {
+	case <-ctx.Done():
+		sugar.Warn("Shutdown timeout reached, forcing stop")
+		grpcServer.Stop()
+	case <-done:
+		sugar.Info("gRPC server stopped gracefully")
+	}
+
+	sugar.Info("Service shutdown complete")
 }

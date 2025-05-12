@@ -3,114 +3,83 @@ package handler
 import (
 	"context"
 	pb "cra-protos/messaging_service"
-	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
+	"messaging_service/internal/config"
+	"messaging_service/internal/messaging_service/service"
 	"messaging_service/pkg/kafka"
 	"messaging_service/pkg/logger"
 )
 
 type MessagingHandler struct {
 	pb.UnimplementedMessagingServiceServer
+	config           *config.Config
+	messagingService service.MessagingService
+}
+
+// NewMessagingHandler creates a new instance of MessagingHandler
+func NewMessagingHandler(config *config.Config, messagingService service.MessagingService) *MessagingHandler {
+	return &MessagingHandler{
+		config:           config,
+		messagingService: messagingService,
+	}
 }
 
 func (s *MessagingHandler) PublishMessage(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
-	header := map[string]string{
-		"Content-Type": "application/json",
+	// Create Kafka configuration
+	cfg := kafka.NewDefaultKafkaConfig(s.config.KafkaBrokers, req.Topic)
+
+	// Set producer configuration if provided
+	if req.ProducerConfig != nil {
+		cfg.ExactlyOnceConfig.EnableIdempotence = req.ProducerConfig.EnableIdempotence
+		cfg.ExactlyOnceConfig.EnableTransactions = req.ProducerConfig.EnableIdempotence
+		cfg.ExactlyOnceConfig.TransactionTimeoutMs = int(req.ProducerConfig.RequestTimeoutMs)
 	}
 
-	headers := make([]kafka.Header, 0, len(header))
+	// Log the publish request
+	logger.LogInfo("kafka_publish_config",
+		fmt.Sprintf("Publishing to topic %s", req.Topic))
 
-	for k, v := range header {
-		headers = append(headers, kafka.Header{
-			Key:   k,
-			Value: []byte(v),
-		})
-	}
-
-	cfg := kafka.KafkaConfig{
-		Brokers:  []string{"kafka:9092"}, // Optional: make this dynamic
-		Topic:    req.Topic,
-		GroupID:  req.GroupId,
-		MinBytes: int(req.MinBytes),
-		MaxBytes: int(req.MaxBytes),
-	}
-
-	producer := kafka.NewDLQProducer(cfg)
-
-	b, err := MapToBytes(req.Value)
-	if err != nil {
-		log.Fatalf("serialization failed: %v", err)
-	}
-
-	// Call DLQProducer.SendToDLQ (assumes all messages go to DLQ for now)
-	err = producer.SendToDLQ(ctx, "", b, headers)
-	if err != nil {
-		return &pb.PublishResponse{
-			Status: "failed",
-		}, err
-	}
-
-	return &pb.PublishResponse{
-		Status: "success",
-	}, nil
+	return s.messagingService.PublishMessage(ctx, cfg, req)
 }
 
-func (s *MessagingHandler) SubscribeStream(req *pb.SubscribeRequest, stream pb.MessagingService_SubscribeStreamServer) error {
-	const defaultMinBytes = 1
-	const defaultMaxBytes = 1048576
+func (s *MessagingHandler) Subscribe(req *pb.SubscribeRequest, stream pb.MessagingService_SubscribeServer) error {
+	// Create Kafka configuration
+	cfg := kafka.NewDefaultKafkaConfig(s.config.KafkaBrokers, req.Topic)
 
-	cfg := kafka.KafkaConfig{
-		Brokers:  []string{"kafka:9092"}, // Optional: make this dynamic
-		Topic:    req.Topic,
-		GroupID:  req.GroupId,
-		MinBytes: int(req.MinBytes),
-		MaxBytes: int(req.MaxBytes),
-	}
-	logger.LogInfo("this is config data", fmt.Sprintf("Data : %v", cfg))
+	// Set consumer configuration
+	cfg.GroupID = req.GroupId
 
-	if cfg.MinBytes <= 0 {
-		cfg.MinBytes = defaultMinBytes
-	}
-	if cfg.MaxBytes <= 0 {
-		cfg.MaxBytes = defaultMaxBytes
+	// Set consumer configuration if provided
+	if req.ConsumerConfig != nil {
+		cfg.ConsumerConfig.MaxWait = time.Duration(req.ConsumerConfig.MaxWaitMs) * time.Millisecond
+		cfg.ConsumerConfig.MaxAttempts = int(req.ConsumerConfig.MaxAttempts)
+		cfg.ConsumerConfig.IsolationLevel = req.ConsumerConfig.IsolationLevel
+		cfg.ConsumerConfig.CommitInterval = time.Duration(req.ConsumerConfig.CommitIntervalMs) * time.Millisecond
 	}
 
-	// Initialize the consumer
-	consumer := kafka.NewConsumer(cfg, func(message []byte) error {
-		// Assuming you have a way to extract headers from the message
-		// Send the message to the stream
+	logger.LogInfo("kafka_subscribe",
+		fmt.Sprintf("Subscribing to topic %s", req.Topic))
 
-		msg, err := BytesToMap(message)
-		if err != nil {
-			log.Printf("deserialization failed: %v %s", err, message)
-		}
-
-		return stream.Send(&pb.KafkaMessage{
-			Value:     msg,
-			Timestamp: time.Now().UnixMilli(), // Set the current timestamp
-		})
-	})
-
-	// Start the consumer
-	go func() {
-		consumer.Start(stream.Context()) // No need to check for a return value
-		// Handle any additional logic if needed
-	}()
+	s.messagingService.ConsumeMessage(stream, cfg)
 
 	// Keep the stream open
 	<-stream.Context().Done()
-
 	return nil
 }
 
-func MapToBytes(m map[string]string) ([]byte, error) {
-	return json.Marshal(m)
-}
-func BytesToMap(b []byte) (map[string]string, error) {
-	var m map[string]string
-	err := json.Unmarshal(b, &m)
-	return m, err
+func (s *MessagingHandler) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest) (*pb.CreateTopicResponse, error) {
+	// Create Kafka configuration
+	cfg := kafka.NewDefaultKafkaConfig(s.config.KafkaBrokers, req.Topic)
+
+	// Set default values if not provided
+	if req.NumPartitions <= 0 {
+		req.NumPartitions = 3
+	}
+	if req.ReplicationFactor <= 0 {
+		req.ReplicationFactor = 3
+	}
+
+	return s.messagingService.CreateTopic(ctx, req, cfg)
 }

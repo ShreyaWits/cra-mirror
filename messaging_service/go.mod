@@ -5,6 +5,7 @@ go 1.23
 toolchain go1.23.9
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.27.0
