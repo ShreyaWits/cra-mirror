@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"template-services/internal/models"
@@ -9,6 +10,7 @@ import (
 	"template-services/internal/template/repository"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type TemplateServiceInterface interface {
@@ -73,7 +75,16 @@ func (s *TemplateService) GetTemplate(ctx context.Context, id, name, channel, la
 
 func (s *TemplateService) GetTemplateByID(ctx context.Context, id uuid.UUID) (*models.Template, error) {
 	idStr := id.String()
-	return s.repo.Get(ctx, &idStr, nil, nil, nil)
+
+	data, err := s.repo.Get(ctx, &idStr, nil, nil, nil)
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("template with ID %s not found", idStr)
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get template by ID")
+	}
+
+	return data, nil
+
 }
 
 func (s *TemplateService) UpdateTemplate(ctx context.Context, template *models.Template) (*models.Template, error) {

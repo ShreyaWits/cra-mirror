@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"template-services/internal/models"
 	errors "template-services/internal/pkg/errors"
 	"template-services/internal/template/dto"
@@ -122,7 +123,6 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 			Data:         nil,
 		})
 	}
-
 	idParam := c.Params("id")
 	uid, err := uuid.Parse(idParam)
 	if err != nil {
@@ -145,7 +145,7 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	}
 
 	// Update the fields
-	existing.IsActive = req.IsActive
+	existing.IsActive = *req.IsActive
 
 	updatedTemplate, err := h.service.UpdateTemplate(c.Context(), existing)
 	if err != nil {
@@ -156,7 +156,7 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 			Data:         nil,
 		})
 	}
-
+	log.Printf("Updated template: %+v", updatedTemplate)
 	return c.JSON(dto.UpdateTemplateResponse{
 		Success: true,
 		Message: "Template updated successfully",

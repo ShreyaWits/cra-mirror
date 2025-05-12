@@ -49,7 +49,7 @@ func (r *templateRepository) Get(ctx context.Context, id, name, channel, languag
 	}
 
 	// Always include is_active = true
-	conditions = append(conditions, "is_active = true")
+	// conditions = append(conditions, "is_active = true")
 
 	query := strings.Join(conditions, " AND ")
 
