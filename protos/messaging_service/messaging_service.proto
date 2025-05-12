@@ -74,9 +74,6 @@ message PublishRequest {
 message PublishResponse {
   string status = 1;  // Success or error status
   string message = 2;  // Status message
-  int32 partition = 3;  // Partition where the message was published
-  int64 offset = 4;  // Offset of the published message
-  int64 timestamp = 5;  // Timestamp when the message was published
 }
 
 // Request to subscribe to a topic
@@ -133,7 +130,6 @@ message CreateTopicRequest {
 message CreateTopicResponse {
   string status = 1;  // Success or error status
   string message = 2;  // Status message
-  repeated string validation_errors = 4;  // Any validation errors
 }
 
 // Producer configuration
@@ -150,4 +146,9 @@ message ConsumerConfig {
   int32 commit_interval_ms = 2;  // Offset commit interval
   IsolationLevel isolation_level = 3;  // Kafka isolation level
   AutoOffsetReset auto_offset_reset = 4;  // Offset reset behavior
+}
+message ErrorResponse{
+  bool success = 1;
+  string message = 2;
+  string errorCode = 3;
 }

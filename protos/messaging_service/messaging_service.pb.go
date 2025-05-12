@@ -298,11 +298,8 @@ func (x *PublishRequest) GetKey() string {
 // Response after publishing a message
 type PublishResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`        // Success or error status
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`      // Status message
-	Partition     int32                  `protobuf:"varint,3,opt,name=partition,proto3" json:"partition,omitempty"` // Partition where the message was published
-	Offset        int64                  `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`       // Offset of the published message
-	Timestamp     int64                  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // Timestamp when the message was published
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`   // Success or error status
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"` // Status message
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -349,27 +346,6 @@ func (x *PublishResponse) GetMessage() string {
 		return x.Message
 	}
 	return ""
-}
-
-func (x *PublishResponse) GetPartition() int32 {
-	if x != nil {
-		return x.Partition
-	}
-	return 0
-}
-
-func (x *PublishResponse) GetOffset() int64 {
-	if x != nil {
-		return x.Offset
-	}
-	return 0
-}
-
-func (x *PublishResponse) GetTimestamp() int64 {
-	if x != nil {
-		return x.Timestamp
-	}
-	return 0
 }
 
 // Request to subscribe to a topic
@@ -626,12 +602,11 @@ func (x *CreateTopicRequest) GetConfig() *TopicConfig {
 
 // Response after creating a topic
 type CreateTopicResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Status           string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                                             // Success or error status
-	Message          string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`                                           // Status message
-	ValidationErrors []string               `protobuf:"bytes,4,rep,name=validation_errors,json=validationErrors,proto3" json:"validation_errors,omitempty"` // Any validation errors
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`   // Success or error status
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"` // Status message
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateTopicResponse) Reset() {
@@ -676,13 +651,6 @@ func (x *CreateTopicResponse) GetMessage() string {
 		return x.Message
 	}
 	return ""
-}
-
-func (x *CreateTopicResponse) GetValidationErrors() []string {
-	if x != nil {
-		return x.ValidationErrors
-	}
-	return nil
 }
 
 // Producer configuration
@@ -823,6 +791,66 @@ func (x *ConsumerConfig) GetAutoOffsetReset() AutoOffsetReset {
 	return AutoOffsetReset_AUTO_OFFSET_RESET_UNSPECIFIED
 }
 
+type ErrorResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	ErrorCode     string                 `protobuf:"bytes,3,opt,name=errorCode,proto3" json:"errorCode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ErrorResponse) Reset() {
+	*x = ErrorResponse{}
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ErrorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorResponse) ProtoMessage() {}
+
+func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorResponse.ProtoReflect.Descriptor instead.
+func (*ErrorResponse) Descriptor() ([]byte, []int) {
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ErrorResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ErrorResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ErrorResponse) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
 var File_messaging_service_messaging_service_proto protoreflect.FileDescriptor
 
 const file_messaging_service_messaging_service_proto_rawDesc = "" +
@@ -840,13 +868,10 @@ const file_messaging_service_messaging_service_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x97\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
 	"\x0fPublishResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
-	"\tpartition\x18\x03 \x01(\x05R\tpartition\x12\x16\n" +
-	"\x06offset\x18\x04 \x01(\x03R\x06offset\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"\x8d\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x8d\x01\n" +
 	"\x10SubscribeRequest\x12\x14\n" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\agroupId\x12H\n" +
@@ -870,11 +895,10 @@ const file_messaging_service_messaging_service_proto_rawDesc = "" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12%\n" +
 	"\x0enum_partitions\x18\x02 \x01(\x05R\rnumPartitions\x12-\n" +
 	"\x12replication_factor\x18\x03 \x01(\x05R\x11replicationFactor\x124\n" +
-	"\x06config\x18\x04 \x01(\v2\x1c.messaging_proto.TopicConfigR\x06config\"t\n" +
+	"\x06config\x18\x04 \x01(\v2\x1c.messaging_proto.TopicConfigR\x06config\"G\n" +
 	"\x13CreateTopicResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12+\n" +
-	"\x11validation_errors\x18\x04 \x03(\tR\x10validationErrors\"\xd6\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xd6\x01\n" +
 	"\x0eProducerConfig\x12-\n" +
 	"\x12enable_idempotence\x18\x01 \x01(\bR\x11enableIdempotence\x12\x18\n" +
 	"\aretries\x18\x02 \x01(\x05R\aretries\x12(\n" +
@@ -884,7 +908,11 @@ const file_messaging_service_messaging_service_proto_rawDesc = "" +
 	"\vmax_wait_ms\x18\x01 \x01(\x05R\tmaxWaitMs\x12,\n" +
 	"\x12commit_interval_ms\x18\x02 \x01(\x05R\x10commitIntervalMs\x12H\n" +
 	"\x0fisolation_level\x18\x03 \x01(\x0e2\x1f.messaging_proto.IsolationLevelR\x0eisolationLevel\x12L\n" +
-	"\x11auto_offset_reset\x18\x04 \x01(\x0e2 .messaging_proto.AutoOffsetResetR\x0fautoOffsetReset*f\n" +
+	"\x11auto_offset_reset\x18\x04 \x01(\x0e2 .messaging_proto.AutoOffsetResetR\x0fautoOffsetReset\"a\n" +
+	"\rErrorResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
+	"\terrorCode\x18\x03 \x01(\tR\terrorCode*f\n" +
 	"\rCleanupPolicy\x12\x1e\n" +
 	"\x1aCLEANUP_POLICY_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15CLEANUP_POLICY_DELETE\x10\x01\x12\x1a\n" +
@@ -919,7 +947,7 @@ func file_messaging_service_messaging_service_proto_rawDescGZIP() []byte {
 }
 
 var file_messaging_service_messaging_service_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_messaging_service_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_messaging_service_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_messaging_service_messaging_service_proto_goTypes = []any{
 	(CleanupPolicy)(0),          // 0: messaging_proto.CleanupPolicy
 	(DeliverySemantics)(0),      // 1: messaging_proto.DeliverySemantics
@@ -934,18 +962,19 @@ var file_messaging_service_messaging_service_proto_goTypes = []any{
 	(*CreateTopicResponse)(nil), // 10: messaging_proto.CreateTopicResponse
 	(*ProducerConfig)(nil),      // 11: messaging_proto.ProducerConfig
 	(*ConsumerConfig)(nil),      // 12: messaging_proto.ConsumerConfig
-	nil,                         // 13: messaging_proto.PublishRequest.ValueEntry
-	nil,                         // 14: messaging_proto.PublishRequest.HeadersEntry
-	nil,                         // 15: messaging_proto.KafkaMessage.ValueEntry
-	nil,                         // 16: messaging_proto.KafkaMessage.HeadersEntry
+	(*ErrorResponse)(nil),       // 13: messaging_proto.ErrorResponse
+	nil,                         // 14: messaging_proto.PublishRequest.ValueEntry
+	nil,                         // 15: messaging_proto.PublishRequest.HeadersEntry
+	nil,                         // 16: messaging_proto.KafkaMessage.ValueEntry
+	nil,                         // 17: messaging_proto.KafkaMessage.HeadersEntry
 }
 var file_messaging_service_messaging_service_proto_depIdxs = []int32{
-	13, // 0: messaging_proto.PublishRequest.value:type_name -> messaging_proto.PublishRequest.ValueEntry
+	14, // 0: messaging_proto.PublishRequest.value:type_name -> messaging_proto.PublishRequest.ValueEntry
 	11, // 1: messaging_proto.PublishRequest.producer_config:type_name -> messaging_proto.ProducerConfig
-	14, // 2: messaging_proto.PublishRequest.headers:type_name -> messaging_proto.PublishRequest.HeadersEntry
+	15, // 2: messaging_proto.PublishRequest.headers:type_name -> messaging_proto.PublishRequest.HeadersEntry
 	12, // 3: messaging_proto.SubscribeRequest.consumer_config:type_name -> messaging_proto.ConsumerConfig
-	15, // 4: messaging_proto.KafkaMessage.value:type_name -> messaging_proto.KafkaMessage.ValueEntry
-	16, // 5: messaging_proto.KafkaMessage.headers:type_name -> messaging_proto.KafkaMessage.HeadersEntry
+	16, // 4: messaging_proto.KafkaMessage.value:type_name -> messaging_proto.KafkaMessage.ValueEntry
+	17, // 5: messaging_proto.KafkaMessage.headers:type_name -> messaging_proto.KafkaMessage.HeadersEntry
 	0,  // 6: messaging_proto.TopicConfig.cleanup_policy:type_name -> messaging_proto.CleanupPolicy
 	8,  // 7: messaging_proto.CreateTopicRequest.config:type_name -> messaging_proto.TopicConfig
 	1,  // 8: messaging_proto.ProducerConfig.delivery_semantics:type_name -> messaging_proto.DeliverySemantics
@@ -975,7 +1004,7 @@ func file_messaging_service_messaging_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_messaging_service_messaging_service_proto_rawDesc), len(file_messaging_service_messaging_service_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

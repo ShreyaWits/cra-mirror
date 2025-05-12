@@ -35,5 +35,5 @@ func GetDLQConfig(topic string) (DLQTopicConfig, bool) {
 
 // LogDLQEvent logs a message sent to DLQ
 func LogDLQEvent(requestID, topic, messageID, reason, message string) {
-	logger.LogDLQEvent(requestID, topic, messageID, reason, message)
+	logger.LogEvent(requestID, "dlq_event", messageID, reason, message+" [DLQ topic: "+topic+"]")
 }
