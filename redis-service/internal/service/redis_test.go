@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"log/slog"
 	"redis-service/internal/dto"
 	"testing"
 	"time"
@@ -32,7 +33,9 @@ func (m *MockRedisRepository) InvalidateCache(key string) error {
 
 func TestRedisService_GetCache(t *testing.T) {
 	mockRepo := new(MockRedisRepository)
-	service := NewRedisService(mockRepo)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	service := NewRedisService(mockRepo, logger)
 
 	payload := &dto.GetCacheRequest{
 		Namespace: "ns",
@@ -51,7 +54,9 @@ func TestRedisService_GetCache(t *testing.T) {
 
 func TestRedisService_SetCache_Success(t *testing.T) {
 	mockRepo := new(MockRedisRepository)
-	service := NewRedisService(mockRepo)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	service := NewRedisService(mockRepo, logger)
 
 	payload := &dto.SetCacheRequest{
 		Namespace: "ns",
@@ -74,7 +79,9 @@ func TestRedisService_SetCache_Success(t *testing.T) {
 
 func TestRedisService_SetCache_Error(t *testing.T) {
 	mockRepo := new(MockRedisRepository)
-	service := NewRedisService(mockRepo)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	service := NewRedisService(mockRepo, logger)
 
 	payload := &dto.SetCacheRequest{
 		Namespace: "ns",
@@ -94,7 +101,9 @@ func TestRedisService_SetCache_Error(t *testing.T) {
 
 func TestRedisService_InvalidateCache_Success(t *testing.T) {
 	mockRepo := new(MockRedisRepository)
-	service := NewRedisService(mockRepo)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	service := NewRedisService(mockRepo, logger)
 
 	payload := &dto.DeleteCacheRequest{
 		Namespace: "ns",
@@ -112,7 +121,9 @@ func TestRedisService_InvalidateCache_Success(t *testing.T) {
 
 func TestRedisService_InvalidateCache_Error(t *testing.T) {
 	mockRepo := new(MockRedisRepository)
-	service := NewRedisService(mockRepo)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	service := NewRedisService(mockRepo, logger)
 
 	payload := &dto.DeleteCacheRequest{
 		Namespace: "ns",

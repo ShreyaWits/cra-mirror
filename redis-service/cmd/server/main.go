@@ -42,12 +42,13 @@ func main() {
 	app.Use(http.TraceMiddleware())
 
 	// create a new grpc server instance
-	log.Println("Creating gRPC server instance...")
+	app_module.Di.Logger.Info("Creating gRPC server instance...")
 
 	// create a new grpc server instance with tracing interceptor
 	lis, err := net.Listen("tcp", config.GRPC_PORT)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		app_module.Di.Logger.Error("Failed to listen", "error", err)
+		os.Exit(1)
 	}
 
 	s := grpc.NewServer(
@@ -56,11 +57,12 @@ func main() {
 
 	grpcServer, err := server.NewGRPCServer(s, lis)
 	if err != nil {
-		log.Fatalf("gRPC server failed to listen: %v", err)
+		app_module.Di.Logger.Error("gRPC server failed to listen", "error", err)
+		os.Exit(1)
 	}
 
 	grpcHandler := handler.NewGRPCHandler()
-	log.Println("Registering gRPC services...")
+	app_module.Di.Logger.Info("Registering gRPC services...")
 	proto.RegisterCacheServiceServer(grpcServer.GetServer(), grpcHandler)
 
 	app.Get("/health", http.HealthCheck)
@@ -73,12 +75,13 @@ func main() {
 	go func() {
 		err := app.Listen(config.PORT)
 		if err != nil {
-			log.Fatalf("Failed to start HTTP server: %v", err)
+			app_module.Di.Logger.Error("Failed to start HTTP server", "error", err)
+			os.Exit(1)
 		}
-		log.Printf("Starting HTTP server on port %s...", config.PORT)
+		app_module.Di.Logger.Info("Starting HTTP server", "port", config.PORT)
 	}()
 
 	<-stop
-	log.Println("Stopping gRPC server...")
+	app_module.Di.Logger.Info("Stopping gRPC server...")
 	grpcServer.Stop()
 }
