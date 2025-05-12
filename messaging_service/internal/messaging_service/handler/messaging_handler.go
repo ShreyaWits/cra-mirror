@@ -8,8 +8,12 @@ import (
 
 	"messaging_service/internal/config"
 	"messaging_service/internal/messaging_service/service"
+	"messaging_service/internal/validation"
 	"messaging_service/pkg/kafka"
 	"messaging_service/pkg/logger"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type MessagingHandler struct {
@@ -26,7 +30,11 @@ func NewMessagingHandler(config *config.Config, messagingService service.Messagi
 	}
 }
 
-func (s *MessagingHandler) PublishMessage(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
+func (s *MessagingHandler) PublishMessageV1(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
+	if err := validation.ValidatePublishRequest(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	// Create Kafka configuration
 	cfg := kafka.NewDefaultKafkaConfig(s.config.KafkaBrokers, req.Topic)
 
@@ -34,7 +42,10 @@ func (s *MessagingHandler) PublishMessage(ctx context.Context, req *pb.PublishRe
 	if req.ProducerConfig != nil {
 		cfg.ExactlyOnceConfig.EnableIdempotence = req.ProducerConfig.EnableIdempotence
 		cfg.ExactlyOnceConfig.EnableTransactions = req.ProducerConfig.EnableIdempotence
-		cfg.ExactlyOnceConfig.TransactionTimeoutMs = int(req.ProducerConfig.RequestTimeoutMs)
+		// Set delivery semantics based on the enum
+		if req.ProducerConfig.DeliverySemantics == pb.DeliverySemantics_DELIVERY_SEMANTICS_EXACTLY_ONCE {
+			cfg.ExactlyOnceConfig.EnableTransactions = true
+		}
 	}
 
 	// Log the publish request
@@ -44,7 +55,11 @@ func (s *MessagingHandler) PublishMessage(ctx context.Context, req *pb.PublishRe
 	return s.messagingService.PublishMessage(ctx, cfg, req)
 }
 
-func (s *MessagingHandler) Subscribe(req *pb.SubscribeRequest, stream pb.MessagingService_SubscribeServer) error {
+func (s *MessagingHandler) SubscribeV1(req *pb.SubscribeRequest, stream pb.MessagingService_SubscribeV1Server) error {
+	if err := validation.ValidateSubscribeRequest(req); err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	// Create Kafka configuration
 	cfg := kafka.NewDefaultKafkaConfig(s.config.KafkaBrokers, req.Topic)
 
@@ -54,9 +69,27 @@ func (s *MessagingHandler) Subscribe(req *pb.SubscribeRequest, stream pb.Messagi
 	// Set consumer configuration if provided
 	if req.ConsumerConfig != nil {
 		cfg.ConsumerConfig.MaxWait = time.Duration(req.ConsumerConfig.MaxWaitMs) * time.Millisecond
-		cfg.ConsumerConfig.MaxAttempts = int(req.ConsumerConfig.MaxAttempts)
-		cfg.ConsumerConfig.IsolationLevel = req.ConsumerConfig.IsolationLevel
 		cfg.ConsumerConfig.CommitInterval = time.Duration(req.ConsumerConfig.CommitIntervalMs) * time.Millisecond
+
+		// Convert isolation level enum to string
+		switch req.ConsumerConfig.IsolationLevel {
+		case pb.IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED:
+			cfg.ConsumerConfig.IsolationLevel = "read_committed"
+		case pb.IsolationLevel_ISOLATION_LEVEL_READ_UNCOMMITTED:
+			cfg.ConsumerConfig.IsolationLevel = "read_uncommitted"
+		default:
+			cfg.ConsumerConfig.IsolationLevel = "read_uncommitted"
+		}
+
+		// Set auto offset reset based on enum
+		switch req.ConsumerConfig.AutoOffsetReset {
+		case pb.AutoOffsetReset_AUTO_OFFSET_RESET_LATEST:
+			cfg.ConsumerConfig.AutoOffsetReset = "latest"
+		case pb.AutoOffsetReset_AUTO_OFFSET_RESET_EARLIEST:
+			cfg.ConsumerConfig.AutoOffsetReset = "earliest"
+		default:
+			cfg.ConsumerConfig.AutoOffsetReset = "latest"
+		}
 	}
 
 	logger.LogInfo("kafka_subscribe",
@@ -69,7 +102,11 @@ func (s *MessagingHandler) Subscribe(req *pb.SubscribeRequest, stream pb.Messagi
 	return nil
 }
 
-func (s *MessagingHandler) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest) (*pb.CreateTopicResponse, error) {
+func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopicRequest) (*pb.CreateTopicResponse, error) {
+	if err := validation.ValidateCreateTopicRequest(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	// Create Kafka configuration
 	cfg := kafka.NewDefaultKafkaConfig(s.config.KafkaBrokers, req.Topic)
 

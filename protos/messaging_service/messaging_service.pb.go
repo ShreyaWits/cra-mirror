@@ -21,16 +21,62 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Define an enum for Kafka delivery semantics
+// Enums for configuration values
+type CleanupPolicy int32
+
+const (
+	CleanupPolicy_CLEANUP_POLICY_UNSPECIFIED CleanupPolicy = 0
+	CleanupPolicy_CLEANUP_POLICY_DELETE      CleanupPolicy = 1
+	CleanupPolicy_CLEANUP_POLICY_COMPACT     CleanupPolicy = 2
+)
+
+// Enum value maps for CleanupPolicy.
+var (
+	CleanupPolicy_name = map[int32]string{
+		0: "CLEANUP_POLICY_UNSPECIFIED",
+		1: "CLEANUP_POLICY_DELETE",
+		2: "CLEANUP_POLICY_COMPACT",
+	}
+	CleanupPolicy_value = map[string]int32{
+		"CLEANUP_POLICY_UNSPECIFIED": 0,
+		"CLEANUP_POLICY_DELETE":      1,
+		"CLEANUP_POLICY_COMPACT":     2,
+	}
+)
+
+func (x CleanupPolicy) Enum() *CleanupPolicy {
+	p := new(CleanupPolicy)
+	*p = x
+	return p
+}
+
+func (x CleanupPolicy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CleanupPolicy) Descriptor() protoreflect.EnumDescriptor {
+	return file_messaging_service_messaging_service_proto_enumTypes[0].Descriptor()
+}
+
+func (CleanupPolicy) Type() protoreflect.EnumType {
+	return &file_messaging_service_messaging_service_proto_enumTypes[0]
+}
+
+func (x CleanupPolicy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CleanupPolicy.Descriptor instead.
+func (CleanupPolicy) EnumDescriptor() ([]byte, []int) {
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{0}
+}
+
 type DeliverySemantics int32
 
 const (
-	// Unspecified delivery semantics (use server default)
-	DeliverySemantics_DELIVERY_SEMANTICS_UNSPECIFIED DeliverySemantics = 0
-	// At-least-once delivery
+	DeliverySemantics_DELIVERY_SEMANTICS_UNSPECIFIED   DeliverySemantics = 0
 	DeliverySemantics_DELIVERY_SEMANTICS_AT_LEAST_ONCE DeliverySemantics = 1
-	// Exactly-once delivery (requires transactional producer)
-	DeliverySemantics_DELIVERY_SEMANTICS_EXACTLY_ONCE DeliverySemantics = 2
+	DeliverySemantics_DELIVERY_SEMANTICS_EXACTLY_ONCE  DeliverySemantics = 2
 )
 
 // Enum value maps for DeliverySemantics.
@@ -58,11 +104,11 @@ func (x DeliverySemantics) String() string {
 }
 
 func (DeliverySemantics) Descriptor() protoreflect.EnumDescriptor {
-	return file_messaging_service_messaging_service_proto_enumTypes[0].Descriptor()
+	return file_messaging_service_messaging_service_proto_enumTypes[1].Descriptor()
 }
 
 func (DeliverySemantics) Type() protoreflect.EnumType {
-	return &file_messaging_service_messaging_service_proto_enumTypes[0]
+	return &file_messaging_service_messaging_service_proto_enumTypes[1]
 }
 
 func (x DeliverySemantics) Number() protoreflect.EnumNumber {
@@ -71,79 +117,28 @@ func (x DeliverySemantics) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DeliverySemantics.Descriptor instead.
 func (DeliverySemantics) EnumDescriptor() ([]byte, []int) {
-	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{0}
-}
-
-// Define an enum for consumer offset reset behavior
-type OffsetReset int32
-
-const (
-	OffsetReset_OFFSET_RESET_UNSPECIFIED OffsetReset = 0
-	OffsetReset_OFFSET_RESET_LATEST      OffsetReset = 1 // Start consuming from latest offset
-	OffsetReset_OFFSET_RESET_EARLIEST    OffsetReset = 2 // Start consuming from earliest offset
-)
-
-// Enum value maps for OffsetReset.
-var (
-	OffsetReset_name = map[int32]string{
-		0: "OFFSET_RESET_UNSPECIFIED",
-		1: "OFFSET_RESET_LATEST",
-		2: "OFFSET_RESET_EARLIEST",
-	}
-	OffsetReset_value = map[string]int32{
-		"OFFSET_RESET_UNSPECIFIED": 0,
-		"OFFSET_RESET_LATEST":      1,
-		"OFFSET_RESET_EARLIEST":    2,
-	}
-)
-
-func (x OffsetReset) Enum() *OffsetReset {
-	p := new(OffsetReset)
-	*p = x
-	return p
-}
-
-func (x OffsetReset) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (OffsetReset) Descriptor() protoreflect.EnumDescriptor {
-	return file_messaging_service_messaging_service_proto_enumTypes[1].Descriptor()
-}
-
-func (OffsetReset) Type() protoreflect.EnumType {
-	return &file_messaging_service_messaging_service_proto_enumTypes[1]
-}
-
-func (x OffsetReset) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use OffsetReset.Descriptor instead.
-func (OffsetReset) EnumDescriptor() ([]byte, []int) {
 	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{1}
 }
 
-// Define an enum for consumer isolation level
 type IsolationLevel int32
 
 const (
 	IsolationLevel_ISOLATION_LEVEL_UNSPECIFIED      IsolationLevel = 0
-	IsolationLevel_ISOLATION_LEVEL_READ_UNCOMMITTED IsolationLevel = 1
-	IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED   IsolationLevel = 2
+	IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED   IsolationLevel = 1
+	IsolationLevel_ISOLATION_LEVEL_READ_UNCOMMITTED IsolationLevel = 2
 )
 
 // Enum value maps for IsolationLevel.
 var (
 	IsolationLevel_name = map[int32]string{
 		0: "ISOLATION_LEVEL_UNSPECIFIED",
-		1: "ISOLATION_LEVEL_READ_UNCOMMITTED",
-		2: "ISOLATION_LEVEL_READ_COMMITTED",
+		1: "ISOLATION_LEVEL_READ_COMMITTED",
+		2: "ISOLATION_LEVEL_READ_UNCOMMITTED",
 	}
 	IsolationLevel_value = map[string]int32{
 		"ISOLATION_LEVEL_UNSPECIFIED":      0,
-		"ISOLATION_LEVEL_READ_UNCOMMITTED": 1,
-		"ISOLATION_LEVEL_READ_COMMITTED":   2,
+		"ISOLATION_LEVEL_READ_COMMITTED":   1,
+		"ISOLATION_LEVEL_READ_UNCOMMITTED": 2,
 	}
 )
 
@@ -172,6 +167,55 @@ func (x IsolationLevel) Number() protoreflect.EnumNumber {
 // Deprecated: Use IsolationLevel.Descriptor instead.
 func (IsolationLevel) EnumDescriptor() ([]byte, []int) {
 	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{2}
+}
+
+type AutoOffsetReset int32
+
+const (
+	AutoOffsetReset_AUTO_OFFSET_RESET_UNSPECIFIED AutoOffsetReset = 0
+	AutoOffsetReset_AUTO_OFFSET_RESET_LATEST      AutoOffsetReset = 1
+	AutoOffsetReset_AUTO_OFFSET_RESET_EARLIEST    AutoOffsetReset = 2
+)
+
+// Enum value maps for AutoOffsetReset.
+var (
+	AutoOffsetReset_name = map[int32]string{
+		0: "AUTO_OFFSET_RESET_UNSPECIFIED",
+		1: "AUTO_OFFSET_RESET_LATEST",
+		2: "AUTO_OFFSET_RESET_EARLIEST",
+	}
+	AutoOffsetReset_value = map[string]int32{
+		"AUTO_OFFSET_RESET_UNSPECIFIED": 0,
+		"AUTO_OFFSET_RESET_LATEST":      1,
+		"AUTO_OFFSET_RESET_EARLIEST":    2,
+	}
+)
+
+func (x AutoOffsetReset) Enum() *AutoOffsetReset {
+	p := new(AutoOffsetReset)
+	*p = x
+	return p
+}
+
+func (x AutoOffsetReset) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AutoOffsetReset) Descriptor() protoreflect.EnumDescriptor {
+	return file_messaging_service_messaging_service_proto_enumTypes[3].Descriptor()
+}
+
+func (AutoOffsetReset) Type() protoreflect.EnumType {
+	return &file_messaging_service_messaging_service_proto_enumTypes[3]
+}
+
+func (x AutoOffsetReset) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AutoOffsetReset.Descriptor instead.
+func (AutoOffsetReset) EnumDescriptor() ([]byte, []int) {
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{3}
 }
 
 // Request to publish a message
@@ -458,20 +502,73 @@ func (x *KafkaMessage) GetHeaders() map[string]string {
 	return nil
 }
 
+// Topic configuration
+type TopicConfig struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RetentionMs   int64                  `protobuf:"varint,1,opt,name=retention_ms,json=retentionMs,proto3" json:"retention_ms,omitempty"`                                          // Message retention time in milliseconds
+	CleanupPolicy CleanupPolicy          `protobuf:"varint,2,opt,name=cleanup_policy,json=cleanupPolicy,proto3,enum=messaging_proto.CleanupPolicy" json:"cleanup_policy,omitempty"` // Topic cleanup policy
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TopicConfig) Reset() {
+	*x = TopicConfig{}
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TopicConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TopicConfig) ProtoMessage() {}
+
+func (x *TopicConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TopicConfig.ProtoReflect.Descriptor instead.
+func (*TopicConfig) Descriptor() ([]byte, []int) {
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *TopicConfig) GetRetentionMs() int64 {
+	if x != nil {
+		return x.RetentionMs
+	}
+	return 0
+}
+
+func (x *TopicConfig) GetCleanupPolicy() CleanupPolicy {
+	if x != nil {
+		return x.CleanupPolicy
+	}
+	return CleanupPolicy_CLEANUP_POLICY_UNSPECIFIED
+}
+
 // Request to create a new topic
 type CreateTopicRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	Topic             string                 `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`                                                                             // Required: Name of the topic to create
-	NumPartitions     int32                  `protobuf:"varint,2,opt,name=num_partitions,json=numPartitions,proto3" json:"num_partitions,omitempty"`                                       // Required: Number of partitions
-	ReplicationFactor int32                  `protobuf:"varint,3,opt,name=replication_factor,json=replicationFactor,proto3" json:"replication_factor,omitempty"`                           // Required: Replication factor
-	Config            map[string]string      `protobuf:"bytes,4,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Optional: Topic configuration
+	Topic             string                 `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`                                                   // Required: Name of the topic to create
+	NumPartitions     int32                  `protobuf:"varint,2,opt,name=num_partitions,json=numPartitions,proto3" json:"num_partitions,omitempty"`             // Required: Number of partitions
+	ReplicationFactor int32                  `protobuf:"varint,3,opt,name=replication_factor,json=replicationFactor,proto3" json:"replication_factor,omitempty"` // Required: Replication factor
+	Config            *TopicConfig           `protobuf:"bytes,4,opt,name=config,proto3" json:"config,omitempty"`                                                 // Optional: Topic configuration
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateTopicRequest) Reset() {
 	*x = CreateTopicRequest{}
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[4]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -483,7 +580,7 @@ func (x *CreateTopicRequest) String() string {
 func (*CreateTopicRequest) ProtoMessage() {}
 
 func (x *CreateTopicRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[4]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -496,7 +593,7 @@ func (x *CreateTopicRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTopicRequest.ProtoReflect.Descriptor instead.
 func (*CreateTopicRequest) Descriptor() ([]byte, []int) {
-	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{4}
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CreateTopicRequest) GetTopic() string {
@@ -520,7 +617,7 @@ func (x *CreateTopicRequest) GetReplicationFactor() int32 {
 	return 0
 }
 
-func (x *CreateTopicRequest) GetConfig() map[string]string {
+func (x *CreateTopicRequest) GetConfig() *TopicConfig {
 	if x != nil {
 		return x.Config
 	}
@@ -539,7 +636,7 @@ type CreateTopicResponse struct {
 
 func (x *CreateTopicResponse) Reset() {
 	*x = CreateTopicResponse{}
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[5]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -551,7 +648,7 @@ func (x *CreateTopicResponse) String() string {
 func (*CreateTopicResponse) ProtoMessage() {}
 
 func (x *CreateTopicResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[5]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -564,7 +661,7 @@ func (x *CreateTopicResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTopicResponse.ProtoReflect.Descriptor instead.
 func (*CreateTopicResponse) Descriptor() ([]byte, []int) {
-	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{5}
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateTopicResponse) GetStatus() string {
@@ -590,21 +687,18 @@ func (x *CreateTopicResponse) GetValidationErrors() []string {
 
 // Producer configuration
 type ProducerConfig struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	EnableIdempotence   bool                   `protobuf:"varint,1,opt,name=enable_idempotence,json=enableIdempotence,proto3" json:"enable_idempotence,omitempty"`           // Enable idempotent producer
-	Retries             int32                  `protobuf:"varint,2,opt,name=retries,proto3" json:"retries,omitempty"`                                                        // Number of retries
-	RetryBackoffMs      int32                  `protobuf:"varint,3,opt,name=retry_backoff_ms,json=retryBackoffMs,proto3" json:"retry_backoff_ms,omitempty"`                  // Backoff time between retries
-	RequestTimeoutMs    int32                  `protobuf:"varint,4,opt,name=request_timeout_ms,json=requestTimeoutMs,proto3" json:"request_timeout_ms,omitempty"`            // Request timeout
-	MaxInFlightRequests int32                  `protobuf:"varint,5,opt,name=max_in_flight_requests,json=maxInFlightRequests,proto3" json:"max_in_flight_requests,omitempty"` // Max in-flight requests
-	EnableCompression   bool                   `protobuf:"varint,6,opt,name=enable_compression,json=enableCompression,proto3" json:"enable_compression,omitempty"`           // Enable message compression
-	CompressionType     string                 `protobuf:"bytes,7,opt,name=compression_type,json=compressionType,proto3" json:"compression_type,omitempty"`                  // Compression type (gzip, snappy, etc.)
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	EnableIdempotence bool                   `protobuf:"varint,1,opt,name=enable_idempotence,json=enableIdempotence,proto3" json:"enable_idempotence,omitempty"`                                        // Enable idempotent producer
+	Retries           int32                  `protobuf:"varint,2,opt,name=retries,proto3" json:"retries,omitempty"`                                                                                     // Number of retries
+	RetryBackoffMs    int32                  `protobuf:"varint,3,opt,name=retry_backoff_ms,json=retryBackoffMs,proto3" json:"retry_backoff_ms,omitempty"`                                               // Backoff time between retries
+	DeliverySemantics DeliverySemantics      `protobuf:"varint,4,opt,name=delivery_semantics,json=deliverySemantics,proto3,enum=messaging_proto.DeliverySemantics" json:"delivery_semantics,omitempty"` // Delivery semantics
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ProducerConfig) Reset() {
 	*x = ProducerConfig{}
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[6]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -616,7 +710,7 @@ func (x *ProducerConfig) String() string {
 func (*ProducerConfig) ProtoMessage() {}
 
 func (x *ProducerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[6]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -629,7 +723,7 @@ func (x *ProducerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProducerConfig.ProtoReflect.Descriptor instead.
 func (*ProducerConfig) Descriptor() ([]byte, []int) {
-	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{6}
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ProducerConfig) GetEnableIdempotence() bool {
@@ -653,54 +747,27 @@ func (x *ProducerConfig) GetRetryBackoffMs() int32 {
 	return 0
 }
 
-func (x *ProducerConfig) GetRequestTimeoutMs() int32 {
+func (x *ProducerConfig) GetDeliverySemantics() DeliverySemantics {
 	if x != nil {
-		return x.RequestTimeoutMs
+		return x.DeliverySemantics
 	}
-	return 0
-}
-
-func (x *ProducerConfig) GetMaxInFlightRequests() int32 {
-	if x != nil {
-		return x.MaxInFlightRequests
-	}
-	return 0
-}
-
-func (x *ProducerConfig) GetEnableCompression() bool {
-	if x != nil {
-		return x.EnableCompression
-	}
-	return false
-}
-
-func (x *ProducerConfig) GetCompressionType() string {
-	if x != nil {
-		return x.CompressionType
-	}
-	return ""
+	return DeliverySemantics_DELIVERY_SEMANTICS_UNSPECIFIED
 }
 
 // Consumer configuration
 type ConsumerConfig struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	MaxWaitMs           int32                  `protobuf:"varint,1,opt,name=max_wait_ms,json=maxWaitMs,proto3" json:"max_wait_ms,omitempty"`                               // Maximum time to wait for messages
-	ReadBackoffMinMs    int32                  `protobuf:"varint,2,opt,name=read_backoff_min_ms,json=readBackoffMinMs,proto3" json:"read_backoff_min_ms,omitempty"`        // Minimum backoff between reads
-	ReadBackoffMaxMs    int32                  `protobuf:"varint,3,opt,name=read_backoff_max_ms,json=readBackoffMaxMs,proto3" json:"read_backoff_max_ms,omitempty"`        // Maximum backoff between reads
-	CommitIntervalMs    int32                  `protobuf:"varint,4,opt,name=commit_interval_ms,json=commitIntervalMs,proto3" json:"commit_interval_ms,omitempty"`          // Offset commit interval
-	HeartbeatIntervalMs int32                  `protobuf:"varint,5,opt,name=heartbeat_interval_ms,json=heartbeatIntervalMs,proto3" json:"heartbeat_interval_ms,omitempty"` // Consumer group heartbeat interval
-	SessionTimeoutMs    int32                  `protobuf:"varint,6,opt,name=session_timeout_ms,json=sessionTimeoutMs,proto3" json:"session_timeout_ms,omitempty"`          // Session timeout
-	RebalanceTimeoutMs  int32                  `protobuf:"varint,7,opt,name=rebalance_timeout_ms,json=rebalanceTimeoutMs,proto3" json:"rebalance_timeout_ms,omitempty"`    // Rebalance timeout
-	MaxAttempts         int32                  `protobuf:"varint,8,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`                           // Maximum read attempts
-	IsolationLevel      string                 `protobuf:"bytes,9,opt,name=isolation_level,json=isolationLevel,proto3" json:"isolation_level,omitempty"`                   // Read committed or uncommitted
-	AutoOffsetReset     string                 `protobuf:"bytes,10,opt,name=auto_offset_reset,json=autoOffsetReset,proto3" json:"auto_offset_reset,omitempty"`             // Offset reset behavior
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	MaxWaitMs        int32                  `protobuf:"varint,1,opt,name=max_wait_ms,json=maxWaitMs,proto3" json:"max_wait_ms,omitempty"`                                                        // Maximum time to wait for messages
+	CommitIntervalMs int32                  `protobuf:"varint,2,opt,name=commit_interval_ms,json=commitIntervalMs,proto3" json:"commit_interval_ms,omitempty"`                                   // Offset commit interval
+	IsolationLevel   IsolationLevel         `protobuf:"varint,3,opt,name=isolation_level,json=isolationLevel,proto3,enum=messaging_proto.IsolationLevel" json:"isolation_level,omitempty"`       // Kafka isolation level
+	AutoOffsetReset  AutoOffsetReset        `protobuf:"varint,4,opt,name=auto_offset_reset,json=autoOffsetReset,proto3,enum=messaging_proto.AutoOffsetReset" json:"auto_offset_reset,omitempty"` // Offset reset behavior
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ConsumerConfig) Reset() {
 	*x = ConsumerConfig{}
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[7]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -712,7 +779,7 @@ func (x *ConsumerConfig) String() string {
 func (*ConsumerConfig) ProtoMessage() {}
 
 func (x *ConsumerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_messaging_service_messaging_service_proto_msgTypes[7]
+	mi := &file_messaging_service_messaging_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -725,26 +792,12 @@ func (x *ConsumerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsumerConfig.ProtoReflect.Descriptor instead.
 func (*ConsumerConfig) Descriptor() ([]byte, []int) {
-	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{7}
+	return file_messaging_service_messaging_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ConsumerConfig) GetMaxWaitMs() int32 {
 	if x != nil {
 		return x.MaxWaitMs
-	}
-	return 0
-}
-
-func (x *ConsumerConfig) GetReadBackoffMinMs() int32 {
-	if x != nil {
-		return x.ReadBackoffMinMs
-	}
-	return 0
-}
-
-func (x *ConsumerConfig) GetReadBackoffMaxMs() int32 {
-	if x != nil {
-		return x.ReadBackoffMaxMs
 	}
 	return 0
 }
@@ -756,46 +809,18 @@ func (x *ConsumerConfig) GetCommitIntervalMs() int32 {
 	return 0
 }
 
-func (x *ConsumerConfig) GetHeartbeatIntervalMs() int32 {
-	if x != nil {
-		return x.HeartbeatIntervalMs
-	}
-	return 0
-}
-
-func (x *ConsumerConfig) GetSessionTimeoutMs() int32 {
-	if x != nil {
-		return x.SessionTimeoutMs
-	}
-	return 0
-}
-
-func (x *ConsumerConfig) GetRebalanceTimeoutMs() int32 {
-	if x != nil {
-		return x.RebalanceTimeoutMs
-	}
-	return 0
-}
-
-func (x *ConsumerConfig) GetMaxAttempts() int32 {
-	if x != nil {
-		return x.MaxAttempts
-	}
-	return 0
-}
-
-func (x *ConsumerConfig) GetIsolationLevel() string {
+func (x *ConsumerConfig) GetIsolationLevel() IsolationLevel {
 	if x != nil {
 		return x.IsolationLevel
 	}
-	return ""
+	return IsolationLevel_ISOLATION_LEVEL_UNSPECIFIED
 }
 
-func (x *ConsumerConfig) GetAutoOffsetReset() string {
+func (x *ConsumerConfig) GetAutoOffsetReset() AutoOffsetReset {
 	if x != nil {
 		return x.AutoOffsetReset
 	}
-	return ""
+	return AutoOffsetReset_AUTO_OFFSET_RESET_UNSPECIFIED
 }
 
 var File_messaging_service_messaging_service_proto protoreflect.FileDescriptor
@@ -837,55 +862,49 @@ const file_messaging_service_messaging_service_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x84\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"w\n" +
+	"\vTopicConfig\x12!\n" +
+	"\fretention_ms\x18\x01 \x01(\x03R\vretentionMs\x12E\n" +
+	"\x0ecleanup_policy\x18\x02 \x01(\x0e2\x1e.messaging_proto.CleanupPolicyR\rcleanupPolicy\"\xb6\x01\n" +
 	"\x12CreateTopicRequest\x12\x14\n" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12%\n" +
 	"\x0enum_partitions\x18\x02 \x01(\x05R\rnumPartitions\x12-\n" +
-	"\x12replication_factor\x18\x03 \x01(\x05R\x11replicationFactor\x12G\n" +
-	"\x06config\x18\x04 \x03(\v2/.messaging_proto.CreateTopicRequest.ConfigEntryR\x06config\x1a9\n" +
-	"\vConfigEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"t\n" +
+	"\x12replication_factor\x18\x03 \x01(\x05R\x11replicationFactor\x124\n" +
+	"\x06config\x18\x04 \x01(\v2\x1c.messaging_proto.TopicConfigR\x06config\"t\n" +
 	"\x13CreateTopicResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12+\n" +
-	"\x11validation_errors\x18\x04 \x03(\tR\x10validationErrors\"\xc0\x02\n" +
+	"\x11validation_errors\x18\x04 \x03(\tR\x10validationErrors\"\xd6\x01\n" +
 	"\x0eProducerConfig\x12-\n" +
 	"\x12enable_idempotence\x18\x01 \x01(\bR\x11enableIdempotence\x12\x18\n" +
 	"\aretries\x18\x02 \x01(\x05R\aretries\x12(\n" +
-	"\x10retry_backoff_ms\x18\x03 \x01(\x05R\x0eretryBackoffMs\x12,\n" +
-	"\x12request_timeout_ms\x18\x04 \x01(\x05R\x10requestTimeoutMs\x123\n" +
-	"\x16max_in_flight_requests\x18\x05 \x01(\x05R\x13maxInFlightRequests\x12-\n" +
-	"\x12enable_compression\x18\x06 \x01(\bR\x11enableCompression\x12)\n" +
-	"\x10compression_type\x18\a \x01(\tR\x0fcompressionType\"\xc8\x03\n" +
+	"\x10retry_backoff_ms\x18\x03 \x01(\x05R\x0eretryBackoffMs\x12Q\n" +
+	"\x12delivery_semantics\x18\x04 \x01(\x0e2\".messaging_proto.DeliverySemanticsR\x11deliverySemantics\"\xf6\x01\n" +
 	"\x0eConsumerConfig\x12\x1e\n" +
-	"\vmax_wait_ms\x18\x01 \x01(\x05R\tmaxWaitMs\x12-\n" +
-	"\x13read_backoff_min_ms\x18\x02 \x01(\x05R\x10readBackoffMinMs\x12-\n" +
-	"\x13read_backoff_max_ms\x18\x03 \x01(\x05R\x10readBackoffMaxMs\x12,\n" +
-	"\x12commit_interval_ms\x18\x04 \x01(\x05R\x10commitIntervalMs\x122\n" +
-	"\x15heartbeat_interval_ms\x18\x05 \x01(\x05R\x13heartbeatIntervalMs\x12,\n" +
-	"\x12session_timeout_ms\x18\x06 \x01(\x05R\x10sessionTimeoutMs\x120\n" +
-	"\x14rebalance_timeout_ms\x18\a \x01(\x05R\x12rebalanceTimeoutMs\x12!\n" +
-	"\fmax_attempts\x18\b \x01(\x05R\vmaxAttempts\x12'\n" +
-	"\x0fisolation_level\x18\t \x01(\tR\x0eisolationLevel\x12*\n" +
-	"\x11auto_offset_reset\x18\n" +
-	" \x01(\tR\x0fautoOffsetReset*\x82\x01\n" +
+	"\vmax_wait_ms\x18\x01 \x01(\x05R\tmaxWaitMs\x12,\n" +
+	"\x12commit_interval_ms\x18\x02 \x01(\x05R\x10commitIntervalMs\x12H\n" +
+	"\x0fisolation_level\x18\x03 \x01(\x0e2\x1f.messaging_proto.IsolationLevelR\x0eisolationLevel\x12L\n" +
+	"\x11auto_offset_reset\x18\x04 \x01(\x0e2 .messaging_proto.AutoOffsetResetR\x0fautoOffsetReset*f\n" +
+	"\rCleanupPolicy\x12\x1e\n" +
+	"\x1aCLEANUP_POLICY_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15CLEANUP_POLICY_DELETE\x10\x01\x12\x1a\n" +
+	"\x16CLEANUP_POLICY_COMPACT\x10\x02*\x82\x01\n" +
 	"\x11DeliverySemantics\x12\"\n" +
 	"\x1eDELIVERY_SEMANTICS_UNSPECIFIED\x10\x00\x12$\n" +
 	" DELIVERY_SEMANTICS_AT_LEAST_ONCE\x10\x01\x12#\n" +
-	"\x1fDELIVERY_SEMANTICS_EXACTLY_ONCE\x10\x02*_\n" +
-	"\vOffsetReset\x12\x1c\n" +
-	"\x18OFFSET_RESET_UNSPECIFIED\x10\x00\x12\x17\n" +
-	"\x13OFFSET_RESET_LATEST\x10\x01\x12\x19\n" +
-	"\x15OFFSET_RESET_EARLIEST\x10\x02*{\n" +
+	"\x1fDELIVERY_SEMANTICS_EXACTLY_ONCE\x10\x02*{\n" +
 	"\x0eIsolationLevel\x12\x1f\n" +
-	"\x1bISOLATION_LEVEL_UNSPECIFIED\x10\x00\x12$\n" +
-	" ISOLATION_LEVEL_READ_UNCOMMITTED\x10\x01\x12\"\n" +
-	"\x1eISOLATION_LEVEL_READ_COMMITTED\x10\x022\x98\x02\n" +
-	"\x10MessagingService\x12U\n" +
-	"\x0ePublishMessage\x12\x1f.messaging_proto.PublishRequest\x1a .messaging_proto.PublishResponse\"\x00\x12Q\n" +
-	"\tSubscribe\x12!.messaging_proto.SubscribeRequest\x1a\x1d.messaging_proto.KafkaMessage\"\x000\x01\x12Z\n" +
-	"\vCreateTopic\x12#.messaging_proto.CreateTopicRequest\x1a$.messaging_proto.CreateTopicResponse\"\x00B,Z*messaging_service/protos/messaging_serviceb\x06proto3"
+	"\x1bISOLATION_LEVEL_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eISOLATION_LEVEL_READ_COMMITTED\x10\x01\x12$\n" +
+	" ISOLATION_LEVEL_READ_UNCOMMITTED\x10\x02*r\n" +
+	"\x0fAutoOffsetReset\x12!\n" +
+	"\x1dAUTO_OFFSET_RESET_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18AUTO_OFFSET_RESET_LATEST\x10\x01\x12\x1e\n" +
+	"\x1aAUTO_OFFSET_RESET_EARLIEST\x10\x022\x9e\x02\n" +
+	"\x10MessagingService\x12W\n" +
+	"\x10PublishMessageV1\x12\x1f.messaging_proto.PublishRequest\x1a .messaging_proto.PublishResponse\"\x00\x12S\n" +
+	"\vSubscribeV1\x12!.messaging_proto.SubscribeRequest\x1a\x1d.messaging_proto.KafkaMessage\"\x000\x01\x12\\\n" +
+	"\rCreateTopicV1\x12#.messaging_proto.CreateTopicRequest\x1a$.messaging_proto.CreateTopicResponse\"\x00B,Z*messaging_service/protos/messaging_serviceb\x06proto3"
 
 var (
 	file_messaging_service_messaging_service_proto_rawDescOnce sync.Once
@@ -899,45 +918,50 @@ func file_messaging_service_messaging_service_proto_rawDescGZIP() []byte {
 	return file_messaging_service_messaging_service_proto_rawDescData
 }
 
-var file_messaging_service_messaging_service_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_messaging_service_messaging_service_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_messaging_service_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_messaging_service_messaging_service_proto_goTypes = []any{
-	(DeliverySemantics)(0),      // 0: messaging_proto.DeliverySemantics
-	(OffsetReset)(0),            // 1: messaging_proto.OffsetReset
+	(CleanupPolicy)(0),          // 0: messaging_proto.CleanupPolicy
+	(DeliverySemantics)(0),      // 1: messaging_proto.DeliverySemantics
 	(IsolationLevel)(0),         // 2: messaging_proto.IsolationLevel
-	(*PublishRequest)(nil),      // 3: messaging_proto.PublishRequest
-	(*PublishResponse)(nil),     // 4: messaging_proto.PublishResponse
-	(*SubscribeRequest)(nil),    // 5: messaging_proto.SubscribeRequest
-	(*KafkaMessage)(nil),        // 6: messaging_proto.KafkaMessage
-	(*CreateTopicRequest)(nil),  // 7: messaging_proto.CreateTopicRequest
-	(*CreateTopicResponse)(nil), // 8: messaging_proto.CreateTopicResponse
-	(*ProducerConfig)(nil),      // 9: messaging_proto.ProducerConfig
-	(*ConsumerConfig)(nil),      // 10: messaging_proto.ConsumerConfig
-	nil,                         // 11: messaging_proto.PublishRequest.ValueEntry
-	nil,                         // 12: messaging_proto.PublishRequest.HeadersEntry
-	nil,                         // 13: messaging_proto.KafkaMessage.ValueEntry
-	nil,                         // 14: messaging_proto.KafkaMessage.HeadersEntry
-	nil,                         // 15: messaging_proto.CreateTopicRequest.ConfigEntry
+	(AutoOffsetReset)(0),        // 3: messaging_proto.AutoOffsetReset
+	(*PublishRequest)(nil),      // 4: messaging_proto.PublishRequest
+	(*PublishResponse)(nil),     // 5: messaging_proto.PublishResponse
+	(*SubscribeRequest)(nil),    // 6: messaging_proto.SubscribeRequest
+	(*KafkaMessage)(nil),        // 7: messaging_proto.KafkaMessage
+	(*TopicConfig)(nil),         // 8: messaging_proto.TopicConfig
+	(*CreateTopicRequest)(nil),  // 9: messaging_proto.CreateTopicRequest
+	(*CreateTopicResponse)(nil), // 10: messaging_proto.CreateTopicResponse
+	(*ProducerConfig)(nil),      // 11: messaging_proto.ProducerConfig
+	(*ConsumerConfig)(nil),      // 12: messaging_proto.ConsumerConfig
+	nil,                         // 13: messaging_proto.PublishRequest.ValueEntry
+	nil,                         // 14: messaging_proto.PublishRequest.HeadersEntry
+	nil,                         // 15: messaging_proto.KafkaMessage.ValueEntry
+	nil,                         // 16: messaging_proto.KafkaMessage.HeadersEntry
 }
 var file_messaging_service_messaging_service_proto_depIdxs = []int32{
-	11, // 0: messaging_proto.PublishRequest.value:type_name -> messaging_proto.PublishRequest.ValueEntry
-	9,  // 1: messaging_proto.PublishRequest.producer_config:type_name -> messaging_proto.ProducerConfig
-	12, // 2: messaging_proto.PublishRequest.headers:type_name -> messaging_proto.PublishRequest.HeadersEntry
-	10, // 3: messaging_proto.SubscribeRequest.consumer_config:type_name -> messaging_proto.ConsumerConfig
-	13, // 4: messaging_proto.KafkaMessage.value:type_name -> messaging_proto.KafkaMessage.ValueEntry
-	14, // 5: messaging_proto.KafkaMessage.headers:type_name -> messaging_proto.KafkaMessage.HeadersEntry
-	15, // 6: messaging_proto.CreateTopicRequest.config:type_name -> messaging_proto.CreateTopicRequest.ConfigEntry
-	3,  // 7: messaging_proto.MessagingService.PublishMessage:input_type -> messaging_proto.PublishRequest
-	5,  // 8: messaging_proto.MessagingService.Subscribe:input_type -> messaging_proto.SubscribeRequest
-	7,  // 9: messaging_proto.MessagingService.CreateTopic:input_type -> messaging_proto.CreateTopicRequest
-	4,  // 10: messaging_proto.MessagingService.PublishMessage:output_type -> messaging_proto.PublishResponse
-	6,  // 11: messaging_proto.MessagingService.Subscribe:output_type -> messaging_proto.KafkaMessage
-	8,  // 12: messaging_proto.MessagingService.CreateTopic:output_type -> messaging_proto.CreateTopicResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	13, // 0: messaging_proto.PublishRequest.value:type_name -> messaging_proto.PublishRequest.ValueEntry
+	11, // 1: messaging_proto.PublishRequest.producer_config:type_name -> messaging_proto.ProducerConfig
+	14, // 2: messaging_proto.PublishRequest.headers:type_name -> messaging_proto.PublishRequest.HeadersEntry
+	12, // 3: messaging_proto.SubscribeRequest.consumer_config:type_name -> messaging_proto.ConsumerConfig
+	15, // 4: messaging_proto.KafkaMessage.value:type_name -> messaging_proto.KafkaMessage.ValueEntry
+	16, // 5: messaging_proto.KafkaMessage.headers:type_name -> messaging_proto.KafkaMessage.HeadersEntry
+	0,  // 6: messaging_proto.TopicConfig.cleanup_policy:type_name -> messaging_proto.CleanupPolicy
+	8,  // 7: messaging_proto.CreateTopicRequest.config:type_name -> messaging_proto.TopicConfig
+	1,  // 8: messaging_proto.ProducerConfig.delivery_semantics:type_name -> messaging_proto.DeliverySemantics
+	2,  // 9: messaging_proto.ConsumerConfig.isolation_level:type_name -> messaging_proto.IsolationLevel
+	3,  // 10: messaging_proto.ConsumerConfig.auto_offset_reset:type_name -> messaging_proto.AutoOffsetReset
+	4,  // 11: messaging_proto.MessagingService.PublishMessageV1:input_type -> messaging_proto.PublishRequest
+	6,  // 12: messaging_proto.MessagingService.SubscribeV1:input_type -> messaging_proto.SubscribeRequest
+	9,  // 13: messaging_proto.MessagingService.CreateTopicV1:input_type -> messaging_proto.CreateTopicRequest
+	5,  // 14: messaging_proto.MessagingService.PublishMessageV1:output_type -> messaging_proto.PublishResponse
+	7,  // 15: messaging_proto.MessagingService.SubscribeV1:output_type -> messaging_proto.KafkaMessage
+	10, // 16: messaging_proto.MessagingService.CreateTopicV1:output_type -> messaging_proto.CreateTopicResponse
+	14, // [14:17] is the sub-list for method output_type
+	11, // [11:14] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_messaging_service_messaging_service_proto_init() }
@@ -950,7 +974,7 @@ func file_messaging_service_messaging_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_messaging_service_messaging_service_proto_rawDesc), len(file_messaging_service_messaging_service_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      4,
 			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,

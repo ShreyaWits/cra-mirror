@@ -15,7 +15,7 @@ import (
 
 type MessagingService interface {
 	PublishMessage(ctx context.Context, cfg kafkapkg.KafkaConfig, req *pb.PublishRequest) (*pb.PublishResponse, error)
-	ConsumeMessage(stream pb.MessagingService_SubscribeServer, cfg kafkapkg.KafkaConfig)
+	ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, cfg kafkapkg.KafkaConfig)
 	CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg kafkapkg.KafkaConfig) (*pb.CreateTopicResponse, error)
 }
 
@@ -84,7 +84,7 @@ func (s *MessagingServiceImpl) PublishMessage(ctx context.Context, cfg kafkapkg.
 	}, nil
 }
 
-func (s *MessagingServiceImpl) ConsumeMessage(stream pb.MessagingService_SubscribeServer, cfg kafkapkg.KafkaConfig) {
+func (s *MessagingServiceImpl) ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, cfg kafkapkg.KafkaConfig) {
 	// Create a buffered channel for messages
 	msgChan := make(chan *pb.KafkaMessage, 1000)
 
@@ -143,22 +143,32 @@ func (s *MessagingServiceImpl) CreateTopic(ctx context.Context, req *pb.CreateTo
 		req.ReplicationFactor = 1
 	}
 
-	// Enforce strict retention settings
+	// Initialize config if nil
 	if req.Config == nil {
-		req.Config = make(map[string]string)
+		req.Config = &pb.TopicConfig{}
 	}
 
-	// Set retention settings
-	req.Config["retention.ms"] = "3000"
-	req.Config["cleanup.policy"] = "delete"
-	req.Config["delete.retention.ms"] = "1000"
-	req.Config["segment.ms"] = "1000"
-	req.Config["log.retention.check.interval.ms"] = "1000"
-	req.Config["log.cleanup.interval.mins"] = "1"
-	req.Config["log.segment.delete.delay.ms"] = "1000"
+	// Set default retention settings if not provided
+	if req.Config.RetentionMs == 0 {
+		req.Config.RetentionMs = 3000
+	}
+	if req.Config.CleanupPolicy == pb.CleanupPolicy_CLEANUP_POLICY_UNSPECIFIED {
+		req.Config.CleanupPolicy = pb.CleanupPolicy_CLEANUP_POLICY_DELETE
+	}
+
+	// Convert TopicConfig to map for Kafka admin
+	kafkaConfig := map[string]string{
+		"retention.ms":                    fmt.Sprintf("%d", req.Config.RetentionMs),
+		"cleanup.policy":                  getCleanupPolicyString(req.Config.CleanupPolicy),
+		"delete.retention.ms":             "1000",
+		"segment.ms":                      "1000",
+		"log.retention.check.interval.ms": "1000",
+		"log.cleanup.interval.mins":       "1",
+		"log.segment.delete.delay.ms":     "1000",
+	}
 
 	// Create topic
-	err := s.admin.CreateTopic(ctx, req.Topic, int(req.NumPartitions), int(req.ReplicationFactor), req.Config)
+	err := s.admin.CreateTopic(ctx, req.Topic, int(req.NumPartitions), int(req.ReplicationFactor), kafkaConfig)
 	if err != nil {
 		logger.LogErrorEvent("kafka", "create_topic_failed", req.Topic, "error", err.Error())
 		return &pb.CreateTopicResponse{
@@ -171,4 +181,16 @@ func (s *MessagingServiceImpl) CreateTopic(ctx context.Context, req *pb.CreateTo
 		Status:  "success",
 		Message: fmt.Sprintf("Topic %s created successfully", req.Topic),
 	}, nil
+}
+
+// Helper function to convert CleanupPolicy enum to string
+func getCleanupPolicyString(policy pb.CleanupPolicy) string {
+	switch policy {
+	case pb.CleanupPolicy_CLEANUP_POLICY_DELETE:
+		return "delete"
+	case pb.CleanupPolicy_CLEANUP_POLICY_COMPACT:
+		return "compact"
+	default:
+		return "delete"
+	}
 }
