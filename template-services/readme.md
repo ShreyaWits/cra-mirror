@@ -11,6 +11,8 @@ A microservice template built with Go, featuring both HTTP and gRPC endpoints, u
 - Dependency Injection pattern
 - Clean Architecture structure
 - Environment-based configuration
+- Request validation middleware
+- Error handling with custom error codes
 
 ## Prerequisites
 
@@ -31,9 +33,11 @@ template-services/
 │   ├── di/
 │   ├── pkg/
 │   │   ├── cache/
-│   │   └── db/
+│   │   ├── db/
+│   │   └── errors/
 │   └── template/
 │       ├── handler/
+│       ├── middleware/
 │       ├── repository/
 │       ├── routes/
 │       └── service/
@@ -83,14 +87,73 @@ GRPC_PORT=50051
 ## API Endpoints
 
 ### HTTP Endpoints
-- `GET /api/v1/templates` - List all templates
-- `GET /api/v1/templates/:id` - Get template by ID
-- `POST /api/v1/templates` - Create new template
-- `PUT /api/v1/templates/:id` - Update template
-- `DELETE /api/v1/templates/:id` - Delete template
+
+#### Create Template
+```http
+POST /v1/templates
+Content-Type: application/json
+
+{
+    "name": "welcome_email",
+    "channel": "email",
+    "language": "en",
+    "content": "Hello {{name}}!",
+    "is_active": true
+}
+```
+
+#### Get Template
+```http
+GET /v1/templates?name=welcome_email&channel=email&language=en
+```
+
+#### Update Template
+```http
+PUT /v1/templates/:id
+Content-Type: application/json
+
+{
+    "is_active": false
+}
+```
+
+#### Delete Template
+```http
+DELETE /v1/templates/:id
+```
 
 ### gRPC Endpoints
-The service exposes gRPC endpoints on port 50051. See the proto definitions in the `proto/` directory for available methods.
+
+#### Get Template V1
+```protobuf
+rpc GetTemplateV1(GetTemplateRequest) returns (TemplateResponse)
+
+message GetTemplateRequest {
+  string name = 1;
+  string channel = 2;
+  string language = 3;
+}
+```
+
+### Error Codes
+
+The service uses custom error codes for different scenarios:
+
+- TMP001: Invalid request body
+- TMP002: Invalid UUID
+- TMP003: Template creation failed
+- TMP004: Template fetch failed
+- TMP005: Template update failed
+- TMP006: Template not found
+- TMP007: Template deletion failed
+- TMP008: Template ID not found
+- TMP009: Missing name
+- TMP0010: Missing channel
+- TMP0011: Missing language
+- TMP0012: Missing content
+- TMP0013: Missing is_active status
+- TMP0014: Missing template ID
+- TMP0015: Template name already exists
 
 ## Development
 
@@ -113,6 +176,8 @@ go test ./...
   - HTTP and gRPC endpoints
   - YugabyteDB integration
   - Redis caching
+  - Request validation
+  - Custom error handling
 
 ## Contributing
 
