@@ -1,0 +1,71 @@
+// api/thirdparty.proto
+
+syntax = "proto3";
+
+option go_package = "github.com/kkwitslab/go-boilerplate/internal/pb";
+
+package pb;
+
+// Aadhaar Verification
+service ThirdPartyService {
+  rpc VerifyAadhaar(VerifyAadhaarRequest) returns (VerifyAadhaarResponse);
+  rpc VerifyPAN(VerifyPANRequest) returns (VerifyPANResponse);
+  rpc InvokeTwilioSms(SendSMSRequest) returns (SendSMSResponse);
+  rpc InvokeSendgridEmail(SendEmailRequest) returns (SendEmailResponse);
+  rpc InitiatePayment(PaymentRequest) returns (PaymentResponse);
+}
+
+message VerifyAadhaarRequest {
+  string aadhaar_number = 1; // Aadhaar number to verify
+}
+
+message VerifyAadhaarResponse {
+  bool verified = 1;
+  string name = 2;
+  string dob = 3;
+}
+
+message VerifyPANRequest {
+  string pan_number = 1;
+}
+
+message VerifyPANResponse {
+  bool valid = 1;
+  string name = 2;
+}
+
+message SendSMSRequest {
+  string phone = 1;
+  string message = 2;
+}
+
+message SendSMSResponse {
+  string status = 1;
+}
+
+enum EmailContentType {
+  EMAIL_CONTENT_TYPE_UNSPECIFIED = 0;
+  TEXT = 1;
+  HTML = 2;
+}
+
+message SendEmailRequest {
+  string to = 1;
+  string subject = 2;
+  string body = 3;
+  EmailContentType type = 4;
+}
+
+message SendEmailResponse {
+  string status = 1;
+}
+
+message PaymentRequest {
+  double amount = 1;
+  string user_id = 2;
+}
+
+message PaymentResponse {
+  string transaction_id = 1;
+  string status = 2;
+}
