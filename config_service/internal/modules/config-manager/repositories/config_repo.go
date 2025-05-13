@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -13,7 +14,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
-	"strconv"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -46,22 +46,28 @@ func (r *ConfigRepository) StoreConfig(serviceName, environment string, configDa
 	log.Printf("Storing config with base key: %s", baseKey)
 	changeHistory := []string{}
 	// Store config data fields
-	for key, value := range configData {
-		configKey := fmt.Sprintf("%s/%s", baseKey, key)
-		valueStr := fmt.Sprintf("%v", value)
-		log.Printf("Storing key: %s, value: %s", configKey, valueStr)
-		existingVal, err := r.GetConfigValue(serviceName, environment, key)
-		if err != nil {
-			changeHistory = append(changeHistory, fmt.Sprintf("added: %s", key))
-		} else if existingVal != valueStr {
-			changeHistory = append(changeHistory, fmt.Sprintf("updated: %s", key))
-		}
-		err = r.EtcdClient.PutKey(configKey, valueStr)
-		if err != nil {
-			log.Printf("Error storing key %s: %v", configKey, err)
-			return nil, fmt.Errorf("failed to store config field %s: %v", key, err)
-		}
+	b, err := json.Marshal(configData)
+	if err != nil {
+		fmt.Errorf("failed to marshal config body: %v", err)
 	}
+
+	if err := r.EtcdClient.PutKey(baseKey, string(b)); err != nil {
+		log.Printf("Error storing key %s: %v", baseKey, err)
+		return nil, fmt.Errorf("failed to store config field %s: %v", baseKey, err)
+	}
+
+	// for key, value := range configData {
+	// 	configKey := fmt.Sprintf("%s/%s", baseKey, key)
+	// 	valueStr := fmt.Sprintf("%v", value)
+	// 	log.Printf("Storing key: %s, value: %s", configKey, valueStr)
+	// 	existingVal, err := r.GetConfigValue(serviceName, environment, key)
+	// 	if err != nil {
+	// 		changeHistory = append(changeHistory, fmt.Sprintf("added: %s", key))
+	// 	} else if existingVal != valueStr {
+	// 		changeHistory = append(changeHistory, fmt.Sprintf("updated: %s", key))
+	// 	}
+	// }
+
 	log.Println("Config data stored successfully. Change history: ", changeHistory)
 	// Store metadata, code is commented out for now, will use it later when we have to store metadata
 	// now := time.Now()
@@ -93,7 +99,7 @@ func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[strin
 	log.Printf("Getting all config for base key: %s", baseKey)
 
 	// Get all keys under the base key
-	keys, err := r.EtcdClient.GetAllKeys(baseKey)
+	key, err := r.EtcdClient.GetKey(baseKey)
 	if err != nil {
 		log.Printf("Error getting all keys: %v", err)
 		return nil, fmt.Errorf("failed to get config keys: %v", err)
@@ -107,11 +113,15 @@ func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[strin
 	}
 	result := map[string]interface{}{}
 
-	// Process each key-value pair
-	for key, value := range keys {
-		// Skip metadata fields
-		result[key] = value
-		log.Printf("Retrieved key: %s, value: %v", key, value)
+	// // Process each key-value pair
+	// for key, value := range keys {
+	// 	// Skip metadata fields
+	// 	result[key] = value
+	// 	log.Printf("Retrieved key: %s, value: %v", key, value)
+	// }
+
+	if err := json.Unmarshal([]byte(key), &result); err != nil {
+		return nil, fmt.Errorf("failed to get config keys: %v", err)
 	}
 
 	log.Printf("Successfully retrieved all config for %s", baseKey)
@@ -124,30 +134,38 @@ func (r *ConfigRepository) GetConfigValue(serviceName, environment, key string) 
 	// defer app.Client.Close()
 
 	// Construct the full key
-	fullKey := fmt.Sprintf("%s/%s/%s", environment, serviceName, key)
-	log.Printf("Getting config value for key: %s", fullKey)
+	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
+	log.Printf("Getting config value for key: %s", key)
 
 	// Get the value
-	value, err := r.EtcdClient.GetKey(fullKey)
+	baseValue, err := r.EtcdClient.GetKey(baseKey)
 	if err != nil {
-		log.Printf("Error getting key %s: %v", fullKey, err)
+		log.Printf("Error getting key %s: %v", baseKey, err)
 		return nil, fmt.Errorf("failed to get config value: %v", err)
 	}
 
 	// Try to convert the value to appropriate type
-	var result interface{}
-	if value == "true" || value == "false" {
-		result = value == "true"
-	} else if intValue, err := strconv.Atoi(value); err == nil {
-		result = intValue
-	} else if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
-		result = floatValue
-	} else {
-		result = value
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(baseValue), &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal baseKey data: %v", err)
 	}
 
-	log.Printf("Successfully retrieved value for key %s: %v", fullKey, result)
-	return result, nil
+	// if value == "true" || value == "false" {
+	// 	result = value == "true"
+	// } else if intValue, err := strconv.Atoi(value); err == nil {
+	// 	result = intValue
+	// } else if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
+	// 	result = floatValue
+	// } else {
+	// 	result = value
+	// }
+	value, ok := result[key]
+	if !ok {
+		return nil, fmt.Errorf("failed to get key %v from stored config", key)
+	}
+
+	log.Printf("Successfully retrieved value for key %s: %v", key, value)
+	return value, nil
 }
 
 // Test function to demonstrate usage
