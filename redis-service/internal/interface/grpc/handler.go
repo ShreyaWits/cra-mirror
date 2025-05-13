@@ -40,8 +40,8 @@ func NewGRPCHandler() *GRPCServer {
 	logger := app.Di.Logger
 
 	redisClient := redis.NewRedisService(config.REDIS_URL, config.REDIS_PASSWORD, redisDb)
-	redisRepo := repository.NewRedisRepository(redisClient,logger)
-	redisService := service.NewRedisService(redisRepo,logger)
+	redisRepo := repository.NewRedisRepository(redisClient, logger)
+	redisService := service.NewRedisService(redisRepo, logger)
 	return &GRPCServer{service: redisService, tracer: tracer, logger: logger}
 }
 
@@ -164,6 +164,7 @@ func (grpc *GRPCServer) SetCache(ctx context.Context, req *proto.SetCacheRequest
 
 	// Set cache value
 	success, err := grpc.service.SetCache(payload)
+
 	if err != nil || !success {
 		if span != nil {
 			span.RecordError(err)
