@@ -135,7 +135,7 @@ func TestGRPCServer_SetCache(t *testing.T) {
 	resp, err = server.SetCache(ctx, validReq)
 	assert.NoError(t, err)
 	assert.False(t, resp.Success)
-	assert.Equal(t, message.RD0002, resp.Message)
+	assert.Equal(t, message.RD0003, resp.Message)
 }
 
 func TestGRPCServer_InvalidateCache(t *testing.T) {

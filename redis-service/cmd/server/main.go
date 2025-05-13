@@ -36,18 +36,19 @@ func main() {
 
 	// init container
 	app_module.InitContainer()
+	logger := app_module.Di.Logger
 
 	// Create Fiber app with tracing middleware
 	app := fiber.New()
 	app.Use(http.TraceMiddleware())
 
 	// create a new grpc server instance
-	app_module.Di.Logger.Info("Creating gRPC server instance...")
+	logger.DebugContext(context.Background(), "Creating gRPC server instance...")
 
 	// create a new grpc server instance with tracing interceptor
 	lis, err := net.Listen("tcp", config.GRPC_PORT)
 	if err != nil {
-		app_module.Di.Logger.Error("Failed to listen", "error", err)
+		logger.ErrorContext(context.Background(), "Failed to listen", "error", err)
 		os.Exit(1)
 	}
 
@@ -57,12 +58,12 @@ func main() {
 
 	grpcServer, err := server.NewGRPCServer(s, lis)
 	if err != nil {
-		app_module.Di.Logger.Error("gRPC server failed to listen", "error", err)
+		logger.ErrorContext(context.Background(), "gRPC server failed to listen:", err)
 		os.Exit(1)
 	}
 
 	grpcHandler := handler.NewGRPCHandler()
-	app_module.Di.Logger.Info("Registering gRPC services...")
+	logger.InfoContext(context.Background(), "Registering gRPC services...")
 	proto.RegisterCacheServiceServer(grpcServer.GetServer(), grpcHandler)
 
 	app.Get("/health", http.HealthCheck)
@@ -75,13 +76,13 @@ func main() {
 	go func() {
 		err := app.Listen(config.PORT)
 		if err != nil {
-			app_module.Di.Logger.Error("Failed to start HTTP server", "error", err)
-			os.Exit(1)
+			logger.ErrorContext(context.Background(), "Failed to start HTTP server", "error", err)
+			panic(err)
 		}
-		app_module.Di.Logger.Info("Starting HTTP server", "port", config.PORT)
+		logger.InfoContext(context.Background(), "HTTP server started", "port", config.PORT)
 	}()
 
 	<-stop
-	app_module.Di.Logger.Info("Stopping gRPC server...")
+	logger.InfoContext(context.Background(), "Shutting down...")
 	grpcServer.Stop()
 }

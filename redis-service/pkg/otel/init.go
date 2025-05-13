@@ -3,6 +3,8 @@ package opentelemetry
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"redis-service/pkg/config"
 	"time"
 
@@ -190,6 +192,24 @@ func newResource() (*resource.Resource, error) {
 		))
 }
 
+type stdoutExporter struct{}
+
+func (e *stdoutExporter) Export(ctx context.Context, records []log.Record) error {
+	for _, rec := range records {
+		fmt.Fprintf(os.Stdout, "[%s] %s: %s\n", rec.Timestamp(), rec.SeverityText(), rec.Body().AsString())
+	}
+	return nil
+}
+
+func (e *stdoutExporter) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+func (e *stdoutExporter) ForceFlush(ctx context.Context) error {
+	// You can add any necessary logic here to force flush the exporter
+	return nil
+}
+
 func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 	logExporter, err := otlploggrpc.New(
 		context.Background(),
@@ -202,8 +222,12 @@ func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 		return nil, err
 	}
 
+	// Custom stdout exporter
+	stdout := &stdoutExporter{}
+
 	loggerProvider := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+		log.WithProcessor(log.NewBatchProcessor(stdout)),
 		log.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(config.SERVICE_NAME),
