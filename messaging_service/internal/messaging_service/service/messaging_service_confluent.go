@@ -125,7 +125,7 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 	} else if !topicExists {
 		return errors.NewCustomError(
 			errors.PUBErrTopicNotExists,
-			fmt.Errorf("Topic does not exist: %s", req.Topic),
+			fmt.Errorf("topic %s does not exist", req.Topic),
 		)
 	}
 
@@ -140,7 +140,7 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 			// Only return an error if active listeners are required by configuration
 			return errors.NewCustomError(
 				errors.PUBErrTopicNotExists,
-				fmt.Errorf("No active consumers found for topic: %s", req.Topic),
+				fmt.Errorf("no active consumers found for topic: %s", req.Topic),
 			)
 		} else if !hasConsumers {
 			// Just log a warning if active listeners aren't required
@@ -250,7 +250,7 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 			abortErr := producer.AbortTransaction(ctx)
 			if abortErr != nil {
 				logger.LogErrorEvent("", "transaction_abort_failed", confluentConfig.Topic, "error",
-					fmt.Sprintf("Failed to abort transaction: %v", abortErr))
+					fmt.Sprintf("failed to abort transaction: %v", abortErr))
 			}
 		}
 
@@ -259,7 +259,7 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 
 		return errors.NewCustomError(
 			errors.PUBErrPublishFailed,
-			fmt.Errorf("Failed to publish message: %v", err),
+			err,
 		)
 	}
 
@@ -282,7 +282,7 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 		if err != nil {
 			return errors.NewCustomError(
 				errors.KAFErrConnectionFailed,
-				fmt.Errorf("Failed to commit transaction: %v", err),
+				err,
 			)
 		}
 
@@ -321,7 +321,7 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 		// Unknown config type
 		return errors.NewCustomError(
 			errors.SUBErrInvalidConfig,
-			fmt.Errorf("Unsupported config type"),
+			fmt.Errorf("unsupported config type"),
 		)
 	}
 
@@ -329,14 +329,14 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 	if confluentConfig.Topic == "" {
 		return errors.NewCustomError(
 			errors.MSGErrInvalidTopic,
-			fmt.Errorf("Topic is required"),
+			fmt.Errorf("topic is required"),
 		)
 	}
 
 	if groupID == "" {
 		return errors.NewCustomError(
 			errors.SUBErrInvalidConfig,
-			fmt.Errorf("Consumer group ID is required"),
+			fmt.Errorf("consumer group ID is required"),
 		)
 	}
 
@@ -347,7 +347,7 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 			fmt.Sprintf("Failed to check if topic exists: %v", err))
 		return errors.NewCustomError(
 			errors.SUBErrTopicNotExists,
-			fmt.Errorf("Failed to check if topic exists: %v", err),
+			err,
 		)
 	}
 
@@ -356,7 +356,7 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 			fmt.Sprintf("Topic %s does not exist", confluentConfig.Topic))
 		return errors.NewCustomError(
 			errors.SUBErrTopicNotExists,
-			fmt.Errorf("Topic does not exist: %s", confluentConfig.Topic),
+			fmt.Errorf(confluentConfig.Topic),
 		)
 	}
 

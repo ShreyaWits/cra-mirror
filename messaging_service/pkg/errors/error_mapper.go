@@ -18,7 +18,7 @@ func NewGRPCError(customErr *CustomError) error {
 	appMessage := GetAppErrorMessage(customErr.ErrorCode)
 	fullMessage := customErr.Error()
 	if appMessage != "" {
-		fullMessage = fmt.Sprintf("%s: %s", appMessage, customErr.Error())
+		fullMessage = fmt.Sprintf("%s: %s: %s", customErr.ErrorCode, appMessage, customErr.Err.Error())
 	}
 
 	// Get the appropriate gRPC code for this error
