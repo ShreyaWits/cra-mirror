@@ -9,8 +9,8 @@ import (
 	appconfig "messaging_service/internal/config"
 	"messaging_service/internal/messaging_service/service"
 	"messaging_service/internal/validation"
+	"messaging_service/pkg/confluent"
 	"messaging_service/pkg/errors"
-	"messaging_service/pkg/kafka"
 	"messaging_service/pkg/logger"
 )
 
@@ -22,7 +22,7 @@ type MessagingHandler struct {
 	pb.UnimplementedMessagingServiceServer
 	config           *appconfig.Config
 	messagingService service.MessagingService
-	kafkaConfig      *kafka.Configurator
+	kafkaConfig      *confluent.Configurator
 }
 
 // NewMessagingHandler creates a new instance of MessagingHandler
@@ -30,7 +30,7 @@ func NewMessagingHandler(config *appconfig.Config, messagingService service.Mess
 	return &MessagingHandler{
 		config:           config,
 		messagingService: messagingService,
-		kafkaConfig:      kafka.NewConfigurator(config.KafkaBrokers, config),
+		kafkaConfig:      confluent.NewConfigurator(config.KafkaBrokers, config),
 	}
 }
 
@@ -49,7 +49,7 @@ func (s *MessagingHandler) PublishMessageV1(ctx context.Context, req *pb.Publish
 		return nil, errors.NewGRPCError(customErr)
 	}
 
-	// Create Kafka configuration with exactly-once semantics
+	// Create Confluent Kafka configuration with exactly-once semantics
 	cfg := s.kafkaConfig.CreatePublishConfig(req.Topic, req)
 
 	// Log the publish request
@@ -84,7 +84,7 @@ func (s *MessagingHandler) SubscribeV1(req *pb.SubscribeRequest, stream pb.Messa
 		return errors.NewGRPCError(customErr)
 	}
 
-	// Create Kafka configuration with read committed and latest offset
+	// Create Confluent Kafka configuration with read committed and latest offset
 	cfg := s.kafkaConfig.CreateSubscribeConfig(req.Topic, req.GroupId, req)
 
 	// Log the subscribe request
@@ -120,7 +120,7 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 		return nil, errors.NewGRPCError(customErr)
 	}
 
-	// Create Kafka configuration with default values
+	// Create Confluent Kafka configuration with default values
 	cfg := s.kafkaConfig.CreateTopicConfig(req.Topic, req)
 
 	// Log the create topic request using configured values
@@ -131,6 +131,19 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 	// Create topic
 	customErr := s.messagingService.CreateTopic(ctx, req, cfg)
 	if customErr != nil {
+		// Check if this is a "topic already exists" error, which is not actually an error
+		if customErr.ErrorCode == errors.TOPErrTopicExists {
+			logger.LogEvent(requestID, "kafka_topic_exists", req.Topic, "info",
+				fmt.Sprintf("Topic %s already exists", req.Topic))
+
+			// Return success response with a message indicating the topic already exists
+			return &pb.CreateTopicResponse{
+				Status:  "success",
+				Message: fmt.Sprintf("Topic %s already exists", req.Topic),
+			}, nil
+		}
+
+		// For any other error, handle as before
 		logger.LogEvent(requestID, "kafka_create_topic_failed", req.Topic, "error",
 			fmt.Sprintf("Failed to create topic: %v", customErr))
 		return nil, errors.NewGRPCError(customErr)

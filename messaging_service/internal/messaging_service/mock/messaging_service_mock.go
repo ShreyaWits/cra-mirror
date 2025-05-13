@@ -8,7 +8,6 @@ import (
 	context "context"
 	messaging_service "cra-protos/messaging_service"
 	errors "messaging_service/pkg/errors"
-	kafka "messaging_service/pkg/kafka"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -38,7 +37,7 @@ func (m *MockMessagingService) EXPECT() *MockMessagingServiceMockRecorder {
 }
 
 // ConsumeMessage mocks base method.
-func (m *MockMessagingService) ConsumeMessage(stream messaging_service.MessagingService_SubscribeV1Server, cfg kafka.KafkaConfig) *errors.CustomError {
+func (m *MockMessagingService) ConsumeMessage(stream messaging_service.MessagingService_SubscribeV1Server, cfg interface{}) *errors.CustomError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConsumeMessage", stream, cfg)
 	ret0, _ := ret[0].(*errors.CustomError)
@@ -52,7 +51,7 @@ func (mr *MockMessagingServiceMockRecorder) ConsumeMessage(stream, cfg interface
 }
 
 // CreateTopic mocks base method.
-func (m *MockMessagingService) CreateTopic(ctx context.Context, req *messaging_service.CreateTopicRequest, cfg kafka.KafkaConfig) *errors.CustomError {
+func (m *MockMessagingService) CreateTopic(ctx context.Context, req *messaging_service.CreateTopicRequest, cfg interface{}) *errors.CustomError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateTopic", ctx, req, cfg)
 	ret0, _ := ret[0].(*errors.CustomError)
@@ -66,7 +65,7 @@ func (mr *MockMessagingServiceMockRecorder) CreateTopic(ctx, req, cfg interface{
 }
 
 // PublishMessage mocks base method.
-func (m *MockMessagingService) PublishMessage(ctx context.Context, cfg kafka.KafkaConfig, req *messaging_service.PublishRequest) *errors.CustomError {
+func (m *MockMessagingService) PublishMessage(ctx context.Context, cfg interface{}, req *messaging_service.PublishRequest) *errors.CustomError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PublishMessage", ctx, cfg, req)
 	ret0, _ := ret[0].(*errors.CustomError)

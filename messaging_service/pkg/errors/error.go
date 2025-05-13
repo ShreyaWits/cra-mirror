@@ -17,7 +17,6 @@ func (e *CustomError) ErrObj() error {
 	return e.Err
 }
 
-// NewEncryptionError creates a new EncryptionError
 func NewCustomError(message string, err error) *CustomError {
 	return &CustomError{
 		ErrorCode: message,

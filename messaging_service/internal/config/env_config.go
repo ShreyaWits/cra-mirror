@@ -23,14 +23,15 @@ type Config struct {
 	KafkaReplicationFactor int
 
 	// Kafka producer configuration
-	KafkaBatchSize        int
-	KafkaBatchBytes       int64
-	KafkaBatchTimeoutMs   int
-	KafkaCompressionCodec string
-	KafkaMaxAttempts      int
-	KafkaRetryBackoffMs   int
-	KafkaReadTimeoutMs    int
-	KafkaWriteTimeoutMs   int
+	KafkaBatchSize             int
+	KafkaBatchBytes            int64
+	KafkaBatchTimeoutMs        int
+	KafkaCompressionCodec      string
+	KafkaMaxAttempts           int
+	KafkaRetryBackoffMs        int
+	KafkaReadTimeoutMs         int
+	KafkaWriteTimeoutMs        int
+	KafkaRequireActiveListener bool
 
 	// Kafka topic settings
 	KafkaRetentionMs int
@@ -64,14 +65,15 @@ func LoadConfig() (*Config, error) {
 		KafkaReplicationFactor: getEnvInt("KAFKA_REPLICATION_FACTOR", 3),
 
 		// Kafka producer configuration
-		KafkaBatchSize:        getEnvInt("KAFKA_BATCH_SIZE", 100),
-		KafkaBatchBytes:       getEnvInt64("KAFKA_BATCH_BYTES", 1048576),
-		KafkaBatchTimeoutMs:   getEnvInt("KAFKA_BATCH_TIMEOUT_MS", 500),
-		KafkaCompressionCodec: getEnvString("KAFKA_COMPRESSION_CODEC", "snappy"),
-		KafkaMaxAttempts:      getEnvInt("KAFKA_MAX_ATTEMPTS", 3),
-		KafkaRetryBackoffMs:   getEnvInt("KAFKA_RETRY_BACKOFF_MS", 100),
-		KafkaReadTimeoutMs:    getEnvInt("KAFKA_READ_TIMEOUT_MS", 5000),
-		KafkaWriteTimeoutMs:   getEnvInt("KAFKA_WRITE_TIMEOUT_MS", 5000),
+		KafkaBatchSize:             getEnvInt("KAFKA_BATCH_SIZE", 100),
+		KafkaBatchBytes:            getEnvInt64("KAFKA_BATCH_BYTES", 1048576),
+		KafkaBatchTimeoutMs:        getEnvInt("KAFKA_BATCH_TIMEOUT_MS", 500),
+		KafkaCompressionCodec:      getEnvString("KAFKA_COMPRESSION_CODEC", "snappy"),
+		KafkaMaxAttempts:           getEnvInt("KAFKA_MAX_ATTEMPTS", 3),
+		KafkaRetryBackoffMs:        getEnvInt("KAFKA_RETRY_BACKOFF_MS", 100),
+		KafkaReadTimeoutMs:         getEnvInt("KAFKA_READ_TIMEOUT_MS", 5000),
+		KafkaWriteTimeoutMs:        getEnvInt("KAFKA_WRITE_TIMEOUT_MS", 5000),
+		KafkaRequireActiveListener: getEnvBool("KAFKA_REQUIRE_ACTIVE_LISTENER", true),
 
 		// Kafka topic settings
 		KafkaRetentionMs: getEnvInt("KAFKA_RETENTION_MS", 3000),

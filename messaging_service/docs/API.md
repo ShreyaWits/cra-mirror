@@ -1,14 +1,14 @@
 # Kafka Messaging Service API Documentation
 
 ## Overview
-This service provides a high-performance Kafka messaging implementation with support for topic creation, message publishing, and message subscription. The service uses the segmentio/kafka-go client library.
+This service provides a high-performance Kafka messaging implementation with support for topic creation, message publishing, and message subscription. The service uses the confluent-kafka-go client library, which provides exactly-once message delivery semantics.
 
 ## Configuration Types
 
 The service uses three types of configurations:
 
 1. **Kafka-native configurations**: Direct Kafka broker settings
-2. **Client-library configurations**: segmentio/kafka-go specific settings
+2. **Client-library configurations**: confluent-kafka-go specific settings
 3. **Service-level configurations**: Our abstraction layer settings
 
 ## API Endpoints

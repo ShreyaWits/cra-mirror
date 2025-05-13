@@ -265,7 +265,6 @@ Logs are available in JSON format with the following levels:
 
 ### Encryption
 - SSL/TLS
-- Message encryption
 - Secure communication
 
 ## Troubleshooting

@@ -1,4 +1,4 @@
-package kafka
+package confluent
 
 import (
 	pb "cra-protos/messaging_service"
@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-// Configurator handles all Kafka-specific configuration logic
+// Configurator handles all Kafka-specific configuration logic for Confluent
 type Configurator struct {
 	brokers []string
 	config  *config.Config
 }
 
-// NewConfigurator creates a new Kafka Configurator
+// NewConfigurator creates a new Confluent Kafka Configurator
 func NewConfigurator(brokers []string, config *config.Config) *Configurator {
 	return &Configurator{
 		brokers: brokers,
@@ -20,7 +20,7 @@ func NewConfigurator(brokers []string, config *config.Config) *Configurator {
 	}
 }
 
-// CreatePublishConfig creates Kafka configuration for publishing messages
+// CreatePublishConfig creates Confluent Kafka configuration for publishing messages
 func (k *Configurator) CreatePublishConfig(topic string, req *pb.PublishRequest) KafkaConfig {
 	cfg := NewDefaultKafkaConfig(k.brokers, topic)
 
@@ -38,7 +38,7 @@ func (k *Configurator) CreatePublishConfig(topic string, req *pb.PublishRequest)
 		cfg.BatchTimeout = time.Duration(k.config.KafkaBatchTimeoutMs) * time.Millisecond
 		cfg.ReadTimeout = time.Duration(k.config.KafkaReadTimeoutMs) * time.Millisecond
 		cfg.WriteTimeout = time.Duration(k.config.KafkaWriteTimeoutMs) * time.Millisecond
-		cfg.CompressionCodec = k.config.KafkaCompressionCodec
+		cfg.CompressionType = k.config.KafkaCompressionCodec
 	} else {
 		// Fallback to default values if config is not available
 		cfg.MaxAttempts = 3
@@ -48,16 +48,16 @@ func (k *Configurator) CreatePublishConfig(topic string, req *pb.PublishRequest)
 		cfg.BatchTimeout = 500 * time.Millisecond
 		cfg.ReadTimeout = 5 * time.Second
 		cfg.WriteTimeout = 5 * time.Second
-		cfg.CompressionCodec = "snappy"
+		cfg.CompressionType = "snappy"
 	}
 
 	return cfg
 }
 
-// CreateSubscribeConfig creates Kafka configuration for subscribing to messages
+// CreateSubscribeConfig creates Confluent Kafka configuration for subscribing to messages
 func (k *Configurator) CreateSubscribeConfig(topic string, groupID string, req *pb.SubscribeRequest) KafkaConfig {
 	cfg := NewDefaultKafkaConfig(k.brokers, topic)
-	cfg.GroupID = groupID
+	cfg.ConsumerConfig.GroupID = groupID
 
 	// Apply environment-based configuration if available
 	if k.config != nil {
@@ -65,7 +65,7 @@ func (k *Configurator) CreateSubscribeConfig(topic string, groupID string, req *
 		cfg.BatchSize = k.config.KafkaBatchSize
 		cfg.BatchBytes = k.config.KafkaBatchBytes
 		cfg.BatchTimeout = time.Duration(k.config.KafkaBatchTimeoutMs) * time.Millisecond
-		cfg.CompressionCodec = k.config.KafkaCompressionCodec
+		cfg.CompressionType = k.config.KafkaCompressionCodec
 		cfg.MaxAttempts = k.config.KafkaMaxAttempts
 		cfg.RetryBackoffMs = k.config.KafkaRetryBackoffMs
 		cfg.ReadTimeout = time.Duration(k.config.KafkaReadTimeoutMs) * time.Millisecond
@@ -80,9 +80,6 @@ func (k *Configurator) CreateSubscribeConfig(topic string, groupID string, req *
 		// Set auto offset reset from environment
 		cfg.ConsumerConfig.AutoOffsetReset = k.config.KafkaConsumerAutoOffsetReset
 
-		// Set isolation level for exactly-once delivery
-		cfg.ConsumerConfig.IsolationLevel = k.config.KafkaIsolationLevel
-
 		// Configure for exactly-once delivery semantics to prevent duplicates
 		if k.config.KafkaIsolationLevel == "read_committed" {
 			cfg.DeliverySemantics = ExactlyOnce
@@ -96,8 +93,8 @@ func (k *Configurator) CreateSubscribeConfig(topic string, groupID string, req *
 	}
 
 	// Default to read_committed isolation level if not set in environment
-	if cfg.ConsumerConfig.IsolationLevel == "" {
-		cfg.ConsumerConfig.IsolationLevel = mapIsolationLevel(pb.IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED)
+	if cfg.ExactlyOnceConfig.IsolationLevel == "" {
+		cfg.ExactlyOnceConfig.IsolationLevel = mapIsolationLevel(pb.IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED)
 	}
 
 	// Default to latest offset reset if not set in environment
@@ -105,15 +102,10 @@ func (k *Configurator) CreateSubscribeConfig(topic string, groupID string, req *
 		cfg.ConsumerConfig.AutoOffsetReset = mapAutoOffsetReset(pb.AutoOffsetReset_AUTO_OFFSET_RESET_LATEST)
 	}
 
-	// If provided in the request, use the specified isolation level and auto offset reset
-	if req != nil {
-		// Other configuration options would be set here based on the request
-	}
-
 	return cfg
 }
 
-// CreateTopicConfig creates Kafka configuration for topic creation
+// CreateTopicConfig creates Confluent Kafka configuration for topic creation
 func (k *Configurator) CreateTopicConfig(topic string, req *pb.CreateTopicRequest) KafkaConfig {
 	cfg := NewDefaultKafkaConfig(k.brokers, topic)
 
@@ -124,8 +116,7 @@ func (k *Configurator) CreateTopicConfig(topic string, req *pb.CreateTopicReques
 		cfg.BatchSize = k.config.KafkaBatchSize
 		cfg.BatchBytes = k.config.KafkaBatchBytes
 		cfg.BatchTimeout = time.Duration(k.config.KafkaBatchTimeoutMs) * time.Millisecond
-		cfg.CompressionCodec = k.config.KafkaCompressionCodec
-		cfg.ConsumerConfig.RetentionTime = time.Duration(k.config.KafkaRetentionMs) * time.Millisecond
+		cfg.CompressionType = k.config.KafkaCompressionCodec
 	} else {
 		// Default configuration as fallback
 		cfg.NumPartitions = 3
@@ -133,38 +124,15 @@ func (k *Configurator) CreateTopicConfig(topic string, req *pb.CreateTopicReques
 		cfg.BatchSize = 100
 		cfg.BatchBytes = 1 * 1024 * 1024 // 1MB
 		cfg.BatchTimeout = 500 * time.Millisecond
-		cfg.CompressionCodec = "snappy"
-		cfg.ConsumerConfig.RetentionTime = 3 * time.Second
+		cfg.CompressionType = "snappy"
 	}
-
-	// Set cleanup policy based on protobuf enum
-	// Just mapping here, actual usage would be in admin.CreateTopic
-	_ = mapCleanupPolicy(pb.CleanupPolicy_CLEANUP_POLICY_DELETE)
 
 	return cfg
 }
 
-// CreateProducer creates a new Producer for a topic with appropriate configuration
-func (k *Configurator) CreateProducer(topic string) Producer {
-	cfg := k.CreatePublishConfig(topic, nil)
-	return NewProducer(cfg)
-}
-
 // Helper functions to map protobuf enums to Kafka config values
 
-// mapDeliverySemantics maps the protobuf DeliverySemantics enum to Kafka config values
-func mapDeliverySemantics(semantics pb.DeliverySemantics) DeliverySemantics {
-	switch semantics {
-	case pb.DeliverySemantics_DELIVERY_SEMANTICS_AT_LEAST_ONCE:
-		return AtLeastOnce
-	case pb.DeliverySemantics_DELIVERY_SEMANTICS_EXACTLY_ONCE:
-		return ExactlyOnce
-	default:
-		return AtLeastOnce // Default to at-least-once for safety
-	}
-}
-
-// mapIsolationLevel maps the protobuf IsolationLevel enum to Kafka config values
+// mapIsolationLevel maps the protobuf IsolationLevel enum to Confluent Kafka config values
 func mapIsolationLevel(level pb.IsolationLevel) string {
 	switch level {
 	case pb.IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED:
@@ -176,7 +144,7 @@ func mapIsolationLevel(level pb.IsolationLevel) string {
 	}
 }
 
-// mapAutoOffsetReset maps the protobuf AutoOffsetReset enum to Kafka config values
+// mapAutoOffsetReset maps the protobuf AutoOffsetReset enum to Confluent Kafka config values
 func mapAutoOffsetReset(reset pb.AutoOffsetReset) string {
 	switch reset {
 	case pb.AutoOffsetReset_AUTO_OFFSET_RESET_LATEST:
@@ -188,7 +156,7 @@ func mapAutoOffsetReset(reset pb.AutoOffsetReset) string {
 	}
 }
 
-// mapCleanupPolicy maps the protobuf CleanupPolicy enum to Kafka config values
+// mapCleanupPolicy maps the protobuf CleanupPolicy enum to Confluent Kafka config values
 func mapCleanupPolicy(policy pb.CleanupPolicy) string {
 	switch policy {
 	case pb.CleanupPolicy_CLEANUP_POLICY_DELETE:

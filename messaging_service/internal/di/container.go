@@ -4,9 +4,7 @@ import (
 	"messaging_service/internal/config"
 	"messaging_service/internal/messaging_service/handler"
 	"messaging_service/internal/messaging_service/service"
-	"messaging_service/pkg/kafka"
 	"messaging_service/pkg/logger"
-	"time"
 )
 
 // Container holds all the dependencies for the application
@@ -19,12 +17,16 @@ type Container struct {
 
 	// Services
 	MessagingService service.MessagingService
-
-	// Repositories and infrastructure
-	KafkaAdmin kafka.KafkaAdmin
 }
 
 // NewContainer creates a new dependency injection container
+//
+// This initializes the application dependencies:
+//   - Creates a logger
+//   - Loads configuration
+//   - Sets up the Confluent Kafka-based messaging service for reliable message processing
+//     with exactly-once delivery guarantees, transaction support, and automatic retries
+//   - Creates the messaging service handler
 func NewContainer() (*Container, error) {
 	// Initialize logger
 	logger.InitLogger()
@@ -35,25 +37,8 @@ func NewContainer() (*Container, error) {
 		return nil, err
 	}
 
-	// Initialize dependencies with environment-based configuration
-	kafkaConfig := kafka.KafkaConfig{
-		Brokers:           cfg.KafkaBrokers,
-		NumPartitions:     cfg.KafkaNumPartitions,
-		ReplicationFactor: cfg.KafkaReplicationFactor,
-		BatchSize:         cfg.KafkaBatchSize,
-		BatchBytes:        cfg.KafkaBatchBytes,
-		BatchTimeout:      time.Duration(cfg.KafkaBatchTimeoutMs) * time.Millisecond,
-		CompressionCodec:  cfg.KafkaCompressionCodec,
-		MaxAttempts:       cfg.KafkaMaxAttempts,
-		RetryBackoffMs:    cfg.KafkaRetryBackoffMs,
-		ReadTimeout:       time.Duration(cfg.KafkaReadTimeoutMs) * time.Millisecond,
-		WriteTimeout:      time.Duration(cfg.KafkaWriteTimeoutMs) * time.Millisecond,
-	}
-
-	admin := kafka.NewAdmin(kafkaConfig)
-
-	// Create the messaging service with the admin
-	messagingService := service.NewMessagingService(admin)
+	// Create the messaging service with confluent-kafka-go
+	messagingService := service.NewConfluentMessagingService(cfg)
 
 	// Create the handler with the service
 	msgHandler := handler.NewMessagingHandler(cfg, messagingService)
@@ -63,7 +48,6 @@ func NewContainer() (*Container, error) {
 		Config:           cfg,
 		MessagingHandler: msgHandler,
 		MessagingService: messagingService,
-		KafkaAdmin:       admin,
 	}
 
 	return container, nil
@@ -76,15 +60,6 @@ func (c *Container) Close() error {
 		if err := closer.Close(); err != nil {
 			logger.LogErrorEvent("", "container_close", "", "error",
 				"Failed to close messaging service")
-			return err
-		}
-	}
-
-	// Close admin client if needed
-	if closer, ok := c.KafkaAdmin.(interface{ Close() error }); ok {
-		if err := closer.Close(); err != nil {
-			logger.LogErrorEvent("", "container_close", "", "error",
-				"Failed to close Kafka admin client")
 			return err
 		}
 	}

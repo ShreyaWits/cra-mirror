@@ -1,40 +1,49 @@
 # ---- Stage 1: Builder ----
-    FROM golang:1.24-alpine AS builder
+    FROM golang:1.24 AS builder
 
-    # Install git and SSL certs for private repos or HTTPS downloads
-    RUN apk add --no-cache git ca-certificates
+    # Install librdkafka dependencies
+    RUN apt-get update && apt-get install -y \
+        build-essential \
+        wget \
+        git \
+        pkg-config \
+        curl \
+        gnupg \
+        ca-certificates
     
-    # Set working directory
+    # Install Confluent librdkafka (latest stable via APT)
+    RUN curl -fsSL https://packages.confluent.io/deb/7.6/archive.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/confluent.gpg && \
+        echo "deb [arch=amd64] https://packages.confluent.io/deb/7.6 stable main" > /etc/apt/sources.list.d/confluent.list && \
+        apt-get update && apt-get install -y librdkafka-dev
+    
+    # Set Go environment
     WORKDIR /app
-    
-    # Copy workspace & modules
     COPY go.work go.work.sum ./
     COPY messaging_service/go.mod messaging_service/go.sum ./messaging_service/
     COPY protos/go.mod protos/go.sum ./protos/
-    
-    # Copy source code
     COPY messaging_service ./messaging_service
     COPY protos ./protos
     COPY messaging_service/.env ./.env
     
-    # Download dependencies in workspace mode
     WORKDIR /app/messaging_service
     RUN go mod tidy
+    RUN go build -o messaging_service ./server
     
-    # Build binary
-    RUN CGO_ENABLED=0 GOOS=linux go build -o messaging_service ./server
+    # ---- Stage 2: Runtime ----
+    FROM ubuntu:22.04
     
-    # ---- Stage 2: Minimal Image ----
-    FROM alpine:latest
+    # Install runtime dependencies
+    RUN apt-get update && apt-get install -y \
+        ca-certificates \
+        librdkafka1 \
+        && rm -rf /var/lib/apt/lists/*
     
     WORKDIR /app
     
-    # Copy built binary from builder
+    # Copy built binary and env
     COPY --from=builder /app/messaging_service/messaging_service .
-    # Copy env file from builder 
     COPY --from=builder /app/.env .
     
     RUN chmod +x ./messaging_service
     
-    # Run the binary
     CMD ["./messaging_service"]
