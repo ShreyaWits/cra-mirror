@@ -1,8 +1,9 @@
 package rpc
 
 import (
-	"thirdparty_service/api/rpc/methods"
 	protos "thirdparty_service/protos"
+
+	"thirdparty_service/api/rpc/methods"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
