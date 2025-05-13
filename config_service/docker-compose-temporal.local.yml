@@ -44,6 +44,5 @@ volumes:
   temporal-db-data:
 networks:
   temporal-network:
-    external: true
     driver: bridge
     name: temporal-network
