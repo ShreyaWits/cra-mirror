@@ -176,7 +176,7 @@ func (grpc *GRPCServer) SetCache(ctx context.Context, req *proto.SetCacheRequest
 		)
 		return &proto.SetCacheResponse{
 			Success: false,
-			Message: message.RD0002,
+			Message: message.RD0003,
 		}, nil
 	}
 

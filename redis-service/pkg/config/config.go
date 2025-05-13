@@ -32,7 +32,7 @@ func LoadEnv() {
 	PORT = getEnv("PORT", ":8080")
 	GRPC_PORT = getEnv("GRPC_PORT", ":50051")
 	OTEL_COLLECTOR_URL = getEnv("OTEL_COLLECTOR_URL", "")
-	SERVICE_NAME = getEnv("SERVICE_NAME", "config-service")
+	SERVICE_NAME = getEnv("SERVICE_NAME", "caching-service")
 	DEPLOYMENT_ENV = getEnv("DEPLOYMENT_ENV", "development")
 }
 

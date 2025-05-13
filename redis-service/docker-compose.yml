@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--requirepass", "redis"]
+    networks:
+      - caching-networks
+
+  caching-service:
+    build: .
+    container_name: caching-service
+    restart: always
+    image: caching-service
+    ports:
+      - 8001:8001
+      - 50051:50051
+    environment:
+      - PORT=:8001
+      - OTEL_COLLECTOR_URL=localhost:4317
+      - REDIS_URL=redis:6379
+      - REDIS_PASSWORD=redis
+      - REDIS_DB=0
+      - GRPC_PORT=:50051
+      - SERVICE_NAME=caching-service
+      - DEPLOYMENT_ENV=development
+    depends_on:
+      - redis
+    networks:
+      - caching-networks
+
+networks:
+  caching-networks:
+    external: true
