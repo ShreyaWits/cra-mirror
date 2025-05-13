@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"messaging_service/pkg/logger"
@@ -32,20 +33,31 @@ func NewConsumerImplError(err error, permanent bool, reason string) *ConsumerImp
 	}
 }
 
+// Consumer interface defines methods for consuming messages from Kafka
 type Consumer interface {
 	Start(ctx context.Context)
+	processMessageWithRetries(ctx context.Context, messageID string, m kafka.Message)
+	invokeHandlerWithTimeout(ctx context.Context, payload []byte) error
+	sendToDLQ(ctx context.Context, messageID string, m kafka.Message, reason string)
 }
 
+// ConsumerImpl implements the Consumer interface
 type ConsumerImpl struct {
 	Reader       *kafka.Reader
 	Handler      func([]byte) error
 	RetryHandler *RetryHandler
-	DLQProducer  *DLQProducer
+	DLQProducer  DLQProducer
 	Topic        string
 	MaxRetries   int
 	RetryTimeout time.Duration
 }
 
+// NewKafkaConsumer creates a new Consumer with default implementation
+func NewKafkaConsumer(cfg KafkaConfig, handler func([]byte) error) Consumer {
+	return NewConsumer(cfg, handler)
+}
+
+// NewConsumer creates a new Consumer with customizable components (useful for testing)
 func NewConsumer(cfg KafkaConfig, handler func([]byte) error) Consumer {
 	dlqConfig, exists := GetDLQConfig(cfg.Topic)
 	maxRetries := 5
@@ -64,60 +76,101 @@ func NewConsumer(cfg KafkaConfig, handler func([]byte) error) Consumer {
 	}
 }
 
+// NewConsumerWithCustomDLQ creates a consumer with a custom DLQ producer (useful for testing)
+func NewConsumerWithCustomDLQ(reader *kafka.Reader, handler func([]byte) error,
+	retryHandler *RetryHandler, dlqProducer DLQProducer, topic string, maxRetries int) Consumer {
+	return &ConsumerImpl{
+		Reader:       reader,
+		Handler:      handler,
+		RetryHandler: retryHandler,
+		DLQProducer:  dlqProducer,
+		Topic:        topic,
+		MaxRetries:   maxRetries,
+		RetryTimeout: 5 * time.Second,
+	}
+}
+
 func (c *ConsumerImpl) Start(ctx context.Context) {
-	defer c.Reader.Close()
-	defer c.DLQProducer.Close()
-
-	log.Printf("[Kafka][%s] ConsumerImpl started", c.Topic)
-
-	// Create a buffered channel for message processing
-	msgChan := make(chan kafka.Message, 100)
-
-	// Start message processor goroutine
-	go func() {
-		for msg := range msgChan {
-			messageID := string(msg.Key)
-			if messageID == "" {
-				messageID = fmt.Sprintf("%s-%d", c.Topic, msg.Time.UnixNano())
-			}
-			c.processMessageWithRetries(ctx, messageID, msg)
-		}
+	defer func() {
+		_ = c.Reader.Close()
+		_ = c.DLQProducer.Close()
+		log.Printf("[Kafka][%s] ConsumerImpl stopped", c.Topic)
 	}()
 
+	const (
+		bufferSize  = 1000
+		workerCount = 10
+	)
+	msgChan := make(chan kafka.Message, bufferSize)
+
+	// Cancelable context
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Start worker pool
+	var wg sync.WaitGroup
+	wg.Add(workerCount)
+	for i := 0; i < workerCount; i++ {
+		go func(workerID int) {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case msg, ok := <-msgChan:
+					if !ok {
+						return
+					}
+					messageID := string(msg.Key)
+					if messageID == "" {
+						messageID = fmt.Sprintf("%s-%d", c.Topic, msg.Time.UnixNano())
+					}
+					c.processMessageWithRetries(ctx, messageID, msg)
+				}
+			}
+		}(i)
+	}
+
+	// Main message reading loop
+readLoop:
 	for {
 		select {
 		case <-ctx.Done():
-			close(msgChan)
-			log.Printf("[Kafka][%s] ConsumerImpl stopped due to context cancellation", c.Topic)
-			return
+			break readLoop
 		default:
-			m, err := c.Reader.ReadMessage(ctx)
+			msg, err := c.Reader.ReadMessage(ctx)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					close(msgChan)
-					return
+					break readLoop
 				}
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(50 * time.Millisecond)
 				continue
 			}
 
-			// Check message timestamp
-			if time.Since(m.Time) > 3*time.Second {
+			// Optionally skip stale messages
+			if time.Since(msg.Time) > 5*time.Second {
+				log.Printf("[Kafka][%s] Skipping stale message at offset %d", c.Topic, msg.Offset)
 				continue
 			}
 
 			select {
-			case msgChan <- m:
+			case msgChan <- msg:
 			default:
-				// If channel is full, process message in current goroutine
-				messageID := string(m.Key)
-				if messageID == "" {
-					messageID = fmt.Sprintf("%s-%d", c.Topic, m.Time.UnixNano())
-				}
-				c.processMessageWithRetries(ctx, messageID, m)
+				// Drop to a separate goroutine if channel is full to avoid blocking
+				go func(m kafka.Message) {
+					messageID := string(m.Key)
+					if messageID == "" {
+						messageID = fmt.Sprintf("%s-%d", c.Topic, m.Time.UnixNano())
+					}
+					c.processMessageWithRetries(ctx, messageID, m)
+				}(msg)
 			}
 		}
 	}
+
+	// Shutdown
+	close(msgChan)
+	wg.Wait()
 }
 
 func (c *ConsumerImpl) processMessageWithRetries(ctx context.Context, messageID string, m kafka.Message) {

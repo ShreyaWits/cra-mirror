@@ -1,3 +1,6 @@
+#!/bin/bash
+
+cat > .env << 'EOF'
 # Server settings
 GRPC_PORT=50051
 
@@ -31,3 +34,6 @@ KAFKA_CONSUMER_MAX_POLL_RECORDS=1000
 KAFKA_CONSUMER_AUTO_OFFSET_RESET=latest
 KAFKA_ENABLE_AUTO_COMMIT=false
 KAFKA_ISOLATION_LEVEL=read_committed
+EOF
+
+echo ".env file created successfully" 

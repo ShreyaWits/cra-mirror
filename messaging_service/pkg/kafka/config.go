@@ -129,7 +129,9 @@ func DefaultConsumerConfig() ConsumerConfig {
 	}
 }
 
+// KafkaConfig holds all configuration related to Kafka connections
 type KafkaConfig struct {
+	// Core connection settings
 	Brokers           []string
 	Topic             string
 	GroupID           string
@@ -141,8 +143,24 @@ type KafkaConfig struct {
 	ReplicationFactor int
 	NumPartitions     int
 	ClusterMode       KafkaClusterMode
+
+	// Retry and timeout settings
+	MaxAttempts    int           // Maximum number of retry attempts
+	RetryBackoffMs int           // Base backoff time between retries in milliseconds
+	ReadTimeout    time.Duration // Read timeout for Kafka operations
+	WriteTimeout   time.Duration // Write timeout for Kafka operations
+
+	// Producer batch settings
+	BatchSize    int           // Number of messages to batch together
+	BatchBytes   int64         // Maximum size of a batch in bytes
+	BatchTimeout time.Duration // Maximum time to wait for a batch to fill
+
+	// Message format and compression
+	CompressionCodec string // Compression codec: gzip, snappy, lz4, zstd
+
+	// Additional config objects
 	ExactlyOnceConfig ExactlyOnceConfig
-	ConsumerConfig    ConsumerConfig // New field for consumer configuration
+	ConsumerConfig    ConsumerConfig
 }
 
 // NewDefaultKafkaConfig creates a new KafkaConfig with sensible defaults for production use
@@ -160,6 +178,14 @@ func NewDefaultKafkaConfig(brokers []string, topic string) KafkaConfig {
 		ClusterMode:       ZookeeperMode, // Default to Zookeeper
 		ExactlyOnceConfig: DefaultExactlyOnceConfig(),
 		ConsumerConfig:    DefaultConsumerConfig(),
+		MaxAttempts:       3,                      // Default retry attempts
+		RetryBackoffMs:    100,                    // Default backoff in ms
+		ReadTimeout:       10 * time.Second,       // Default read timeout
+		WriteTimeout:      10 * time.Second,       // Default write timeout
+		BatchSize:         100,                    // Default batch size
+		BatchBytes:        int64(1 * 1024 * 1024), // 1MB default batch size
+		BatchTimeout:      1 * time.Second,        // Default batch timeout
+		CompressionCodec:  "snappy",               // Default compression
 	}
 }
 
@@ -250,13 +276,13 @@ func (c KafkaConfig) WithRetentionTime(duration time.Duration) KafkaConfig {
 	return c
 }
 
-// WithMaxAttempts sets the maximum number of read attempts
+// WithMaxAttempts sets the maximum number of retry attempts
 func (c KafkaConfig) WithMaxAttempts(attempts int) KafkaConfig {
-	c.ConsumerConfig.MaxAttempts = attempts
+	c.MaxAttempts = attempts
 	return c
 }
 
-// WithIsolationLevel sets the isolation level
+// WithIsolationLevel sets the isolation level for reading
 func (c KafkaConfig) WithIsolationLevel(level string) KafkaConfig {
 	c.ConsumerConfig.IsolationLevel = level
 	return c
@@ -265,5 +291,37 @@ func (c KafkaConfig) WithIsolationLevel(level string) KafkaConfig {
 // WithAutoOffsetReset sets the auto offset reset behavior
 func (c KafkaConfig) WithAutoOffsetReset(reset string) KafkaConfig {
 	c.ConsumerConfig.AutoOffsetReset = reset
+	return c
+}
+
+// WithRetryBackoff sets the retry backoff in milliseconds
+func (c KafkaConfig) WithRetryBackoff(backoffMs int) KafkaConfig {
+	c.RetryBackoffMs = backoffMs
+	return c
+}
+
+// WithReadTimeout sets the read timeout for Kafka operations
+func (c KafkaConfig) WithReadTimeout(timeout time.Duration) KafkaConfig {
+	c.ReadTimeout = timeout
+	return c
+}
+
+// WithWriteTimeout sets the write timeout for Kafka operations
+func (c KafkaConfig) WithWriteTimeout(timeout time.Duration) KafkaConfig {
+	c.WriteTimeout = timeout
+	return c
+}
+
+// WithBatchSettings sets the batch processing configuration
+func (c KafkaConfig) WithBatchSettings(size int, bytes int, timeout time.Duration) KafkaConfig {
+	c.BatchSize = size
+	c.BatchBytes = int64(bytes)
+	c.BatchTimeout = timeout
+	return c
+}
+
+// WithCompression sets the compression codec
+func (c KafkaConfig) WithCompression(codec string) KafkaConfig {
+	c.CompressionCodec = codec
 	return c
 }

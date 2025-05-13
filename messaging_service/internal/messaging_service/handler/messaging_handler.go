@@ -30,7 +30,7 @@ func NewMessagingHandler(config *appconfig.Config, messagingService service.Mess
 	return &MessagingHandler{
 		config:           config,
 		messagingService: messagingService,
-		kafkaConfig:      kafka.NewConfigurator(config.KafkaBrokers),
+		kafkaConfig:      kafka.NewConfigurator(config.KafkaBrokers, config),
 	}
 }
 
@@ -49,13 +49,12 @@ func (s *MessagingHandler) PublishMessageV1(ctx context.Context, req *pb.Publish
 		return nil, errors.NewGRPCError(customErr)
 	}
 
-	// Create Kafka configuration using the configurator
+	// Create Kafka configuration with exactly-once semantics
 	cfg := s.kafkaConfig.CreatePublishConfig(req.Topic, req)
 
 	// Log the publish request
 	logger.LogEvent(requestID, "kafka_publish_start", req.Topic, "info",
-		fmt.Sprintf("Publishing to topic %s with config: idempotence=%v, transactions=%v",
-			req.Topic, cfg.ExactlyOnceConfig.EnableIdempotence, cfg.ExactlyOnceConfig.EnableTransactions))
+		fmt.Sprintf("Publishing to topic %s with exactly-once semantics", req.Topic))
 
 	// Publish message
 	customErr := s.messagingService.PublishMessage(ctx, cfg, req)
@@ -85,14 +84,13 @@ func (s *MessagingHandler) SubscribeV1(req *pb.SubscribeRequest, stream pb.Messa
 		return errors.NewGRPCError(customErr)
 	}
 
-	// Create Kafka configuration using the configurator
+	// Create Kafka configuration with read committed and latest offset
 	cfg := s.kafkaConfig.CreateSubscribeConfig(req.Topic, req.GroupId, req)
 
 	// Log the subscribe request
 	logger.LogEvent(requestID, "kafka_subscribe_start", req.Topic, "info",
-		fmt.Sprintf("Subscribing to topic %s with group %s, config: max_wait=%v, commit_interval=%v, isolation=%v, offset=%v",
-			req.Topic, req.GroupId, cfg.ConsumerConfig.MaxWait, cfg.ConsumerConfig.CommitInterval,
-			cfg.ConsumerConfig.IsolationLevel, cfg.ConsumerConfig.AutoOffsetReset))
+		fmt.Sprintf("Subscribing to topic %s with group %s (read committed, latest offset)",
+			req.Topic, req.GroupId))
 
 	// Start consuming messages
 	customErr := s.messagingService.ConsumeMessage(stream, cfg)
@@ -122,13 +120,13 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 		return nil, errors.NewGRPCError(customErr)
 	}
 
-	// Create Kafka configuration using the configurator
+	// Create Kafka configuration with default values
 	cfg := s.kafkaConfig.CreateTopicConfig(req.Topic, req)
 
-	// Log the create topic request
+	// Log the create topic request using configured values
 	logger.LogEvent(requestID, "kafka_create_topic_start", req.Topic, "info",
 		fmt.Sprintf("Creating topic %s with %d partitions and replication factor %d",
-			req.Topic, req.NumPartitions, req.ReplicationFactor))
+			req.Topic, s.config.KafkaNumPartitions, s.config.KafkaReplicationFactor))
 
 	// Create topic
 	customErr := s.messagingService.CreateTopic(ctx, req, cfg)
@@ -144,7 +142,7 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 	return &pb.CreateTopicResponse{
 		Status: "success",
 		Message: fmt.Sprintf("Topic %s created successfully with %d partitions and replication factor %d",
-			req.Topic, req.NumPartitions, req.ReplicationFactor),
+			req.Topic, s.config.KafkaNumPartitions, s.config.KafkaReplicationFactor),
 	}, nil
 }
 

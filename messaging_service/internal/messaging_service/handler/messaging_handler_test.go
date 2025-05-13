@@ -3,7 +3,6 @@ package handler_test
 import (
 	"context"
 	pb "cra-protos/messaging_service"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -13,6 +12,7 @@ import (
 	"messaging_service/internal/config"
 	"messaging_service/internal/messaging_service/handler"
 	mock_service "messaging_service/internal/messaging_service/mock"
+	"messaging_service/pkg/errors"
 )
 
 func setupHandler(t *testing.T) (*handler.MessagingHandler, *mock_service.MockMessagingService) {
@@ -33,29 +33,30 @@ func TestPublishMessageV1(t *testing.T) {
 	tests := []struct {
 		name        string
 		req         *pb.PublishRequest
-		mockError   error
+		mockError   *errors.CustomError
 		expectError bool
 	}{
 		{
 			name: "valid request",
 			req: &pb.PublishRequest{
 				Topic: "valid-topic",
+				Value: map[string]string{"key": "value"},
 			},
 			mockError:   nil,
 			expectError: false,
 		},
 		{
-			name: "invalid request (missing topic)",
-			req:  &pb.PublishRequest{},
-			// No call expected to PublishMessage
+			name:        "invalid request (missing topic)",
+			req:         &pb.PublishRequest{},
 			expectError: true,
 		},
 		{
 			name: "service error",
 			req: &pb.PublishRequest{
 				Topic: "test-topic",
+				Value: map[string]string{"key": "value"},
 			},
-			mockError:   errors.New("internal error"),
+			mockError:   errors.NewCustomError(errors.PUBErrPublishFailed, fmt.Errorf("internal error")),
 			expectError: true,
 		},
 	}
@@ -64,7 +65,7 @@ func TestPublishMessageV1(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			if tt.req.Topic != "" {
+			if tt.req.Topic != "" && tt.req.Value != nil {
 				mockSvc.EXPECT().
 					PublishMessage(gomock.Any(), gomock.Any(), tt.req).
 					Return(tt.mockError)
@@ -91,34 +92,28 @@ func TestCreateTopicV1(t *testing.T) {
 	tests := []struct {
 		name        string
 		req         *pb.CreateTopicRequest
-		mockError   error
+		mockError   *errors.CustomError
 		expectError bool
 	}{
 		{
 			name: "valid request",
 			req: &pb.CreateTopicRequest{
-				Topic:             "new-topic",
-				NumPartitions:     3,
-				ReplicationFactor: 1,
+				Topic: "new-topic",
 			},
 			mockError:   nil,
 			expectError: false,
 		},
 		{
-			name: "invalid request (missing topic)",
-			req: &pb.CreateTopicRequest{
-				NumPartitions: 3,
-			},
+			name:        "invalid request (missing topic)",
+			req:         &pb.CreateTopicRequest{},
 			expectError: true,
 		},
 		{
 			name: "service error",
 			req: &pb.CreateTopicRequest{
-				Topic:             "fail-topic",
-				NumPartitions:     3,
-				ReplicationFactor: 1,
+				Topic: "fail-topic",
 			},
-			mockError:   errors.New("topic creation failed"),
+			mockError:   errors.NewCustomError(errors.TOPErrCreateFailed, fmt.Errorf("topic creation failed")),
 			expectError: true,
 		},
 	}
@@ -154,7 +149,7 @@ func TestSubscribeV1(t *testing.T) {
 	tests := []struct {
 		name        string
 		req         *pb.SubscribeRequest
-		mockError   error
+		mockError   *errors.CustomError
 		expectError bool
 	}{
 		{
@@ -179,7 +174,7 @@ func TestSubscribeV1(t *testing.T) {
 				Topic:   "topic-fail",
 				GroupId: "group-1",
 			},
-			mockError:   errors.New("consume failed"),
+			mockError:   errors.NewCustomError(errors.SUBErrSubscribeFailed, fmt.Errorf("consume failed")),
 			expectError: true,
 		},
 	}
@@ -216,6 +211,5 @@ func (m *mockServerStream) Context() context.Context {
 }
 
 func (m *mockServerStream) Send(msg *pb.KafkaMessage) error {
-	fmt.Printf("mock send: %v\n", msg)
 	return nil
 }

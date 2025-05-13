@@ -31,11 +31,11 @@ Creates a new Kafka topic with specified configuration.
 
 **Fields:**
 - `topic` (string, required): Name of the topic to create
-- `num_partitions` (int, required): Number of partitions
-- `replication_factor` (int, required): Replication factor
+- `num_partitions` (int, required): Number of partitions //remove
+- `replication_factor` (int, required): Replication factor  //remove
 - `config` (object, optional): Topic configuration
   - `retention_ms` (int64): Message retention time in milliseconds
-  - `cleanup_policy` (enum): Topic cleanup policy
+  - `cleanup_policy` (enum): Topic cleanup policy //soft delete
     - `CLEANUP_POLICY_UNSPECIFIED` (0)
     - `CLEANUP_POLICY_DELETE` (1)
     - `CLEANUP_POLICY_COMPACT` (2)
@@ -44,8 +44,7 @@ Creates a new Kafka topic with specified configuration.
 ```json
 {
   "status": "success",
-  "message": "Topic my-temporary-topic created successfully",
-  "validation_errors": []
+  "message": "Topic my-temporary-topic created successfully"
 }
 ```
 
@@ -61,14 +60,13 @@ Publishes a message to a Kafka topic.
     "timestamp": "2023-10-01T12:00:00Z"
   },
   "producer_config": {
-    "enable_idempotence": true,
-    "retries": 3,
-    "retry_backoff_ms": 100,
-    "delivery_semantics": "DELIVERY_SEMANTICS_AT_LEAST_ONCE"
+    "retries": 3, //dafault
+    "retry_backoff_ms": 100, //dafault
+    "delivery_semantics": "DELIVERY_SEMANTICS_AT_LEAST_ONCE" // Exactly One
   },
-  "headers": {
-    "Content-Type": "application/json",
-    "Source": "web-app"
+  "headers": { //remove
+    "Content-Type": "application/json", //remove
+    "Source": "web-app" //remove
   },
   "key": "user123"
 }
@@ -78,7 +76,6 @@ Publishes a message to a Kafka topic.
 - `topic` (string, required): Topic to publish to
 - `value` (map, required): Message content
 - `producer_config` (object, optional): Producer configuration
-  - `enable_idempotence` (boolean): Enable idempotent producer
   - `retries` (int32): Number of retries
   - `retry_backoff_ms` (int32): Backoff time between retries
   - `delivery_semantics` (enum): Delivery semantics
@@ -107,12 +104,12 @@ Subscribes to a topic and receives messages via gRPC stream.
 {
   "topic": "my-temporary-topic",
   "group_id": "my-consumer-group",
-  "consumer_config": {
-    "max_wait_ms": 5000,
-    "commit_interval_ms": 5000,
-    "isolation_level": "ISOLATION_LEVEL_READ_COMMITTED",
-    "auto_offset_reset": "AUTO_OFFSET_RESET_LATEST"
-  }
+    //"consumer_config": {
+    //"max_wait_ms": 5000,
+    //"commit_interval_ms": 5000,
+    //"isolation_level": "ISOLATION_LEVEL_READ_COMMITTED",
+    //"auto_offset_reset": "AUTO_OFFSET_RESET_LATEST"
+  //}
 }
 ```
 
@@ -154,12 +151,17 @@ Subscribes to a topic and receives messages via gRPC stream.
    - May result in duplicate messages
    - Use when message ordering is important
    - Set `delivery_semantics` to `DELIVERY_SEMANTICS_AT_LEAST_ONCE`
+   - Optimized for performance with async publishing
+   - Uses leader acknowledgment for faster delivery
 
 2. **Exactly-Once Delivery**
    - Messages are delivered exactly once
-   - Requires transactional producer
+   - Automatically enables idempotent producer and transactions
    - Higher latency but stronger guarantees
    - Set `delivery_semantics` to `DELIVERY_SEMANTICS_EXACTLY_ONCE`
+   - Uses synchronous publishing
+   - Requires all broker acknowledgments
+   - Higher retry count (10 attempts) for reliability
 
 ## Consumer Modes
 
@@ -179,9 +181,10 @@ Subscribes to a topic and receives messages via gRPC stream.
    - Configure proper replication factor
 
 2. **Producer Configuration**
-   - Enable idempotence for critical operations
-   - Configure appropriate retry settings
-   - Choose appropriate delivery semantics
+   - Choose appropriate delivery semantics based on your use case
+   - Configure retry settings for resilience
+   - Use exactly-once semantics for critical operations
+   - Use at-least-once semantics for high-throughput scenarios
 
 3. **Consumer Configuration**
    - Set appropriate timeouts using `max_wait_ms`

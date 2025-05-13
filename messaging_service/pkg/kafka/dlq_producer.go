@@ -8,13 +8,20 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type DLQProducer struct {
+// DLQProducer interface defines methods for handling dead-letter queues
+type DLQProducer interface {
+	SendToDLQ(ctx context.Context, messageID string, value []byte, headers []kafka.Header, failureReason string) error
+	Close() error
+}
+
+// DLQProducerImpl implements the DLQProducer interface
+type DLQProducerImpl struct {
 	writer *kafka.Writer
 	topic  string
 }
 
 // NewDLQProducer creates a new DLQ producer for the specified topic
-func NewDLQProducer(cfg KafkaConfig) *DLQProducer {
+func NewDLQProducer(cfg KafkaConfig) DLQProducer {
 	// Get DLQ topic name from the source topic
 	dlqTopic := GetDLQTopicName(cfg.Topic)
 
@@ -24,14 +31,22 @@ func NewDLQProducer(cfg KafkaConfig) *DLQProducer {
 		Balancer: GetBalancer(cfg.BalancerType),
 	}
 
-	return &DLQProducer{
+	return &DLQProducerImpl{
 		writer: writer,
 		topic:  cfg.Topic,
 	}
 }
 
+// NewMockDLQProducer creates a new DLQ producer with a mock writer (for testing)
+func NewMockDLQProducer(topic string, writer *kafka.Writer) DLQProducer {
+	return &DLQProducerImpl{
+		writer: writer,
+		topic:  topic,
+	}
+}
+
 // SendToDLQ sends a failed message to the appropriate DLQ
-func (d *DLQProducer) SendToDLQ(ctx context.Context, messageID string, value []byte, headers []kafka.Header, failureReason string) error {
+func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value []byte, headers []kafka.Header, failureReason string) error {
 	// Generate a message ID if not provided
 	if messageID == "" {
 		messageID = fmt.Sprintf("%s-%d", d.topic, time.Now().UnixNano())
@@ -64,6 +79,6 @@ func (d *DLQProducer) SendToDLQ(ctx context.Context, messageID string, value []b
 	})
 }
 
-func (d *DLQProducer) Close() error {
+func (d *DLQProducerImpl) Close() error {
 	return d.writer.Close()
 }

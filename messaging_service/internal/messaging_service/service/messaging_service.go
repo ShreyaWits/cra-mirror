@@ -10,8 +10,6 @@ import (
 	errors "messaging_service/pkg/errors"
 	kafkapkg "messaging_service/pkg/kafka"
 	"messaging_service/pkg/logger"
-
-	kafka "github.com/segmentio/kafka-go"
 )
 
 type MessagingService interface {
@@ -21,43 +19,71 @@ type MessagingService interface {
 }
 
 type MessagingServiceImpl struct {
-	producer *kafkapkg.Producer
-	admin    kafkapkg.KafkaAdmin
+	producerFactory ProducerFactory
+	admin           kafkapkg.KafkaAdmin
+	// Map to store topic-specific producers
+	producers map[string]kafkapkg.Producer
 }
 
-func NewMessagingService(producer *kafkapkg.Producer, admin kafkapkg.KafkaAdmin) MessagingService {
+// ProducerFactory defines an interface for creating producers
+type ProducerFactory interface {
+	CreateProducer(cfg kafkapkg.KafkaConfig) kafkapkg.Producer
+}
+
+// DefaultProducerFactory implements ProducerFactory
+type DefaultProducerFactory struct{}
+
+// CreateProducer creates a new producer
+func (f *DefaultProducerFactory) CreateProducer(cfg kafkapkg.KafkaConfig) kafkapkg.Producer {
+	return kafkapkg.NewProducer(cfg)
+}
+
+func NewMessagingService(admin kafkapkg.KafkaAdmin) MessagingService {
 	return &MessagingServiceImpl{
-		producer: producer,
-		admin:    admin,
+		producerFactory: &DefaultProducerFactory{},
+		admin:           admin,
+		producers:       make(map[string]kafkapkg.Producer),
 	}
+}
+
+// getOrCreateProducer gets an existing producer for a topic or creates a new one
+func (s *MessagingServiceImpl) getOrCreateProducer(cfg kafkapkg.KafkaConfig) (kafkapkg.Producer, error) {
+	if cfg.Topic == "" {
+		return nil, fmt.Errorf("topic is required")
+	}
+
+	// Check if we already have a producer for this topic
+	if producer, exists := s.producers[cfg.Topic]; exists {
+		return producer, nil
+	}
+
+	// Create a new producer
+	producer := s.producerFactory.CreateProducer(cfg)
+	s.producers[cfg.Topic] = producer
+	return producer, nil
 }
 
 func (s *MessagingServiceImpl) PublishMessage(ctx context.Context, cfg kafkapkg.KafkaConfig, req *pb.PublishRequest) *errors.CustomError {
 	if req.Topic == "" {
 		return errors.NewCustomError(errors.MSGErrInvalidTopic, fmt.Errorf("topic is required"))
 	}
-	if req.Value == nil {
+	if req.Value == nil || len(req.Value) == 0 {
 		return errors.NewCustomError(errors.PUBErrInvalidMessage, fmt.Errorf("message content is required"))
 	}
+
+	// Ensure topic in config matches request
+	cfg.Topic = req.Topic
 
 	valueBytes, err := json.Marshal(req.Value)
 	if err != nil {
 		return errors.NewCustomError(errors.PUBErrInvalidMessage, fmt.Errorf("failed to serialize message: %w", err))
 	}
 
-	writer := s.producer.GetWriter(cfg)
-	defer func() {
-		if err := s.producer.Close(writer); err != nil {
-			logger.LogEvent("", "kafka_close_writer_failed", req.Topic, "error", fmt.Sprintf("Failed to close writer: %v", err))
-		}
-	}()
-
-	headers := make([]kafka.Header, 0, len(req.Headers))
-	for k, v := range req.Headers {
-		headers = append(headers, kafka.Header{
-			Key:   k,
-			Value: []byte(v),
-		})
+	// Get or create a producer for this topic
+	producer, err := s.getOrCreateProducer(cfg)
+	if err != nil {
+		return errors.NewCustomError(errors.PUBErrProducerNotReady,
+			fmt.Errorf("failed to get producer: %w", err))
 	}
 
 	key := []byte(req.Key)
@@ -65,10 +91,13 @@ func (s *MessagingServiceImpl) PublishMessage(ctx context.Context, cfg kafkapkg.
 		key = []byte(fmt.Sprintf("%s-%d", req.Topic, time.Now().UnixNano()))
 	}
 
-	err = s.producer.WriteWithRetry(ctx, writer, key, valueBytes, headers, 3)
+	// Use WriteWithRetry for better reliability
+	err = producer.WriteWithRetry(ctx, key, valueBytes, nil)
 	if err != nil {
-		logger.LogEvent("", "kafka_publish_failed", req.Topic, "error", fmt.Sprintf("Failed to publish message: %v", err))
-		return errors.NewCustomError(errors.PUBErrPublishFailed, fmt.Errorf("failed to publish message: %w", err))
+		logger.LogEvent("", "kafka_publish_failed", req.Topic, "error",
+			fmt.Sprintf("Failed to publish message: %v", err))
+		return errors.NewCustomError(errors.PUBErrPublishFailed,
+			fmt.Errorf("failed to publish message: %w", err))
 	}
 
 	return nil
@@ -92,9 +121,12 @@ func (s *MessagingServiceImpl) ConsumeMessage(stream pb.MessagingService_Subscri
 			return fmt.Errorf("failed to deserialize message: %w", err)
 		}
 
+		// Create a new KafkaMessage with the updated fields from the protobuf
 		msg := &pb.KafkaMessage{
 			Value:     value,
 			Timestamp: time.Now().UnixMilli(),
+			Key:       "",                      // Default to empty key
+			Headers:   make(map[string]string), // Initialize empty headers
 		}
 
 		select {
@@ -117,27 +149,11 @@ func (s *MessagingServiceImpl) CreateTopic(ctx context.Context, req *pb.CreateTo
 		return errors.NewCustomError(errors.MSGErrInvalidTopic, fmt.Errorf("topic name is required"))
 	}
 
-	if req.NumPartitions <= 0 {
-		req.NumPartitions = 1
-	}
-	if req.ReplicationFactor <= 0 {
-		req.ReplicationFactor = 1
-	}
-
-	if req.Config == nil {
-		req.Config = &pb.TopicConfig{}
-	}
-
-	if req.Config.RetentionMs == 0 {
-		req.Config.RetentionMs = 3000
-	}
-	if req.Config.CleanupPolicy == pb.CleanupPolicy_CLEANUP_POLICY_UNSPECIFIED {
-		req.Config.CleanupPolicy = pb.CleanupPolicy_CLEANUP_POLICY_DELETE
-	}
-
+	// Use configuration from KafkaConfig passed from higher layers
+	// which now contains values from environment variables
 	kafkaConfig := map[string]string{
-		"retention.ms":                    fmt.Sprintf("%d", req.Config.RetentionMs),
-		"cleanup.policy":                  getCleanupPolicyString(req.Config.CleanupPolicy),
+		"retention.ms":                    fmt.Sprintf("%d", cfg.ConsumerConfig.RetentionTime.Milliseconds()),
+		"cleanup.policy":                  "delete", // Maps to CLEANUP_POLICY_DELETE from proto
 		"delete.retention.ms":             "1000",
 		"segment.ms":                      "1000",
 		"log.retention.check.interval.ms": "1000",
@@ -145,13 +161,26 @@ func (s *MessagingServiceImpl) CreateTopic(ctx context.Context, req *pb.CreateTo
 		"log.segment.delete.delay.ms":     "1000",
 	}
 
-	err := s.admin.CreateTopic(ctx, req.Topic, int(req.NumPartitions), int(req.ReplicationFactor), kafkaConfig)
+	err := s.admin.CreateTopic(ctx, req.Topic, cfg.NumPartitions, cfg.ReplicationFactor, kafkaConfig)
 	if err != nil {
 		logger.LogEvent("kafka", "create_topic_failed", req.Topic, "error", err.Error())
 		return errors.NewCustomError(errors.TOPErrCreateFailed, fmt.Errorf("failed to create topic: %w", err))
 	}
 
 	return nil
+}
+
+// Close closes all producers and frees resources
+func (s *MessagingServiceImpl) Close() error {
+	var lastErr error
+	for topic, producer := range s.producers {
+		if err := producer.Close(); err != nil {
+			logger.LogErrorEvent("", "producer_close_error", topic, "error",
+				fmt.Sprintf("Failed to close producer: %v", err))
+			lastErr = err
+		}
+	}
+	return lastErr
 }
 
 // Helper function to convert CleanupPolicy enum to string
