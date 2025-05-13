@@ -40,6 +40,7 @@ message FileData {
 message BatchFileProcessingRequest {
   repeated FileProcessingRequest files = 1;
   string batch_id = 2;  // Unique identifier for the batch
+  string classifier = 3;
 }
 
 // Batch processing acknowledgment

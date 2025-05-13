@@ -6,19 +6,28 @@ import (
 	"os/signal"
 	"syscall"
 
+	"Document-Processing/internal/config"
 	"Document-Processing/internal/di"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load environment variables
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: Error loading .env file: %v", err)
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNzQ3MTQxNzc5fQ.KcsFZ8YWHHcp41IZRhT5Z4mgDdzfOI9w7YJ4GbXxBg0"
+
+	rawData, err := config.LoadConfigFromAPI(token)
+	if err != nil {
+		log.Fatalf("Failed to fetch config from API: %v", err)
 	}
 
+	cfg, err := config.NewConfig(rawData)
+	if err != nil {
+		log.Fatalf("Config validation failed: %v", err)
+	}
+
+	log.Printf("Config initialized: %+v\n", cfg)
+
 	// Initialize application container
-	container, err := di.NewContainer()
+	container, err := di.NewContainer(cfg)
 	if err != nil {
 		log.Fatalf("Failed to initialize container: %v", err)
 	}

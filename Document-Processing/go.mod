@@ -7,7 +7,6 @@ toolchain go1.23.5
 require (
 	github.com/google/generative-ai-go v0.10.0
 	github.com/google/uuid v1.6.0
-	github.com/joho/godotenv v1.5.1
 	github.com/minio/minio-go/v7 v7.0.65
 	google.golang.org/api v0.232.0
 	google.golang.org/grpc v1.72.0

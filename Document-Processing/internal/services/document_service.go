@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"Document-Processing/internal/repository"
-	"Document-Processing/internal/utils"
+	// "Document-Processing/internal/utils"
+	"Document-Processing/internal/enums"
 	pb "Document-Processing/proto"
 )
 
@@ -26,15 +27,16 @@ type BatchProcessingState struct {
 type DocumentService struct {
 	pb.UnimplementedDocumentProcessingServiceV1Server
 	geminiService *GeminiService
+	llamaService  *LlamaService
 	minioRepo     *repository.MinioRepository
-	// Map to store batch processing states
 	batchStates   map[string]*BatchProcessingState
 	batchStatesMu sync.RWMutex
 }
 
-func NewDocumentService(geminiService *GeminiService, minioRepo *repository.MinioRepository) *DocumentService {
+func NewDocumentService(geminiService *GeminiService, llamaService *LlamaService, minioRepo *repository.MinioRepository) *DocumentService {
 	return &DocumentService{
 		geminiService: geminiService,
+		llamaService:  llamaService,
 		minioRepo:     minioRepo,
 		batchStates:   make(map[string]*BatchProcessingState),
 	}
@@ -132,7 +134,7 @@ func (s *DocumentService) processBatchInBackground(ctx context.Context, batchID 
 			fileCtx, fileCancel := context.WithTimeout(batchCtx, 2*time.Minute)
 			defer fileCancel()
 
-			processedFile, err := s.processFile(fileCtx, fileReq)
+			processedFile, err := s.processFile(fileCtx, fileReq, req.Classifier)
 			if err != nil {
 				log.Printf("Error processing file %d: %v", index, err)
 				errChan <- err
@@ -178,7 +180,7 @@ func (s *DocumentService) GeminiService() *GeminiService {
 	return s.geminiService
 }
 
-func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessingRequest) (*pb.ProcessedFileData, error) {
+func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessingRequest, classifier string) (*pb.ProcessedFileData, error) {
 	base64Data := req.File.Base64File
 	mimeType := req.File.FileType
 
@@ -245,16 +247,30 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 	log.Printf("Successfully decoded base64, file size: %d bytes", len(fileData))
 
 	// Save to temp file
-	tempFilePath, err := utils.SaveBytesToTempFile(fileData, mimeType)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save temp image: %v", err)
-	}
-	log.Printf("Temp file saved at: %s", tempFilePath)
+	// tempFilePath, err := utils.SaveBytesToTempFile(fileData, mimeType)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to save temp image: %v", err)
+	// }
+	// log.Printf("Temp file saved at: %s", tempFilePath)
 
-	// Continue with Gemini processing
-	extractedData, err := s.geminiService.ProcessImage(ctx, base64Data, req.ExtractionFields)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process with Gemini: %v", err)
+	var extractedData map[string]string
+
+	// Llama Doc Processing AI
+
+	if classifier == string(enums.ClassifierLlama) {
+
+		extractedData, err = s.llamaService.ProcessImage(ctx, base64Data, req.ExtractionFields)
+
+		if err != nil {
+
+			return nil, fmt.Errorf("failed to process with LLaMA: %v", err)
+		}
+	} else {
+		// Gemini Doc Processing AI
+		extractedData, err = s.geminiService.ProcessImage(ctx, base64Data, req.ExtractionFields)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process with Gemini: %v", err)
+		}
 	}
 
 	fileURL, err := s.minioRepo.StoreFile(ctx, fileData, mimeType)
@@ -271,10 +287,10 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 
 // isValidBase64Char checks if a character is valid in base64 encoding
 func isValidBase64Char(c rune) bool {
-	return (c >= 'A' && c <= 'Z') || // A-Z
-		(c >= 'a' && c <= 'z') || // a-z
-		(c >= '0' && c <= '9') || // 0-9
-		c == '+' || c == '/' || c == '=' // + / =
+	return (c >= 'A' && c <= 'Z') ||
+		(c >= 'a' && c <= 'z') ||
+		(c >= '0' && c <= '9') ||
+		c == '+' || c == '/' || c == '='
 }
 
 // Helper function to get minimum of two integers

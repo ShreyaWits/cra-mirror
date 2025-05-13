@@ -16,9 +16,7 @@ type Container struct {
 	HealthHandler   *handlers.HealthHandler
 }
 
-func NewContainer() (*Container, error) {
-	cfg := config.NewConfig()
-
+func NewContainer(cfg *config.Config) (*Container, error) {
 	// Initialize MinIO repository
 	minioRepo, err := repository.NewMinioRepository(
 		cfg.MinioEndpoint,
@@ -36,8 +34,14 @@ func NewContainer() (*Container, error) {
 		return nil, err
 	}
 
+	// Initialize Llama service
+	llamaService := services.NewLlamaService()
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialize services
-	documentService := services.NewDocumentService(geminiService, minioRepo)
+	documentService := services.NewDocumentService(geminiService, llamaService, minioRepo)
 
 	// Initialize handlers
 	healthHandler := handlers.NewHealthHandler()

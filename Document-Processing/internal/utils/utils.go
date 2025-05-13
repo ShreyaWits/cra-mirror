@@ -55,3 +55,50 @@ func SaveBytesToTempFile(data []byte, mimeType string) (string, error) {
 	log.Printf("Successfully saved file to: %s", filePath)
 	return filePath, nil
 }
+
+func GetIdentityUserDetailsPrompt(fields []string) string {
+	prompt := `You are an AI system that extracts identity details from a document image.
+
+Please find the following details from the document:
+`
+
+	for _, field := range fields {
+		prompt += fmt.Sprintf("- %s\n", field)
+	}
+
+	prompt += `
+
+Return the details in the following JSON format without any code blocks, markdown formatting, or explanations:
+
+If valid details are found:
+{
+`
+
+	for i, field := range fields {
+		comma := ","
+		if i == len(fields)-1 {
+			comma = ""
+		}
+		prompt += fmt.Sprintf("  \"%s\": \"<%s or null>\"%s\n", field, field, comma)
+	}
+
+	prompt += `}
+
+If no valid identity details are found:
+{
+  "error": "document is not valid"
+}
+
+IMPORTANT INSTRUCTIONS:
+1. Your response must ONLY contain the raw JSON object
+2. Do not include 'json' tags
+3. Do not include any explanations before or after the JSON
+4. Do not use escape characters for newlines (\n) within the JSON values
+5. Format the JSON on multiple lines with proper indentation
+6. Keep address or any text field as a single line without line breaks
+7. Return field values exactly as they appear in the document
+
+Now, process the document and extract the required identity details.`
+
+	return prompt
+}
