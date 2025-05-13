@@ -9,15 +9,38 @@ services:
       - "50051:50051"
     environment:
       GRPC_PORT: 50051
-      # Update the Kafka brokers list to include all brokers
+      # Kafka connection settings
       KAFKA_BROKERS: kafka1:9092,kafka2:9093,kafka3:9094
+      # Kafka topic configuration
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_REPLICATION_FACTOR: 3
+      # Kafka producer configuration for performance and reliability
+      KAFKA_BATCH_SIZE: 100
+      KAFKA_BATCH_BYTES: 1048576
+      KAFKA_BATCH_TIMEOUT_MS: 500
+      KAFKA_COMPRESSION_CODEC: snappy
+      KAFKA_MAX_ATTEMPTS: 5
+      KAFKA_RETRY_BACKOFF_MS: 250
+      KAFKA_READ_TIMEOUT_MS: 5000
+      KAFKA_WRITE_TIMEOUT_MS: 5000
+      # Consumer configuration
+      KAFKA_CONSUMER_MAX_WAIT_MS: 5000
+      KAFKA_CONSUMER_COMMIT_INTERVAL_MS: 5000
+      KAFKA_CONSUMER_SESSION_TIMEOUT_MS: 30000
+      KAFKA_CONSUMER_HEARTBEAT_MS: 1000
+      KAFKA_CONSUMER_MAX_POLL_RECORDS: 500
+      KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
+      KAFKA_ENABLE_AUTO_COMMIT: "false"
+      # Exactly-once configuration
+      KAFKA_ISOLATION_LEVEL: read_committed
     depends_on:
       - kafka1
       - kafka2
       - kafka3
-      - zookeeper1 # Depend on all zookeepers
+      - zookeeper1
       - zookeeper2
       - zookeeper3
+    restart: on-failure
 
   # Define the first Zookeeper node
   zookeeper1:
@@ -36,6 +59,7 @@ services:
     volumes:
       # Use a unique volume for each zookeeper's data
       - zookeeper1_data:/var/lib/zookeeper/data
+    restart: on-failure
 
   # Define the second Zookeeper node
   zookeeper2:
@@ -51,6 +75,7 @@ services:
       ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
     volumes:
       - zookeeper2_data:/var/lib/zookeeper/data
+    restart: on-failure
 
   # Define the third Zookeeper node
   zookeeper3:
@@ -66,6 +91,7 @@ services:
       ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
     volumes:
       - zookeeper3_data:/var/lib/zookeeper/data
+    restart: on-failure
 
   # Define the first Kafka broker
   kafka1:
@@ -73,7 +99,7 @@ services:
     container_name: kafka1
     hostname: kafka1
     depends_on:
-      - zookeeper1 # Depend on all zookeepers
+      - zookeeper1
       - zookeeper2
       - zookeeper3
     ports:
@@ -89,11 +115,22 @@ services:
       # Replication factor for internal topics should be at least the number of brokers
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      # It's generally recommended to disable auto topic creation in production
+      # Disable auto topic creation in production
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Set to "false" for production
+      # Transaction configuration
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_MAX_TIMEOUT_MS: 15000
+      # Additional Kafka settings for stability
+      KAFKA_LOG_FLUSH_INTERVAL_MESSAGES: 10000
+      KAFKA_LOG_FLUSH_INTERVAL_MS: 1000
+      KAFKA_LOG_RETENTION_HOURS: 168 # 7 days
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_NUM_PARTITIONS: 3 
     volumes:
       # Use a unique volume for each broker's data
       - kafka1_data:/var/lib/kafka/data
+    restart: on-failure
 
   # Define the second Kafka broker
   kafka2:
@@ -101,7 +138,7 @@ services:
     container_name: kafka2
     hostname: kafka2
     depends_on:
-      - zookeeper1 # Depend on all zookeepers
+      - zookeeper1
       - zookeeper2
       - zookeeper3
     ports:
@@ -115,8 +152,19 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Set to "false" for production
+      # Transaction configuration
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_MAX_TIMEOUT_MS: 15000
+      # Additional Kafka settings for stability
+      KAFKA_LOG_FLUSH_INTERVAL_MESSAGES: 10000
+      KAFKA_LOG_FLUSH_INTERVAL_MS: 1000
+      KAFKA_LOG_RETENTION_HOURS: 168 # 7 days
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_NUM_PARTITIONS: 3
     volumes:
       - kafka2_data:/var/lib/kafka/data
+    restart: on-failure
 
   # Define the third Kafka broker
   kafka3:
@@ -124,7 +172,7 @@ services:
     container_name: kafka3
     hostname: kafka3
     depends_on:
-      - zookeeper1 # Depend on all zookeepers
+      - zookeeper1
       - zookeeper2
       - zookeeper3
     ports:
@@ -138,18 +186,27 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Set to "false" for production
+      # Transaction configuration
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_MAX_TIMEOUT_MS: 15000
+      # Additional Kafka settings for stability
+      KAFKA_LOG_FLUSH_INTERVAL_MESSAGES: 10000
+      KAFKA_LOG_FLUSH_INTERVAL_MS: 1000
+      KAFKA_LOG_RETENTION_HOURS: 168 # 7 days
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_NUM_PARTITIONS: 3
     volumes:
       - kafka3_data:/var/lib/kafka/data
+    restart: on-failure
 
 volumes:
   kafka1_data:
   kafka2_data:
   kafka3_data:
-  zookeeper1_data: # Add volumes for each zookeeper node
+  zookeeper1_data:
   zookeeper2_data:
   zookeeper3_data:
-  # Keep the original kafka_data volume if you had data there you want to migrate or keep
-  # kafka_data:
 
-
-  #[NOTE:- docker compose -f 'docker/docker-compose.yml' up --build 'messaging_service'   ]
+# Command to start the service:
+# docker compose -f 'docker/docker-compose.yml' up --build 'messaging_service'

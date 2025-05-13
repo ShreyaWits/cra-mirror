@@ -45,9 +45,7 @@ service MessagingService {
 message PublishRequest {
   string topic = 1;  // Required: The Kafka topic to publish to
   map<string, string> value = 2;  // Required: The message payload
-  ProducerConfig producer_config = 3;  // Optional: Producer configuration
-  map<string, string> headers = 4;  // Optional: Message headers
-  string key = 5;  // Optional: Message key for partitioning
+  string key = 3;  // Optional: Message key for partitioning
 
   // Example default message
   // {
@@ -57,7 +55,6 @@ message PublishRequest {
   //     "timestamp": "2023-10-01T12:00:00Z"
   //   },
   //   "producer_config": {
-  //     "enable_idempotence": true,
   //     "retries": 3,
   //     "retry_backoff_ms": 100,
   //     "delivery_semantics": "DELIVERY_SEMANTICS_AT_LEAST_ONCE"
@@ -79,18 +76,11 @@ message PublishResponse {
 // Request to subscribe to a topic
 message SubscribeRequest {
   string topic = 1;  // Required: The Kafka topic to subscribe to
-  string group_id = 2;  // Required: Consumer group ID
-  ConsumerConfig consumer_config = 3;  // Optional: Consumer configuration
+  string group_id = 2;  // Required: Consumer group ID // Optional: Consumer configuration
     // Example default message
   // {
   //   "topic": "my-temporary-topic",
   //   "group_id": "my-consumer-group",
-  //   "consumer_config": {
-  //     "max_wait_ms": 5000,
-  //     "commit_interval_ms": 5000,
-  //     "isolation_level": "ISOLATION_LEVEL_READ_COMMITTED",
-  //     "auto_offset_reset": "AUTO_OFFSET_RESET_LATEST"
-  //   }
   // }
 }
 
@@ -111,9 +101,9 @@ message TopicConfig {
 // Request to create a new topic
 message CreateTopicRequest {
   string topic = 1;  // Required: Name of the topic to create
-  int32 num_partitions = 2;  // Required: Number of partitions
-  int32 replication_factor = 3;  // Required: Replication factor
-  TopicConfig config = 4;  // Optional: Topic configuration
+  // int32 num_partitions = 2;  // Required: Number of partitions
+  // int32 replication_factor = 3;  // Required: Replication factor
+  // TopicConfig config = 4;  // Optional: Topic configuration
     // Example default message
   // {
   //   "topic": "my-temporary-topic",
@@ -134,10 +124,9 @@ message CreateTopicResponse {
 
 // Producer configuration
 message ProducerConfig {
-  bool enable_idempotence = 1;  // Enable idempotent producer
+  DeliverySemantics delivery_semantics = 1;  // Primary delivery guarantee
   int32 retries = 2;  // Number of retries
   int32 retry_backoff_ms = 3;  // Backoff time between retries
-  DeliverySemantics delivery_semantics = 4;  // Delivery semantics
 }
 
 // Consumer configuration

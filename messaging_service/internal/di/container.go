@@ -4,7 +4,6 @@ import (
 	"messaging_service/internal/config"
 	"messaging_service/internal/messaging_service/handler"
 	"messaging_service/internal/messaging_service/service"
-	"messaging_service/pkg/kafka"
 	"messaging_service/pkg/logger"
 )
 
@@ -13,13 +12,21 @@ type Container struct {
 	// Config
 	Config *config.Config
 
-	// Key Manager
+	// Service handlers
 	MessagingHandler *handler.MessagingHandler
 
-	Producer *kafka.Producer
+	// Services
+	MessagingService service.MessagingService
 }
 
 // NewContainer creates a new dependency injection container
+//
+// This initializes the application dependencies:
+//   - Creates a logger
+//   - Loads configuration
+//   - Sets up the Confluent Kafka-based messaging service for reliable message processing
+//     with exactly-once delivery guarantees, transaction support, and automatic retries
+//   - Creates the messaging service handler
 func NewContainer() (*Container, error) {
 	// Initialize logger
 	logger.InitLogger()
@@ -30,21 +37,32 @@ func NewContainer() (*Container, error) {
 		return nil, err
 	}
 
-	// Initialize dependencies
-	producer := kafka.NewProducer()
-	admin := kafka.NewAdmin(kafka.KafkaConfig{
-		Brokers: cfg.KafkaBrokers,
-	})
+	// Create the messaging service with confluent-kafka-go
+	messagingService := service.NewConfluentMessagingService(cfg)
 
-	messagingService := service.NewMessagingService(producer, admin)
+	// Create the handler with the service
 	msgHandler := handler.NewMessagingHandler(cfg, messagingService)
 
 	// Build container
 	container := &Container{
 		Config:           cfg,
 		MessagingHandler: msgHandler,
-		Producer:         producer,
+		MessagingService: messagingService,
 	}
 
 	return container, nil
+}
+
+// Close properly shuts down all resources
+func (c *Container) Close() error {
+	// Close messaging service (which will close producers)
+	if closer, ok := c.MessagingService.(interface{ Close() error }); ok {
+		if err := closer.Close(); err != nil {
+			logger.LogErrorEvent("", "container_close", "", "error",
+				"Failed to close messaging service")
+			return err
+		}
+	}
+
+	return nil
 }

@@ -3,7 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
-	"strings" // Need to import strings for splitting
+	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -14,22 +15,78 @@ type Config struct {
 	GrpcPort string
 
 	// Kafka settings for client connection
-	KafkaBrokers          []string // Corrected name for clarity and consistency
-	KafkaAutoCreateTopics string   // Keeping as string to match env, though bool might be better
+	KafkaBrokers          []string
+	KafkaAutoCreateTopics string
+
+	// Kafka topic configuration
+	KafkaNumPartitions     int
+	KafkaReplicationFactor int
+
+	// Kafka producer configuration
+	KafkaBatchSize             int
+	KafkaBatchBytes            int64
+	KafkaBatchTimeoutMs        int
+	KafkaCompressionCodec      string
+	KafkaMaxAttempts           int
+	KafkaRetryBackoffMs        int
+	KafkaReadTimeoutMs         int
+	KafkaWriteTimeoutMs        int
+	KafkaRequireActiveListener bool
+
+	// Kafka topic settings
+	KafkaRetentionMs int
+
+	// Kafka consumer configuration
+	KafkaConsumerMaxWaitMs        int
+	KafkaConsumerCommitIntervalMs int
+	KafkaConsumerSessionTimeoutMs int
+	KafkaConsumerHeartbeatMs      int
+	KafkaConsumerMaxPollRecords   int
+	KafkaConsumerAutoOffsetReset  string
+	KafkaEnableAutoCommit         bool
+	KafkaIsolationLevel           string
 }
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
-	// godotenv.Load() will not return an error if the .env file is not found,
-	// which is useful for environments where env vars are set directly.
 	godotenv.Load()
 
 	config := &Config{
+		// Server settings
 		GrpcPort: getEnvString("GRPC_PORT", "50051"),
-		// Load and split the KAFKA_BROKERS string into a slice
-		KafkaBrokers:          getEnvStringSlice("KAFKA_BROKERS", "localhost:9092"), // Default should be a single broker or match your .env
+
+		// Kafka connection settings
+		KafkaBrokers:          getEnvStringSlice("KAFKA_BROKERS", "localhost:9092"),
 		KafkaAutoCreateTopics: getEnvString("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "true"),
+
+		// Kafka topic configuration
+		KafkaNumPartitions:     getEnvInt("KAFKA_NUM_PARTITIONS", 3),
+		KafkaReplicationFactor: getEnvInt("KAFKA_REPLICATION_FACTOR", 3),
+
+		// Kafka producer configuration
+		KafkaBatchSize:             getEnvInt("KAFKA_BATCH_SIZE", 100),
+		KafkaBatchBytes:            getEnvInt64("KAFKA_BATCH_BYTES", 1048576),
+		KafkaBatchTimeoutMs:        getEnvInt("KAFKA_BATCH_TIMEOUT_MS", 500),
+		KafkaCompressionCodec:      getEnvString("KAFKA_COMPRESSION_CODEC", "snappy"),
+		KafkaMaxAttempts:           getEnvInt("KAFKA_MAX_ATTEMPTS", 3),
+		KafkaRetryBackoffMs:        getEnvInt("KAFKA_RETRY_BACKOFF_MS", 100),
+		KafkaReadTimeoutMs:         getEnvInt("KAFKA_READ_TIMEOUT_MS", 5000),
+		KafkaWriteTimeoutMs:        getEnvInt("KAFKA_WRITE_TIMEOUT_MS", 5000),
+		KafkaRequireActiveListener: getEnvBool("KAFKA_REQUIRE_ACTIVE_LISTENER", true),
+
+		// Kafka topic settings
+		KafkaRetentionMs: getEnvInt("KAFKA_RETENTION_MS", 3000),
+
+		// Kafka consumer configuration
+		KafkaConsumerMaxWaitMs:        getEnvInt("KAFKA_CONSUMER_MAX_WAIT_MS", 5000),
+		KafkaConsumerCommitIntervalMs: getEnvInt("KAFKA_CONSUMER_COMMIT_INTERVAL_MS", 5000),
+		KafkaConsumerSessionTimeoutMs: getEnvInt("KAFKA_CONSUMER_SESSION_TIMEOUT_MS", 30000),
+		KafkaConsumerHeartbeatMs:      getEnvInt("KAFKA_CONSUMER_HEARTBEAT_MS", 1000),
+		KafkaConsumerMaxPollRecords:   getEnvInt("KAFKA_CONSUMER_MAX_POLL_RECORDS", 1000),
+		KafkaConsumerAutoOffsetReset:  getEnvString("KAFKA_CONSUMER_AUTO_OFFSET_RESET", "earliest"),
+		KafkaEnableAutoCommit:         getEnvBool("KAFKA_ENABLE_AUTO_COMMIT", false),
+		KafkaIsolationLevel:           getEnvString("KAFKA_ISOLATION_LEVEL", "read_committed"),
 	}
 
 	// --- Validation ---
@@ -49,9 +106,6 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("KAFKA_BROKERS environment variable contains no valid broker addresses")
 	}
 
-	// Removed validation for Zookeeper and Kafka broker-specific settings
-	// as these are not needed by the client application.
-
 	return config, nil
 }
 
@@ -61,6 +115,21 @@ func getEnvString(key, defaultValue string) string {
 	if value == "" {
 		return defaultValue
 	}
+	return value
+}
+
+// getEnvInt gets an integer environment variable or returns a default value
+func getEnvInt(key string, defaultValue int) int {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+
 	return value
 }
 
@@ -85,6 +154,36 @@ func getEnvStringSlice(key, defaultValue string) []string {
 		}
 	}
 	return result
+}
+
+// getEnvInt64 gets an int64 environment variable or returns a default value
+func getEnvInt64(key string, defaultValue int64) int64 {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+
+	value, err := strconv.ParseInt(valueStr, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
+}
+
+// getEnvBool gets a boolean environment variable or returns a default value
+func getEnvBool(key string, defaultValue bool) bool {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+
+	value, err := strconv.ParseBool(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
 }
 
 // Removed the old getEnv function as more specific helpers are used.
