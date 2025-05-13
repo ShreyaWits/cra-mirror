@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -31,7 +32,9 @@ func (m *MockRedisInterface) InvalidateCache(key string) error {
 
 func TestRedisRepo_GetCache(t *testing.T) {
 	mockRedis := new(MockRedisInterface)
-	repo := NewRedisRepository(mockRedis)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	repo := NewRedisRepository(mockRedis, logger)
 
 	key := "test-key"
 	expectedValue := "test-value"
@@ -46,7 +49,9 @@ func TestRedisRepo_GetCache(t *testing.T) {
 
 func TestRedisRepo_GetCache_Error(t *testing.T) {
 	mockRedis := new(MockRedisInterface)
-	repo := NewRedisRepository(mockRedis)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	repo := NewRedisRepository(mockRedis, logger)
 
 	key := "test-key"
 	mockRedis.On("GetCache", key).Return("", errors.New("redis error"))
@@ -59,7 +64,9 @@ func TestRedisRepo_GetCache_Error(t *testing.T) {
 
 func TestRedisRepo_SetCache(t *testing.T) {
 	mockRedis := new(MockRedisInterface)
-	repo := NewRedisRepository(mockRedis)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	repo := NewRedisRepository(mockRedis, logger)
 
 	key := "test-key"
 	value := "test-value"
@@ -74,7 +81,9 @@ func TestRedisRepo_SetCache(t *testing.T) {
 
 func TestRedisRepo_SetCache_Error(t *testing.T) {
 	mockRedis := new(MockRedisInterface)
-	repo := NewRedisRepository(mockRedis)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	repo := NewRedisRepository(mockRedis, logger)
 
 	key := "test-key"
 	value := "test-value"
@@ -89,7 +98,9 @@ func TestRedisRepo_SetCache_Error(t *testing.T) {
 
 func TestRedisRepo_InvalidateCache(t *testing.T) {
 	mockRedis := new(MockRedisInterface)
-	repo := NewRedisRepository(mockRedis)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	repo := NewRedisRepository(mockRedis, logger)
 
 	key := "test-key"
 
@@ -102,7 +113,9 @@ func TestRedisRepo_InvalidateCache(t *testing.T) {
 
 func TestRedisRepo_InvalidateCache_Error(t *testing.T) {
 	mockRedis := new(MockRedisInterface)
-	repo := NewRedisRepository(mockRedis)
+	// Create a dummy logger for testing
+	logger := slog.Default()
+	repo := NewRedisRepository(mockRedis, logger)
 
 	key := "test-key"
 
