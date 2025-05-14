@@ -24,20 +24,63 @@ message HealthCheckResponse {
   ServingStatus status = 1;
 }
 
-// Document processing service definition
-service DocumentProcessingService {
-  rpc ProcessDocument(ProcessDocumentRequest) returns (ProcessDocumentResponse) {}
+// File processing request message
+message FileProcessingRequest {
+  FileData file = 1;
+  repeated string extraction_fields = 2;
 }
 
-// Document processing request message
-message ProcessDocumentRequest {
-  bytes document = 1;
-  string document_type = 2;
+// File data message
+message FileData {
+  string base64file = 1;
+  string file_type = 2;
 }
 
-// Document processing response message
-message ProcessDocumentResponse {
+// Batch file processing request
+message BatchFileProcessingRequest {
+  repeated FileProcessingRequest files = 1;
+  string batch_id = 2;  // Unique identifier for the batch
+  string classifier = 3;
+}
+
+// Batch processing acknowledgment
+message BatchProcessingAck {
+  string batch_id = 1;
+  string status = 2;  // "ACCEPTED", "PROCESSING", "COMPLETED", "FAILED"
+  string message = 3;
+  repeated string file_urls = 4;  // URLs of all processed files in Minio
+}
+
+// Batch processing status request
+message BatchStatusRequest {
+  string batch_id = 1;
+}
+
+// Processed file data
+message ProcessedFileData {
+  string file_id = 1;
+  string file_url = 2;
+  map<string, string> extracted_data = 3;
+  float confidence = 4;  // Confidence score for this file (0-100)
+}
+
+// Batch file processing response
+message BatchFileProcessingResponse {
   bool success = 1;
   string message = 2;
-  bytes processed_document = 3;
-} 
+  repeated ProcessedFileData processed_files = 3;
+}
+
+// Document processing service definition with versioning
+service DocumentProcessingServiceV1 {
+  // V1 methods
+  rpc ProcessBatchFilesV1(BatchFileProcessingRequest) returns (BatchProcessingAck) {}
+  rpc GetBatchStatusV1(BatchStatusRequest) returns (BatchFileProcessingResponse) {}
+}
+
+// Future V2 service definition (commented out for now)
+// service DocumentProcessingServiceV2 {
+//   // V2 methods will be added here
+//   // rpc ProcessBatchFilesV2(BatchFileProcessingRequest) returns (BatchProcessingAck) {}
+//   // rpc GetBatchStatusV2(BatchStatusRequest) returns (BatchFileProcessingResponse) {}
+// } 
