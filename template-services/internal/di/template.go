@@ -11,7 +11,7 @@ import (
 
 type Container struct {
 	TemplateRepo        repository.TemplateRepository
-	TemplateService     *service.TemplateService
+	TemplateService     *service.TemplateServiceImpl
 	TemplateHandler     *handler.TemplateHandler
 	TemplateGRPCHandler *handler.TemplateGRPCHandler
 	YugabyteDB          *db.YugabyteDB

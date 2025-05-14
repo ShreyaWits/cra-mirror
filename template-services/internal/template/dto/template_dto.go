@@ -6,11 +6,12 @@ import (
 
 // CreateTemplateRequest represents the request body for creating a template
 type CreateTemplateRequest struct {
-	Name     string `json:"name" validate:"required" error_code:"TmpErrmissingName"`
-	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
-	Language string `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
-	Content  string `json:"content" validate:"required" error_code:"TmpErrmissingContent"`
-	IsActive bool   `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
+	Name           string   `json:"name" validate:"required" error_code:"TmpErrmissingName"`
+	Channel        string   `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
+	Language       string   `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
+	RequiredFields []string `json:"required_fields" validate:"required" error_code:"TmpErrmissingRequiredFields"`
+	Content        string   `json:"content" validate:"required" error_code:"TmpErrmissingContent"`
+	IsActive       bool     `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
 }
 
 // CreateTemplateResponse represents the response for template creation
@@ -24,28 +25,30 @@ type CreateTemplateResponse struct {
 
 // GetTemplateRequest represents the request for getting a template
 type GetTemplateRequest struct {
-	Name       string `query:"name" validate:"required"  error_code:"TmpErrmissingName"`
-	Channel    string `query:"channel" validate:"required" error_code:"TmpErrmissingChannel"`
-	Language   string `query:"language" validate:"required" error_code:"TmpErrmissingLanguage"`
-	TemplateID string `param:"id" validate:"required" error_code:"TmpErrmissingTemplateID"`
+	Name     string `json:"name" validate:"required" error_code:"TmpErrmissingName"`
+	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
+	Language string `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
 }
+
+// GetTemplateRequestV1 represents the request for getting a template via gRPC
 type GetTemplateRequestV1 struct {
-	Name     string `query:"name" validate:"required"  error_code:"TmpErrmissingName"`
-	Channel  string `query:"channel" validate:"required" error_code:"TmpErrmissingChannel"`
-	Language string `query:"language" validate:"required" error_code:"TmpErrmissingLanguage"`
+	Name     string `json:"name" validate:"required" error_code:"TmpErrmissingName"`
+	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
+	Language string `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
 }
 
 // TemplateResponse represents the template data in responses
 type TemplateResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Channel   string    `json:"channel"`
-	Language  string    `json:"language"`
-	Content   string    `json:"content"`
-	Version   int       `json:"version"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Channel        string    `json:"channel"`
+	Language       string    `json:"language"`
+	Content        string    `json:"content"`
+	RequiredFields []string  `json:"required_fields"`
+	Version        int       `json:"version"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // GetTemplateResponse represents the response for getting a template
@@ -57,7 +60,8 @@ type GetTemplateResponse struct {
 
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
-	IsActive *bool `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
+	TemplateID string `json:"template_id" validate:"required" error_code:"TmpErrmissingTemplateID"`
+	IsActive   *bool  `json:"is_active" validate:"omitempty" error_code:"TmpErrmissingIsActive"`
 }
 
 // UpdateTemplateResponse represents the response for template update
@@ -69,7 +73,7 @@ type UpdateTemplateResponse struct {
 
 // DeleteTemplateRequest represents the request for deleting a template
 type DeleteTemplateRequest struct {
-	TemplateID string `param:"id" validate:"required" error_code:"TmpErrmissingTemplateID"`
+	TemplateID string `json:"template_id" validate:"required" error_code:"TmpErrmissingTemplateID"`
 }
 
 // DeleteTemplateResponse represents the response for template deletion

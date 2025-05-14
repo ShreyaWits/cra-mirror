@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -12,6 +13,7 @@ type Template struct {
 	Name      string         `gorm:"uniqueIndex" json:"name"`
 	Content   string         `json:"content"`
 	Channel   string         `gorm:"index" json:"channel"`
+	RequiredFields pq.StringArray `gorm:"type:text[]" json:"required_fields"`
 	Language  string         `gorm:"index" json:"language"`
 	IsActive  bool           `gorm:"default:true" json:"is_active"`
 	Version   int            `gorm:"default:1" json:"version"`

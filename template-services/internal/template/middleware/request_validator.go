@@ -3,7 +3,7 @@ package middleware
 import (
 	"reflect"
 	"strings"
-	"template-services/internal/pkg/errors"
+	appErrors "template-services/internal/pkg/errors"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +29,7 @@ func ValidateBody[T any]() fiber.Handler {
 		// Step 1: Parse JSON body
 		if err := c.BodyParser(&body); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"success":    false,
+				"success": false,
 				"message": fiber.Map{
 					"body": "Invalid or malformed JSON",
 				},
@@ -78,17 +78,31 @@ func ValidateBody[T any]() fiber.Handler {
 				}
 
 				// Return the error map with specific missing values
+				// Determine top-level error code
+				topErrorCode := appErrors.TmpErrInvalidRequestBody
+				if len(errMap) == 1 {
+					for _, fe := range ve {
+						if f, ok := reflect.TypeOf(body).FieldByName(fe.Field()); ok {
+							if customCode := f.Tag.Get("error_code"); customCode != "" {
+								topErrorCode = customCode
+							}
+						}
+						break
+					}
+				}
+
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"success":    false,
 					"message":    errMap,
-					"error_code": appErrors.TmpErrInvalidRequestBody,
+					"error_code": topErrorCode,
 					"data":       fiber.Map{},
 				})
+
 			}
 
 			// Unexpected validation error
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"success":    false,
+				"success": false,
 				"message": fiber.Map{
 					"validation": err.Error(),
 				},
@@ -102,8 +116,6 @@ func ValidateBody[T any]() fiber.Handler {
 		return c.Next()
 	}
 }
-
-
 func ValidateStruct[T any](input T) (map[string]string, bool) {
 	errMap := make(map[string]string)
 
@@ -129,86 +141,3 @@ func ValidateStruct[T any](input T) (map[string]string, bool) {
 
 	return nil, true
 }
-
-// ValidateQuery validates query parameters and returns consistent error response
-func ValidateQuery[T any]() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		var query T
-
-		// Step 1: Parse query parameters
-		if err := c.QueryParser(&query); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"success":    false,
-				"message": fiber.Map{
-					"query": "Invalid query parameters",
-				},
-				"error_code": appErrors.TmpErrInvalidRequestBody,
-				"data":       fiber.Map{},
-			})
-		}
-
-		// Step 2: Validate Struct
-		if err := validate.Struct(query); err != nil {
-			if ve, ok := err.(validator.ValidationErrors); ok {
-				errMap := make(fiber.Map)
-
-				// Collect missing or invalid fields
-				for _, fe := range ve {
-					field := strings.ToLower(fe.Field())
-
-					// Default error message
-					msg := ""
-					switch fe.Tag() {
-					case "required":
-						msg = field + " is required"
-					case "len":
-						msg = field + " must be " + fe.Param() + " characters long"
-					case "oneof":
-						msg = field + " must be one of [" + fe.Param() + "]"
-					case "nonempty":
-						msg = field + " cannot be empty"
-					default:
-						msg = "Invalid value for " + field
-					}
-
-					// Attempt to override with error_code tag
-					t := reflect.TypeOf(query)
-					if t.Kind() == reflect.Ptr {
-						t = t.Elem()
-					}
-					if f, ok := t.FieldByName(fe.Field()); ok {
-						if customCode := f.Tag.Get("error_code"); customCode != "" {
-							msg = appErrors.GetAppErrorMessage(customCode)
-						}
-					}
-
-					// Store the error message for the field
-					errMap[field] = msg
-				}
-
-				// Return the error map with specific missing values
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"success":    false,
-					"message":    errMap,
-					"error_code": appErrors.TmpErrInvalidRequestBody,
-					"data":       fiber.Map{},
-				})
-			}
-
-			// Unexpected validation error
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"success":    false,
-				"message": fiber.Map{
-					"validation": err.Error(),
-				},
-				"error_code": appErrors.TmpErrInvalidRequestBody,
-				"data":       fiber.Map{},
-			})
-		}
-
-		// Step 3: Store parsed & validated query into context
-		c.Locals("query", query)
-		return c.Next()
-	}
-}
-

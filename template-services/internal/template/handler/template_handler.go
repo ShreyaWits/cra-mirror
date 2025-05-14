@@ -5,17 +5,17 @@ import (
 	"template-services/internal/models"
 	errors "template-services/internal/pkg/errors"
 	"template-services/internal/template/dto"
-	"template-services/internal/template/service"
+	"template-services/internal/template/service" // Ensure this import is correct
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
 type TemplateHandler struct {
-	service *service.TemplateService
+	service service.TemplateServiceInterface
 }
 
-func NewTemplateHandler(service *service.TemplateService) *TemplateHandler {
+func NewTemplateHandler(service service.TemplateServiceInterface) *TemplateHandler {
 	return &TemplateHandler{
 		service: service,
 	}
@@ -78,14 +78,13 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 // GetTemplate handles template retrieval
 func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
 	req := dto.GetTemplateRequest{
-		Name:       c.Query("name"),
-		Channel:    c.Query("channel"),
-		Language:   c.Query("language"),
-		TemplateID: c.Params("id"),
+		Name:     c.Query("name"),
+		Channel:  c.Query("channel"),
+		Language: c.Query("language"),
 	}
 
 	// Call service
-	resp, err := h.service.GetTemplate(c.Context(), req.TemplateID, req.Name, req.Channel, req.Language)
+	resp, err := h.service.GetTemplate(c.Context(), "", req.Name, req.Channel, req.Language)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
 			Success:      false,
@@ -176,12 +175,43 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 
 // DeleteTemplate handles template deletion
 func (h *TemplateHandler) DeleteTemplate(c *fiber.Ctx) error {
-	req := dto.DeleteTemplateRequest{
-		TemplateID: c.Params("id"),
+	var req dto.DeleteTemplateRequest
+	log.Printf("Request body: %+v", req)
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrInvalidRequestBody),
+			ErrorCode:    errors.TmpErrInvalidRequestBody,
+			Data:         nil,
+		})
 	}
 
-	// Call service
-	_, err := h.service.DeleteTemplate(c.Context(), req.TemplateID)
+	// Parse and validate UUID
+	uid, err := uuid.Parse(req.TemplateID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrUUIDParsing),
+			ErrorCode:    errors.TmpErrUUIDParsing,
+			Data:         nil,
+		})
+	}
+
+	// Check if template exists
+	existing, err := h.service.GetTemplateByID(c.Context(), uid)
+	log.Printf("Existing template: %+v", existing)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse{
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateNotFound),
+			ErrorCode:    errors.TmpErrTemplateNotFound,
+			Data:         nil,
+		})
+	}
+
+	// Call service to delete
+	_, err = h.service.DeleteTemplate(c.Context(), existing.ID.String())
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
 			Success:      false,
