@@ -122,8 +122,9 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 			Data:         nil,
 		})
 	}
-	idParam := c.Params("id")
+	idParam := req.TemplateID
 	uid, err := uuid.Parse(idParam)
+	log.Printf("Parsed UUID: %s", uid)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
 			Success:      false,
@@ -134,6 +135,8 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 
 	// Fetch existing template
 	existing, err := h.service.GetTemplateByID(c.Context(), uid)
+	log.Printf("Existing template: %+v", existing)
+	log.Printf("====>", err)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse{
 			Success:      false,
@@ -147,6 +150,7 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	existing.IsActive = *req.IsActive
 
 	updatedTemplate, err := h.service.UpdateTemplate(c.Context(), existing)
+	log.Printf("Updated template: %+v", updatedTemplate)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
 			Success:      false,

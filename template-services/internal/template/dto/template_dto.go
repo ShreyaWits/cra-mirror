@@ -61,7 +61,7 @@ type GetTemplateResponse struct {
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
 	TemplateID string `json:"template_id" validate:"required" error_code:"TmpErrmissingTemplateID"`
-	IsActive   *bool  `json:"is_active" validate:"omitempty" error_code:"TmpErrmissingIsActive"`
+	IsActive   *bool  `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
 }
 
 // UpdateTemplateResponse represents the response for template update

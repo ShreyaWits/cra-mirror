@@ -42,6 +42,7 @@ func ValidateBody[T any]() fiber.Handler {
 		if err := validate.Struct(body); err != nil {
 			if ve, ok := err.(validator.ValidationErrors); ok {
 				errMap := make(fiber.Map)
+				var topErrorCode string
 
 				// Collect missing or invalid fields
 				for _, fe := range ve {
@@ -70,6 +71,23 @@ func ValidateBody[T any]() fiber.Handler {
 					if f, ok := t.FieldByName(fe.Field()); ok {
 						if customCode := f.Tag.Get("error_code"); customCode != "" {
 							msg = appErrors.GetAppErrorMessage(customCode)
+							// Map the error code to its constant value
+							switch customCode {
+							case "TmpErrmissingName":
+								topErrorCode = appErrors.TmpErrmissingName
+							case "TmpErrmissingChannel":
+								topErrorCode = appErrors.TmpErrmissingChannel
+							case "TmpErrmissingLanguage":
+								topErrorCode = appErrors.TmpErrmissingLanguage
+							case "TmpErrmissingContent":
+								topErrorCode = appErrors.TmpErrmissingContent
+							case "TmpErrmissingIsActive":
+								topErrorCode = appErrors.TmpErrmissingIsActive
+							case "TmpErrmissingTemplateID":
+								topErrorCode = appErrors.TmpErrmissingTemplateID
+							default:
+								topErrorCode = appErrors.TmpErrInvalidRequestBody
+							}
 						}
 					}
 
@@ -77,27 +95,18 @@ func ValidateBody[T any]() fiber.Handler {
 					errMap[field] = msg
 				}
 
-				// Return the error map with specific missing values
-				// Determine top-level error code
-				topErrorCode := appErrors.TmpErrInvalidRequestBody
-				if len(errMap) == 1 {
-					for _, fe := range ve {
-						if f, ok := reflect.TypeOf(body).FieldByName(fe.Field()); ok {
-							if customCode := f.Tag.Get("error_code"); customCode != "" {
-								topErrorCode = customCode
-							}
-						}
-						break
-					}
+				// If no specific error code was found, use the default
+				if topErrorCode == "" {
+					topErrorCode = appErrors.TmpErrInvalidRequestBody
 				}
 
+				// Return the error map with specific missing values
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"success":    false,
 					"message":    errMap,
 					"error_code": topErrorCode,
 					"data":       fiber.Map{},
 				})
-
 			}
 
 			// Unexpected validation error
@@ -116,6 +125,7 @@ func ValidateBody[T any]() fiber.Handler {
 		return c.Next()
 	}
 }
+
 func ValidateStruct[T any](input T) (map[string]string, bool) {
 	errMap := make(map[string]string)
 
