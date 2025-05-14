@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
+	"log"
 )
 
 type Config struct {
@@ -26,7 +29,9 @@ type ConfigResponse struct {
 // LoadConfigFromAPI fetches config from the remote config service
 func LoadConfigFromAPI(token string) (map[string]string, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "http://localhost:4001/api/v1/config/dev/document-processing", nil)
+	api := fmt.Sprintf("%s/%s/document-processing", strings.TrimRight(os.Getenv("CONFIG_API"), "/"), os.Getenv("ENVIRONMENT"))
+	log.Println(api)
+	req, err := http.NewRequest("GET", api, nil)
 	if err != nil {
 		return nil, err
 	}

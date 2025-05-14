@@ -48,6 +48,7 @@ message BatchProcessingAck {
   string batch_id = 1;
   string status = 2;  // "ACCEPTED", "PROCESSING", "COMPLETED", "FAILED"
   string message = 3;
+  repeated string file_urls = 4;  // URLs of all processed files in Minio
 }
 
 // Batch processing status request
@@ -60,6 +61,7 @@ message ProcessedFileData {
   string file_id = 1;
   string file_url = 2;
   map<string, string> extracted_data = 3;
+  float confidence = 4;  // Confidence score for this file (0-100)
 }
 
 // Batch file processing response

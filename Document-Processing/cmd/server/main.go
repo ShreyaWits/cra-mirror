@@ -8,11 +8,18 @@ import (
 
 	"Document-Processing/internal/config"
 	"Document-Processing/internal/di"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil{
+		log.Print("Failed to get .env")
+	}
 	// Load environment variables
-	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNzQ3MTQxNzc5fQ.KcsFZ8YWHHcp41IZRhT5Z4mgDdzfOI9w7YJ4GbXxBg0"
+	token := os.Getenv("JWT_TOKEN")
 
 	rawData, err := config.LoadConfigFromAPI(token)
 	if err != nil {

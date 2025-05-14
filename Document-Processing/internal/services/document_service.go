@@ -17,11 +17,11 @@ import (
 
 // BatchProcessingState tracks the state of a batch processing job
 type BatchProcessingState struct {
+	mu             sync.RWMutex
 	Status         string
 	Message        string
-	ProcessedFiles []*pb.ProcessedFileData
 	Error          error
-	mu             sync.RWMutex
+	ProcessedFiles []*pb.ProcessedFileData
 }
 
 type DocumentService struct {
@@ -56,6 +56,26 @@ func (s *DocumentService) ProcessBatchFilesV1(ctx context.Context, req *pb.Batch
 		batchID = fmt.Sprintf("batch-%d", time.Now().UnixNano())
 	}
 
+	// Store all files in Minio and collect their URLs
+	var fileURLs []string
+	for _, fileReq := range req.Files {
+		if fileReq.File == nil {
+			continue
+		}
+
+		fileData, err := base64.StdEncoding.DecodeString(fileReq.File.Base64File)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode base64 data: %v", err)
+		}
+
+		fileURL, err := s.minioRepo.StoreFile(ctx, fileData, fileReq.File.FileType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to store file in Minio: %v", err)
+		}
+
+		fileURLs = append(fileURLs, fileURL)
+	}
+
 	// Create and store the batch state
 	batchState := &BatchProcessingState{
 		Status:  "ACCEPTED",
@@ -70,9 +90,10 @@ func (s *DocumentService) ProcessBatchFilesV1(ctx context.Context, req *pb.Batch
 	go s.processBatchInBackground(ctx, batchID, req)
 
 	return &pb.BatchProcessingAck{
-		BatchId: batchID,
-		Status:  "ACCEPTED",
-		Message: "Batch processing started",
+		BatchId:  batchID,
+		Status:   "ACCEPTED",
+		Message:  "Batch processing started",
+		FileUrls: fileURLs,
 	}, nil
 }
 
@@ -246,28 +267,20 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 
 	log.Printf("Successfully decoded base64, file size: %d bytes", len(fileData))
 
-	// Save to temp file
-	// tempFilePath, err := utils.SaveBytesToTempFile(fileData, mimeType)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to save temp image: %v", err)
-	// }
-	// log.Printf("Temp file saved at: %s", tempFilePath)
-
 	var extractedData map[string]string
+	var confidence float32
 
 	// Llama Doc Processing AI
-
 	if classifier == string(enums.ClassifierLlama) {
-
 		extractedData, err = s.llamaService.ProcessImage(ctx, base64Data, req.ExtractionFields)
-
 		if err != nil {
-
 			return nil, fmt.Errorf("failed to process with LLaMA: %v", err)
 		}
+		// LLaMA doesn't provide confidence scores, so we'll use a default value
+		confidence = 100.0
 	} else {
 		// Gemini Doc Processing AI
-		extractedData, err = s.geminiService.ProcessImage(ctx, base64Data, req.ExtractionFields)
+		extractedData, confidence, err = s.geminiService.ProcessImage(ctx, base64Data, req.ExtractionFields)
 		if err != nil {
 			return nil, fmt.Errorf("failed to process with Gemini: %v", err)
 		}
@@ -282,6 +295,7 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 		FileId:        fmt.Sprintf("file-%d", time.Now().UnixNano()),
 		FileUrl:       fileURL,
 		ExtractedData: extractedData,
+		Confidence:    confidence,
 	}, nil
 }
 

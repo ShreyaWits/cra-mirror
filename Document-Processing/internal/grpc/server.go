@@ -71,15 +71,8 @@ func (s *Server) Stop() {
 func (s *Server) RegisterServices(documentService pb.DocumentProcessingServiceV1Server, healthHandler pb.HealthServiceServer) {
 	// Register document processing service
 	pb.RegisterDocumentProcessingServiceV1Server(s.grpcServer, documentService)
-	log.Printf("Registered document processing service on port %d", s.port)
-
-	// Register health check service
-	pb.RegisterHealthServiceServer(s.grpcServer, healthHandler)
-	log.Printf("Registered health check service on port %d", s.port)
-
+	
 	// Log server info
 	log.Printf("Server is ready to accept connections on port %d", s.port)
-	log.Printf("Available services:")
-	log.Printf("- DocumentProcessingService")
-	log.Printf("- HealthService")
+
 }

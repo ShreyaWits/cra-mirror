@@ -31,11 +31,11 @@ func NewGeminiService(apiKey string) (*GeminiService, error) {
 	}, nil
 }
 
-func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string) (map[string]string, error) {
+func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string) (map[string]string, float32, error) {
 	// Step 1: Clean and validate base64 string
 	base64Data, mimeType, err := cleanAndValidateBase64(base64Image)
 	if err != nil {
-		return nil, fmt.Errorf("base64 validation failed: %v", err)
+		return nil, 0, fmt.Errorf("base64 validation failed: %v", err)
 	}
 
 	// Log base64 data details for debugging
@@ -47,7 +47,7 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 		fmt.Printf("Base64 decoding failed: %v\n", err)
 		fmt.Printf("Base64 data length: %d\n", len(base64Data))
 		fmt.Printf("First 100 chars: %s\n", base64Data[:min(100, len(base64Data))])
-		return nil, fmt.Errorf("base64 decoding failed: %v (input length: %d)", err, len(base64Data))
+		return nil, 0, fmt.Errorf("base64 decoding failed: %v (input length: %d)", err, len(base64Data))
 	}
 
 	fmt.Printf("Successfully decoded image, size: %d bytes\n", len(imageData))
@@ -57,9 +57,9 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 
 	// Step 4: Create extraction prompt
 	prompt := fmt.Sprintf(`Extract these fields from the document: %s. 
-		Return ONLY valid JSON with these exact field names. 
-		If a field is missing, use empty string. 
-		Example: {"name":"John Doe","email":"john@example.com"}`,
+		Return ONLY valid JSON with these exact field names and an overall confidence score.
+		If a field is missing, use empty string.
+		Example: {"data":{"name":"John Doe","email":"john@example.com"},"confidence":0.95}`,
 		strings.Join(extractionFields, ", "))
 
 	// Step 5: Call Gemini with retry logic and exponential backoff
@@ -70,7 +70,7 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 	for i := 0; i < maxRetries; i++ {
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("context canceled while processing with Gemini: %v", ctx.Err())
+			return nil, 0, fmt.Errorf("context canceled while processing with Gemini: %v", ctx.Err())
 		default:
 			// Create a new context with timeout for this attempt
 			attemptCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -89,7 +89,7 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 				fmt.Printf("Retrying in %v...\n", delay)
 				select {
 				case <-ctx.Done():
-					return nil, fmt.Errorf("context canceled while waiting to retry: %v", ctx.Err())
+					return nil, 0, fmt.Errorf("context canceled while waiting to retry: %v", ctx.Err())
 				case <-time.After(delay):
 					continue
 				}
@@ -98,12 +98,12 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("gemini API failed after %d retries: %v", maxRetries, err)
+		return nil, 0, fmt.Errorf("gemini API failed after %d retries: %v", maxRetries, err)
 	}
 
 	// Step 6: Parse response
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return nil, fmt.Errorf("empty response from Gemini")
+		return nil, 0, fmt.Errorf("empty response from Gemini")
 	}
 
 	var responseText string
@@ -122,19 +122,23 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 	fmt.Printf("Gemini response: %s\n", responseText)
 
 	// Parse JSON
-	result := make(map[string]string)
-	if err := json.Unmarshal([]byte(responseText), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse Gemini response: %v\nResponse: %s", err, responseText)
+	type Response struct {
+		Data       map[string]string `json:"data"`
+		Confidence float32           `json:"confidence"`
+	}
+	var response Response
+	if err := json.Unmarshal([]byte(responseText), &response); err != nil {
+		return nil, 0, fmt.Errorf("failed to parse Gemini response: %v\nResponse: %s", err, responseText)
 	}
 
 	// Ensure all requested fields are present
 	for _, field := range extractionFields {
-		if _, exists := result[field]; !exists {
-			result[field] = ""
+		if _, exists := response.Data[field]; !exists {
+			response.Data[field] = ""
 		}
 	}
 
-	return result, nil
+	return response.Data, response.Confidence * 100, nil // Convert to percentage
 }
 
 func cleanAndValidateBase64(base64Str string) (string, string, error) {
