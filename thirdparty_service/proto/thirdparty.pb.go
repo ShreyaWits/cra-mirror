@@ -4,7 +4,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v3.12.4
-// source: protos/thirdparty.proto
+// source: proto/thirdparty.proto
 
 package pb
 
@@ -56,11 +56,11 @@ func (x EmailContentType) String() string {
 }
 
 func (EmailContentType) Descriptor() protoreflect.EnumDescriptor {
-	return file_protos_thirdparty_proto_enumTypes[0].Descriptor()
+	return file_proto_thirdparty_proto_enumTypes[0].Descriptor()
 }
 
 func (EmailContentType) Type() protoreflect.EnumType {
-	return &file_protos_thirdparty_proto_enumTypes[0]
+	return &file_proto_thirdparty_proto_enumTypes[0]
 }
 
 func (x EmailContentType) Number() protoreflect.EnumNumber {
@@ -69,232 +69,33 @@ func (x EmailContentType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EmailContentType.Descriptor instead.
 func (EmailContentType) EnumDescriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{0}
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{0}
 }
 
-type VerifyAadhaarRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AadhaarNumber string                 `protobuf:"bytes,1,opt,name=aadhaar_number,json=aadhaarNumber,proto3" json:"aadhaar_number,omitempty"` // Aadhaar number to verify
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VerifyAadhaarRequest) Reset() {
-	*x = VerifyAadhaarRequest{}
-	mi := &file_protos_thirdparty_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VerifyAadhaarRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VerifyAadhaarRequest) ProtoMessage() {}
-
-func (x *VerifyAadhaarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VerifyAadhaarRequest.ProtoReflect.Descriptor instead.
-func (*VerifyAadhaarRequest) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *VerifyAadhaarRequest) GetAadhaarNumber() string {
-	if x != nil {
-		return x.AadhaarNumber
-	}
-	return ""
-}
-
-type VerifyAadhaarResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Verified      bool                   `protobuf:"varint,1,opt,name=verified,proto3" json:"verified,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Dob           string                 `protobuf:"bytes,3,opt,name=dob,proto3" json:"dob,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VerifyAadhaarResponse) Reset() {
-	*x = VerifyAadhaarResponse{}
-	mi := &file_protos_thirdparty_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VerifyAadhaarResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VerifyAadhaarResponse) ProtoMessage() {}
-
-func (x *VerifyAadhaarResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VerifyAadhaarResponse.ProtoReflect.Descriptor instead.
-func (*VerifyAadhaarResponse) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *VerifyAadhaarResponse) GetVerified() bool {
-	if x != nil {
-		return x.Verified
-	}
-	return false
-}
-
-func (x *VerifyAadhaarResponse) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *VerifyAadhaarResponse) GetDob() string {
-	if x != nil {
-		return x.Dob
-	}
-	return ""
-}
-
-type VerifyPANRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PanNumber     string                 `protobuf:"bytes,1,opt,name=pan_number,json=panNumber,proto3" json:"pan_number,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VerifyPANRequest) Reset() {
-	*x = VerifyPANRequest{}
-	mi := &file_protos_thirdparty_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VerifyPANRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VerifyPANRequest) ProtoMessage() {}
-
-func (x *VerifyPANRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VerifyPANRequest.ProtoReflect.Descriptor instead.
-func (*VerifyPANRequest) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *VerifyPANRequest) GetPanNumber() string {
-	if x != nil {
-		return x.PanNumber
-	}
-	return ""
-}
-
-type VerifyPANResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Valid         bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VerifyPANResponse) Reset() {
-	*x = VerifyPANResponse{}
-	mi := &file_protos_thirdparty_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VerifyPANResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VerifyPANResponse) ProtoMessage() {}
-
-func (x *VerifyPANResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VerifyPANResponse.ProtoReflect.Descriptor instead.
-func (*VerifyPANResponse) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *VerifyPANResponse) GetValid() bool {
-	if x != nil {
-		return x.Valid
-	}
-	return false
-}
-
-func (x *VerifyPANResponse) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-type SendSMSRequest struct {
+type InvokeTwilioRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Phone         string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	CountryCode   string                 `protobuf:"bytes,3,opt,name=country_code,json=countryCode,proto3" json:"country_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendSMSRequest) Reset() {
-	*x = SendSMSRequest{}
-	mi := &file_protos_thirdparty_proto_msgTypes[4]
+func (x *InvokeTwilioRequest) Reset() {
+	*x = InvokeTwilioRequest{}
+	mi := &file_proto_thirdparty_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendSMSRequest) String() string {
+func (x *InvokeTwilioRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendSMSRequest) ProtoMessage() {}
+func (*InvokeTwilioRequest) ProtoMessage() {}
 
-func (x *SendSMSRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[4]
+func (x *InvokeTwilioRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -305,47 +106,55 @@ func (x *SendSMSRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendSMSRequest.ProtoReflect.Descriptor instead.
-func (*SendSMSRequest) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{4}
+// Deprecated: Use InvokeTwilioRequest.ProtoReflect.Descriptor instead.
+func (*InvokeTwilioRequest) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SendSMSRequest) GetPhone() string {
+func (x *InvokeTwilioRequest) GetPhone() string {
 	if x != nil {
 		return x.Phone
 	}
 	return ""
 }
 
-func (x *SendSMSRequest) GetMessage() string {
+func (x *InvokeTwilioRequest) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-type SendSMSResponse struct {
+func (x *InvokeTwilioRequest) GetCountryCode() string {
+	if x != nil {
+		return x.CountryCode
+	}
+	return ""
+}
+
+type InvokeTwilioResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendSMSResponse) Reset() {
-	*x = SendSMSResponse{}
-	mi := &file_protos_thirdparty_proto_msgTypes[5]
+func (x *InvokeTwilioResponse) Reset() {
+	*x = InvokeTwilioResponse{}
+	mi := &file_proto_thirdparty_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendSMSResponse) String() string {
+func (x *InvokeTwilioResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendSMSResponse) ProtoMessage() {}
+func (*InvokeTwilioResponse) ProtoMessage() {}
 
-func (x *SendSMSResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[5]
+func (x *InvokeTwilioResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,19 +165,26 @@ func (x *SendSMSResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendSMSResponse.ProtoReflect.Descriptor instead.
-func (*SendSMSResponse) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{5}
+// Deprecated: Use InvokeTwilioResponse.ProtoReflect.Descriptor instead.
+func (*InvokeTwilioResponse) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SendSMSResponse) GetStatus() string {
+func (x *InvokeTwilioResponse) GetCode() string {
 	if x != nil {
-		return x.Status
+		return x.Code
 	}
 	return ""
 }
 
-type SendEmailRequest struct {
+func (x *InvokeTwilioResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type InvokeSendGridRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	To            string                 `protobuf:"bytes,1,opt,name=to,proto3" json:"to,omitempty"`
 	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
@@ -378,21 +194,21 @@ type SendEmailRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendEmailRequest) Reset() {
-	*x = SendEmailRequest{}
-	mi := &file_protos_thirdparty_proto_msgTypes[6]
+func (x *InvokeSendGridRequest) Reset() {
+	*x = InvokeSendGridRequest{}
+	mi := &file_proto_thirdparty_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendEmailRequest) String() string {
+func (x *InvokeSendGridRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendEmailRequest) ProtoMessage() {}
+func (*InvokeSendGridRequest) ProtoMessage() {}
 
-func (x *SendEmailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[6]
+func (x *InvokeSendGridRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,61 +219,62 @@ func (x *SendEmailRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendEmailRequest.ProtoReflect.Descriptor instead.
-func (*SendEmailRequest) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{6}
+// Deprecated: Use InvokeSendGridRequest.ProtoReflect.Descriptor instead.
+func (*InvokeSendGridRequest) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *SendEmailRequest) GetTo() string {
+func (x *InvokeSendGridRequest) GetTo() string {
 	if x != nil {
 		return x.To
 	}
 	return ""
 }
 
-func (x *SendEmailRequest) GetSubject() string {
+func (x *InvokeSendGridRequest) GetSubject() string {
 	if x != nil {
 		return x.Subject
 	}
 	return ""
 }
 
-func (x *SendEmailRequest) GetBody() string {
+func (x *InvokeSendGridRequest) GetBody() string {
 	if x != nil {
 		return x.Body
 	}
 	return ""
 }
 
-func (x *SendEmailRequest) GetType() EmailContentType {
+func (x *InvokeSendGridRequest) GetType() EmailContentType {
 	if x != nil {
 		return x.Type
 	}
 	return EmailContentType_EMAIL_CONTENT_TYPE_UNSPECIFIED
 }
 
-type SendEmailResponse struct {
+type InvokeSendGridResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendEmailResponse) Reset() {
-	*x = SendEmailResponse{}
-	mi := &file_protos_thirdparty_proto_msgTypes[7]
+func (x *InvokeSendGridResponse) Reset() {
+	*x = InvokeSendGridResponse{}
+	mi := &file_proto_thirdparty_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendEmailResponse) String() string {
+func (x *InvokeSendGridResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendEmailResponse) ProtoMessage() {}
+func (*InvokeSendGridResponse) ProtoMessage() {}
 
-func (x *SendEmailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[7]
+func (x *InvokeSendGridResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -468,235 +285,108 @@ func (x *SendEmailResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendEmailResponse.ProtoReflect.Descriptor instead.
-func (*SendEmailResponse) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{7}
+// Deprecated: Use InvokeSendGridResponse.ProtoReflect.Descriptor instead.
+func (*InvokeSendGridResponse) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *SendEmailResponse) GetStatus() string {
+func (x *InvokeSendGridResponse) GetCode() string {
 	if x != nil {
-		return x.Status
+		return x.Code
 	}
 	return ""
 }
 
-type PaymentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Amount        float64                `protobuf:"fixed64,1,opt,name=amount,proto3" json:"amount,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PaymentRequest) Reset() {
-	*x = PaymentRequest{}
-	mi := &file_protos_thirdparty_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PaymentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PaymentRequest) ProtoMessage() {}
-
-func (x *PaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[8]
+func (x *InvokeSendGridResponse) GetMessage() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PaymentRequest.ProtoReflect.Descriptor instead.
-func (*PaymentRequest) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *PaymentRequest) GetAmount() float64 {
-	if x != nil {
-		return x.Amount
-	}
-	return 0
-}
-
-func (x *PaymentRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
+		return x.Message
 	}
 	return ""
 }
 
-type PaymentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TransactionId string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
+var File_proto_thirdparty_proto protoreflect.FileDescriptor
 
-func (x *PaymentResponse) Reset() {
-	*x = PaymentResponse{}
-	mi := &file_protos_thirdparty_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PaymentResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PaymentResponse) ProtoMessage() {}
-
-func (x *PaymentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_thirdparty_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PaymentResponse.ProtoReflect.Descriptor instead.
-func (*PaymentResponse) Descriptor() ([]byte, []int) {
-	return file_protos_thirdparty_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *PaymentResponse) GetTransactionId() string {
-	if x != nil {
-		return x.TransactionId
-	}
-	return ""
-}
-
-func (x *PaymentResponse) GetStatus() string {
-	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-var File_protos_thirdparty_proto protoreflect.FileDescriptor
-
-const file_protos_thirdparty_proto_rawDesc = "" +
+const file_proto_thirdparty_proto_rawDesc = "" +
 	"\n" +
-	"\x17protos/thirdparty.proto\x12\x02pb\"=\n" +
-	"\x14VerifyAadhaarRequest\x12%\n" +
-	"\x0eaadhaar_number\x18\x01 \x01(\tR\raadhaarNumber\"Y\n" +
-	"\x15VerifyAadhaarResponse\x12\x1a\n" +
-	"\bverified\x18\x01 \x01(\bR\bverified\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x10\n" +
-	"\x03dob\x18\x03 \x01(\tR\x03dob\"1\n" +
-	"\x10VerifyPANRequest\x12\x1d\n" +
-	"\n" +
-	"pan_number\x18\x01 \x01(\tR\tpanNumber\"=\n" +
-	"\x11VerifyPANResponse\x12\x14\n" +
-	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"@\n" +
-	"\x0eSendSMSRequest\x12\x14\n" +
+	"\x16proto/thirdparty.proto\x12\x02pb\"h\n" +
+	"\x13InvokeTwilioRequest\x12\x14\n" +
 	"\x05phone\x18\x01 \x01(\tR\x05phone\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\")\n" +
-	"\x0fSendSMSResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status\"z\n" +
-	"\x10SendEmailRequest\x12\x0e\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12!\n" +
+	"\fcountry_code\x18\x03 \x01(\tR\vcountryCode\"D\n" +
+	"\x14InvokeTwilioResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x7f\n" +
+	"\x15InvokeSendGridRequest\x12\x0e\n" +
 	"\x02to\x18\x01 \x01(\tR\x02to\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x12\n" +
 	"\x04body\x18\x03 \x01(\tR\x04body\x12(\n" +
-	"\x04type\x18\x04 \x01(\x0e2\x14.pb.EmailContentTypeR\x04type\"+\n" +
-	"\x11SendEmailResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status\"A\n" +
-	"\x0ePaymentRequest\x12\x16\n" +
-	"\x06amount\x18\x01 \x01(\x01R\x06amount\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\"P\n" +
-	"\x0fPaymentResponse\x12%\n" +
-	"\x0etransaction_id\x18\x01 \x01(\tR\rtransactionId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status*J\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x14.pb.EmailContentTypeR\x04type\"F\n" +
+	"\x16InvokeSendGridResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage*J\n" +
 	"\x10EmailContentType\x12\"\n" +
 	"\x1eEMAIL_CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\b\n" +
 	"\x04TEXT\x10\x01\x12\b\n" +
-	"\x04HTML\x10\x022\xcf\x02\n" +
+	"\x04HTML\x10\x022\xa7\x01\n" +
 	"\x11ThirdPartyService\x12D\n" +
-	"\rVerifyAadhaar\x12\x18.pb.VerifyAadhaarRequest\x1a\x19.pb.VerifyAadhaarResponse\x128\n" +
-	"\tVerifyPAN\x12\x14.pb.VerifyPANRequest\x1a\x15.pb.VerifyPANResponse\x12:\n" +
-	"\x0fInvokeTwilioSms\x12\x12.pb.SendSMSRequest\x1a\x13.pb.SendSMSResponse\x12B\n" +
-	"\x13InvokeSendgridEmail\x12\x14.pb.SendEmailRequest\x1a\x15.pb.SendEmailResponse\x12:\n" +
-	"\x0fInitiatePayment\x12\x12.pb.PaymentRequest\x1a\x13.pb.PaymentResponseB1Z/github.com/kkwitslab/go-boilerplate/internal/pbb\x06proto3"
+	"\x0fInvokeTwilioSms\x12\x17.pb.InvokeTwilioRequest\x1a\x18.pb.InvokeTwilioResponse\x12L\n" +
+	"\x13InvokeSendgridEmail\x12\x19.pb.InvokeSendGridRequest\x1a\x1a.pb.InvokeSendGridResponseB1Z/github.com/kkwitslab/go-boilerplate/internal/pbb\x06proto3"
 
 var (
-	file_protos_thirdparty_proto_rawDescOnce sync.Once
-	file_protos_thirdparty_proto_rawDescData []byte
+	file_proto_thirdparty_proto_rawDescOnce sync.Once
+	file_proto_thirdparty_proto_rawDescData []byte
 )
 
-func file_protos_thirdparty_proto_rawDescGZIP() []byte {
-	file_protos_thirdparty_proto_rawDescOnce.Do(func() {
-		file_protos_thirdparty_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protos_thirdparty_proto_rawDesc), len(file_protos_thirdparty_proto_rawDesc)))
+func file_proto_thirdparty_proto_rawDescGZIP() []byte {
+	file_proto_thirdparty_proto_rawDescOnce.Do(func() {
+		file_proto_thirdparty_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_thirdparty_proto_rawDesc), len(file_proto_thirdparty_proto_rawDesc)))
 	})
-	return file_protos_thirdparty_proto_rawDescData
+	return file_proto_thirdparty_proto_rawDescData
 }
 
-var file_protos_thirdparty_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_protos_thirdparty_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
-var file_protos_thirdparty_proto_goTypes = []any{
-	(EmailContentType)(0),         // 0: pb.EmailContentType
-	(*VerifyAadhaarRequest)(nil),  // 1: pb.VerifyAadhaarRequest
-	(*VerifyAadhaarResponse)(nil), // 2: pb.VerifyAadhaarResponse
-	(*VerifyPANRequest)(nil),      // 3: pb.VerifyPANRequest
-	(*VerifyPANResponse)(nil),     // 4: pb.VerifyPANResponse
-	(*SendSMSRequest)(nil),        // 5: pb.SendSMSRequest
-	(*SendSMSResponse)(nil),       // 6: pb.SendSMSResponse
-	(*SendEmailRequest)(nil),      // 7: pb.SendEmailRequest
-	(*SendEmailResponse)(nil),     // 8: pb.SendEmailResponse
-	(*PaymentRequest)(nil),        // 9: pb.PaymentRequest
-	(*PaymentResponse)(nil),       // 10: pb.PaymentResponse
+var file_proto_thirdparty_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_thirdparty_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_thirdparty_proto_goTypes = []any{
+	(EmailContentType)(0),          // 0: pb.EmailContentType
+	(*InvokeTwilioRequest)(nil),    // 1: pb.InvokeTwilioRequest
+	(*InvokeTwilioResponse)(nil),   // 2: pb.InvokeTwilioResponse
+	(*InvokeSendGridRequest)(nil),  // 3: pb.InvokeSendGridRequest
+	(*InvokeSendGridResponse)(nil), // 4: pb.InvokeSendGridResponse
 }
-var file_protos_thirdparty_proto_depIdxs = []int32{
-	0,  // 0: pb.SendEmailRequest.type:type_name -> pb.EmailContentType
-	1,  // 1: pb.ThirdPartyService.VerifyAadhaar:input_type -> pb.VerifyAadhaarRequest
-	3,  // 2: pb.ThirdPartyService.VerifyPAN:input_type -> pb.VerifyPANRequest
-	5,  // 3: pb.ThirdPartyService.InvokeTwilioSms:input_type -> pb.SendSMSRequest
-	7,  // 4: pb.ThirdPartyService.InvokeSendgridEmail:input_type -> pb.SendEmailRequest
-	9,  // 5: pb.ThirdPartyService.InitiatePayment:input_type -> pb.PaymentRequest
-	2,  // 6: pb.ThirdPartyService.VerifyAadhaar:output_type -> pb.VerifyAadhaarResponse
-	4,  // 7: pb.ThirdPartyService.VerifyPAN:output_type -> pb.VerifyPANResponse
-	6,  // 8: pb.ThirdPartyService.InvokeTwilioSms:output_type -> pb.SendSMSResponse
-	8,  // 9: pb.ThirdPartyService.InvokeSendgridEmail:output_type -> pb.SendEmailResponse
-	10, // 10: pb.ThirdPartyService.InitiatePayment:output_type -> pb.PaymentResponse
-	6,  // [6:11] is the sub-list for method output_type
-	1,  // [1:6] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+var file_proto_thirdparty_proto_depIdxs = []int32{
+	0, // 0: pb.InvokeSendGridRequest.type:type_name -> pb.EmailContentType
+	1, // 1: pb.ThirdPartyService.InvokeTwilioSms:input_type -> pb.InvokeTwilioRequest
+	3, // 2: pb.ThirdPartyService.InvokeSendgridEmail:input_type -> pb.InvokeSendGridRequest
+	2, // 3: pb.ThirdPartyService.InvokeTwilioSms:output_type -> pb.InvokeTwilioResponse
+	4, // 4: pb.ThirdPartyService.InvokeSendgridEmail:output_type -> pb.InvokeSendGridResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_protos_thirdparty_proto_init() }
-func file_protos_thirdparty_proto_init() {
-	if File_protos_thirdparty_proto != nil {
+func init() { file_proto_thirdparty_proto_init() }
+func file_proto_thirdparty_proto_init() {
+	if File_proto_thirdparty_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_thirdparty_proto_rawDesc), len(file_protos_thirdparty_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_thirdparty_proto_rawDesc), len(file_proto_thirdparty_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   10,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_protos_thirdparty_proto_goTypes,
-		DependencyIndexes: file_protos_thirdparty_proto_depIdxs,
-		EnumInfos:         file_protos_thirdparty_proto_enumTypes,
-		MessageInfos:      file_protos_thirdparty_proto_msgTypes,
+		GoTypes:           file_proto_thirdparty_proto_goTypes,
+		DependencyIndexes: file_proto_thirdparty_proto_depIdxs,
+		EnumInfos:         file_proto_thirdparty_proto_enumTypes,
+		MessageInfos:      file_proto_thirdparty_proto_msgTypes,
 	}.Build()
-	File_protos_thirdparty_proto = out.File
-	file_protos_thirdparty_proto_goTypes = nil
-	file_protos_thirdparty_proto_depIdxs = nil
+	File_proto_thirdparty_proto = out.File
+	file_proto_thirdparty_proto_goTypes = nil
+	file_proto_thirdparty_proto_depIdxs = nil
 }

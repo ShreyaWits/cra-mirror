@@ -4,7 +4,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.12.4
-// source: protos/thirdparty.proto
+// source: proto/thirdparty.proto
 
 package pb
 
@@ -21,11 +21,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ThirdPartyService_VerifyAadhaar_FullMethodName       = "/pb.ThirdPartyService/VerifyAadhaar"
-	ThirdPartyService_VerifyPAN_FullMethodName           = "/pb.ThirdPartyService/VerifyPAN"
 	ThirdPartyService_InvokeTwilioSms_FullMethodName     = "/pb.ThirdPartyService/InvokeTwilioSms"
 	ThirdPartyService_InvokeSendgridEmail_FullMethodName = "/pb.ThirdPartyService/InvokeSendgridEmail"
-	ThirdPartyService_InitiatePayment_FullMethodName     = "/pb.ThirdPartyService/InitiatePayment"
 )
 
 // ThirdPartyServiceClient is the client API for ThirdPartyService service.
@@ -34,11 +31,8 @@ const (
 //
 // Aadhaar Verification
 type ThirdPartyServiceClient interface {
-	VerifyAadhaar(ctx context.Context, in *VerifyAadhaarRequest, opts ...grpc.CallOption) (*VerifyAadhaarResponse, error)
-	VerifyPAN(ctx context.Context, in *VerifyPANRequest, opts ...grpc.CallOption) (*VerifyPANResponse, error)
-	InvokeTwilioSms(ctx context.Context, in *SendSMSRequest, opts ...grpc.CallOption) (*SendSMSResponse, error)
-	InvokeSendgridEmail(ctx context.Context, in *SendEmailRequest, opts ...grpc.CallOption) (*SendEmailResponse, error)
-	InitiatePayment(ctx context.Context, in *PaymentRequest, opts ...grpc.CallOption) (*PaymentResponse, error)
+	InvokeTwilioSms(ctx context.Context, in *InvokeTwilioRequest, opts ...grpc.CallOption) (*InvokeTwilioResponse, error)
+	InvokeSendgridEmail(ctx context.Context, in *InvokeSendGridRequest, opts ...grpc.CallOption) (*InvokeSendGridResponse, error)
 }
 
 type thirdPartyServiceClient struct {
@@ -49,29 +43,9 @@ func NewThirdPartyServiceClient(cc grpc.ClientConnInterface) ThirdPartyServiceCl
 	return &thirdPartyServiceClient{cc}
 }
 
-func (c *thirdPartyServiceClient) VerifyAadhaar(ctx context.Context, in *VerifyAadhaarRequest, opts ...grpc.CallOption) (*VerifyAadhaarResponse, error) {
+func (c *thirdPartyServiceClient) InvokeTwilioSms(ctx context.Context, in *InvokeTwilioRequest, opts ...grpc.CallOption) (*InvokeTwilioResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(VerifyAadhaarResponse)
-	err := c.cc.Invoke(ctx, ThirdPartyService_VerifyAadhaar_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *thirdPartyServiceClient) VerifyPAN(ctx context.Context, in *VerifyPANRequest, opts ...grpc.CallOption) (*VerifyPANResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(VerifyPANResponse)
-	err := c.cc.Invoke(ctx, ThirdPartyService_VerifyPAN_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *thirdPartyServiceClient) InvokeTwilioSms(ctx context.Context, in *SendSMSRequest, opts ...grpc.CallOption) (*SendSMSResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendSMSResponse)
+	out := new(InvokeTwilioResponse)
 	err := c.cc.Invoke(ctx, ThirdPartyService_InvokeTwilioSms_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -79,20 +53,10 @@ func (c *thirdPartyServiceClient) InvokeTwilioSms(ctx context.Context, in *SendS
 	return out, nil
 }
 
-func (c *thirdPartyServiceClient) InvokeSendgridEmail(ctx context.Context, in *SendEmailRequest, opts ...grpc.CallOption) (*SendEmailResponse, error) {
+func (c *thirdPartyServiceClient) InvokeSendgridEmail(ctx context.Context, in *InvokeSendGridRequest, opts ...grpc.CallOption) (*InvokeSendGridResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendEmailResponse)
+	out := new(InvokeSendGridResponse)
 	err := c.cc.Invoke(ctx, ThirdPartyService_InvokeSendgridEmail_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *thirdPartyServiceClient) InitiatePayment(ctx context.Context, in *PaymentRequest, opts ...grpc.CallOption) (*PaymentResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PaymentResponse)
-	err := c.cc.Invoke(ctx, ThirdPartyService_InitiatePayment_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +69,8 @@ func (c *thirdPartyServiceClient) InitiatePayment(ctx context.Context, in *Payme
 //
 // Aadhaar Verification
 type ThirdPartyServiceServer interface {
-	VerifyAadhaar(context.Context, *VerifyAadhaarRequest) (*VerifyAadhaarResponse, error)
-	VerifyPAN(context.Context, *VerifyPANRequest) (*VerifyPANResponse, error)
-	InvokeTwilioSms(context.Context, *SendSMSRequest) (*SendSMSResponse, error)
-	InvokeSendgridEmail(context.Context, *SendEmailRequest) (*SendEmailResponse, error)
-	InitiatePayment(context.Context, *PaymentRequest) (*PaymentResponse, error)
+	InvokeTwilioSms(context.Context, *InvokeTwilioRequest) (*InvokeTwilioResponse, error)
+	InvokeSendgridEmail(context.Context, *InvokeSendGridRequest) (*InvokeSendGridResponse, error)
 	mustEmbedUnimplementedThirdPartyServiceServer()
 }
 
@@ -120,20 +81,11 @@ type ThirdPartyServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedThirdPartyServiceServer struct{}
 
-func (UnimplementedThirdPartyServiceServer) VerifyAadhaar(context.Context, *VerifyAadhaarRequest) (*VerifyAadhaarResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method VerifyAadhaar not implemented")
-}
-func (UnimplementedThirdPartyServiceServer) VerifyPAN(context.Context, *VerifyPANRequest) (*VerifyPANResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method VerifyPAN not implemented")
-}
-func (UnimplementedThirdPartyServiceServer) InvokeTwilioSms(context.Context, *SendSMSRequest) (*SendSMSResponse, error) {
+func (UnimplementedThirdPartyServiceServer) InvokeTwilioSms(context.Context, *InvokeTwilioRequest) (*InvokeTwilioResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvokeTwilioSms not implemented")
 }
-func (UnimplementedThirdPartyServiceServer) InvokeSendgridEmail(context.Context, *SendEmailRequest) (*SendEmailResponse, error) {
+func (UnimplementedThirdPartyServiceServer) InvokeSendgridEmail(context.Context, *InvokeSendGridRequest) (*InvokeSendGridResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvokeSendgridEmail not implemented")
-}
-func (UnimplementedThirdPartyServiceServer) InitiatePayment(context.Context, *PaymentRequest) (*PaymentResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InitiatePayment not implemented")
 }
 func (UnimplementedThirdPartyServiceServer) mustEmbedUnimplementedThirdPartyServiceServer() {}
 func (UnimplementedThirdPartyServiceServer) testEmbeddedByValue()                           {}
@@ -156,44 +108,8 @@ func RegisterThirdPartyServiceServer(s grpc.ServiceRegistrar, srv ThirdPartyServ
 	s.RegisterService(&ThirdPartyService_ServiceDesc, srv)
 }
 
-func _ThirdPartyService_VerifyAadhaar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VerifyAadhaarRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ThirdPartyServiceServer).VerifyAadhaar(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ThirdPartyService_VerifyAadhaar_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThirdPartyServiceServer).VerifyAadhaar(ctx, req.(*VerifyAadhaarRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ThirdPartyService_VerifyPAN_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VerifyPANRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ThirdPartyServiceServer).VerifyPAN(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ThirdPartyService_VerifyPAN_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThirdPartyServiceServer).VerifyPAN(ctx, req.(*VerifyPANRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ThirdPartyService_InvokeTwilioSms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendSMSRequest)
+	in := new(InvokeTwilioRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -205,13 +121,13 @@ func _ThirdPartyService_InvokeTwilioSms_Handler(srv interface{}, ctx context.Con
 		FullMethod: ThirdPartyService_InvokeTwilioSms_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThirdPartyServiceServer).InvokeTwilioSms(ctx, req.(*SendSMSRequest))
+		return srv.(ThirdPartyServiceServer).InvokeTwilioSms(ctx, req.(*InvokeTwilioRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ThirdPartyService_InvokeSendgridEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendEmailRequest)
+	in := new(InvokeSendGridRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -223,25 +139,7 @@ func _ThirdPartyService_InvokeSendgridEmail_Handler(srv interface{}, ctx context
 		FullMethod: ThirdPartyService_InvokeSendgridEmail_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThirdPartyServiceServer).InvokeSendgridEmail(ctx, req.(*SendEmailRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ThirdPartyService_InitiatePayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PaymentRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ThirdPartyServiceServer).InitiatePayment(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ThirdPartyService_InitiatePayment_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThirdPartyServiceServer).InitiatePayment(ctx, req.(*PaymentRequest))
+		return srv.(ThirdPartyServiceServer).InvokeSendgridEmail(ctx, req.(*InvokeSendGridRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -254,14 +152,6 @@ var ThirdPartyService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ThirdPartyServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "VerifyAadhaar",
-			Handler:    _ThirdPartyService_VerifyAadhaar_Handler,
-		},
-		{
-			MethodName: "VerifyPAN",
-			Handler:    _ThirdPartyService_VerifyPAN_Handler,
-		},
-		{
 			MethodName: "InvokeTwilioSms",
 			Handler:    _ThirdPartyService_InvokeTwilioSms_Handler,
 		},
@@ -269,11 +159,7 @@ var ThirdPartyService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "InvokeSendgridEmail",
 			Handler:    _ThirdPartyService_InvokeSendgridEmail_Handler,
 		},
-		{
-			MethodName: "InitiatePayment",
-			Handler:    _ThirdPartyService_InitiatePayment_Handler,
-		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protos/thirdparty.proto",
+	Metadata: "proto/thirdparty.proto",
 }

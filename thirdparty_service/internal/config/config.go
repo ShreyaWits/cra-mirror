@@ -39,6 +39,10 @@ type dynamicConfig struct {
 	TwilioAccountSID string `validate:"required" json:"TWILIO_ACCOUNT_SID"`
 	TwilioAuthToken  string `validate:"required" json:"TWILIO_AUTH_TOKEN"`
 	TwilioFormNumber string `validate:"required" json:"TWILIO_FORM_NUMBER"`
+
+	SendGridApiKey    string `validate:"required" json:"SENDGRID_API_KEY"`
+	SendGridFromEmail string `validate:"required" json:"SENDGRID_FROM_EMAIL"`
+	SendGridFromName  string `validate:"required" json:"SENDGRID_FROM_NAME"`
 }
 
 type staticConfig struct {

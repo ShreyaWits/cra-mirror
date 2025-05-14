@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"reflect"
+
 	"thirdparty_service/internal/dtos"
 
 	"github.com/go-playground/validator/v10"
@@ -8,24 +10,38 @@ import (
 
 var v = validator.New(validator.WithRequiredStructEnabled())
 
-func Validate(data any) []error {
+func Validate(data any) []dtos.FieldError {
 	err := v.Struct(data)
 	if err == nil {
 		return nil
 	}
 
-	var errs []error
-	for _, err := range err.(validator.ValidationErrors) {
+	var errs []dtos.FieldError
+	for _, fe := range err.(validator.ValidationErrors) {
+		errorCode := getErrorCode(data, fe.StructField())
 		fieldErr := dtos.FieldError{
-			Code:    "VALIDATION_ERROR",
-			Field:   err.Field(),
-			Message: generateErrorMessage(err),
-			Data:    err.Tag(),
+			Code:    errorCode, // use the extracted error_code tag
+			Field:   fe.Field(),
+			Message: generateErrorMessage(fe),
+			Data:    fe.Tag(),
 		}
 		errs = append(errs, fieldErr)
 	}
 
 	return errs
+}
+
+// getErrorCode uses reflection to extract the `error_code` tag
+func getErrorCode(structVal any, fieldName string) string {
+	rt := reflect.TypeOf(structVal)
+	if rt.Kind() == reflect.Ptr {
+		rt = rt.Elem()
+	}
+
+	if field, ok := rt.FieldByName(fieldName); ok {
+		return field.Tag.Get("error_code")
+	}
+	return "VALIDATION_ERROR" // fallback default
 }
 
 func generateErrorMessage(fe validator.FieldError) string {

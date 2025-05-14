@@ -2,11 +2,11 @@ package methods
 
 import (
 	"context"
+	"thirdparty_service/internal/modules/execute/dtos"
 	"thirdparty_service/internal/modules/execute/services"
+	"thirdparty_service/internal/utils"
+	"thirdparty_service/pkg/codes"
 	protos "thirdparty_service/proto"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type ThirdPartyServer struct {
@@ -26,29 +26,67 @@ func InitMethods(svc services.Service) *ThirdPartyServer {
 	}
 }
 
-func (h *ThirdPartyServer) VerifyAadhaar(ctx context.Context, req *protos.VerifyAadhaarRequest) (*protos.VerifyAadhaarResponse, error) {
-	result, name, dob, err := h.svc.VerifyAadhaar(req.AadhaarNumber)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "VerifyAadhaar failed: %v", err)
-	}
-	return &protos.VerifyAadhaarResponse{
-		Verified: result,
-		Name:     name,
-		Dob:      dob,
-	}, nil
-}
-
 // Invoke Twilio SMS
-func (h *ThirdPartyServer) InvokeTwilioSms(ctx context.Context, req *protos.SendSMSRequest) (*protos.SendSMSResponse, error) {
+func (h *ThirdPartyServer) InvokeTwilioSms(ctx context.Context, req *protos.InvokeTwilioRequest) (*protos.InvokeTwilioResponse, error) {
 
-	err := h.svc.SendTwilioSms(req.Phone, req.Message)
-	if err != nil {
-		return &protos.SendSMSResponse{
-			Status: "FAILED",
+	// validate request
+	payload := &dtos.TwilioSmsRequest{
+		Phone:       req.Phone,
+		Message:     req.Message,
+		CountryCode: req.CountryCode,
+	}
+
+	validationErr := utils.Validate(payload)
+	if validationErr != nil || len(validationErr) > 0 {
+		err := validationErr[0]
+		return &protos.InvokeTwilioResponse{
+			Code:    err.Code,
+			Message: codes.ErrorMessage(err.Code),
 		}, nil
 	}
 
-	return &protos.SendSMSResponse{
-		Status: "SUCCESS",
+	err := h.svc.SendTwilioSms(payload)
+	if err != nil {
+		return &protos.InvokeTwilioResponse{
+			Code:    codes.TS1008,
+			Message: codes.ErrorMessage(codes.TS1008),
+		}, nil
+	}
+
+	return &protos.InvokeTwilioResponse{
+		Code:    codes.TS0001,
+		Message: codes.SuccessMessage(codes.TS0001),
+	}, nil
+}
+
+// Invoke SendGrid Email
+func (h *ThirdPartyServer) InvokeSendGridEmail(ctx context.Context, req *protos.InvokeSendGridRequest) (*protos.InvokeSendGridResponse, error) {
+
+	// validate request
+	payload := &dtos.SendGridEmailRequest{
+		Subject: req.Subject,
+		To:      req.To,
+		Body:    req.Body,
+	}
+	validationErr := utils.Validate(payload)
+	if validationErr != nil || len(validationErr) > 0 {
+		err := validationErr[0]
+		return &protos.InvokeSendGridResponse{
+			Code:    err.Code,
+			Message: codes.ErrorMessage(err.Code),
+		}, nil
+	}
+
+	err := h.svc.SendEmailBySendGrid(payload)
+	if err != nil {
+		return &protos.InvokeSendGridResponse{
+			Code:    codes.TS1007,
+			Message: codes.ErrorMessage(codes.TS1007),
+		}, nil
+	}
+
+	return &protos.InvokeSendGridResponse{
+		Code:    codes.TS0001,
+		Message: codes.SuccessMessage(codes.TS0001),
 	}, nil
 }
