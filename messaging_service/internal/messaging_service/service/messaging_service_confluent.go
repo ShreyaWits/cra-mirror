@@ -14,9 +14,9 @@ import (
 )
 
 type MessagingService interface {
-	PublishMessage(ctx context.Context, cfg interface{}, req *pb.PublishRequest) *errors.CustomError
-	ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, cfg interface{}) *errors.CustomError
-	CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg interface{}) *errors.CustomError
+	PublishMessage(ctx context.Context, cfg confluent.KafkaConfig, req *pb.PublishRequest) *errors.CustomError
+	ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, cfg confluent.KafkaConfig) *errors.CustomError
+	CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg confluent.KafkaConfig) *errors.CustomError
 }
 
 // ConfluentMessagingService implements MessagingService using confluent-kafka-go
@@ -30,9 +30,8 @@ type ConfluentMessagingService struct {
 }
 
 // NewConfluentMessagingService creates a new messaging service using confluent-kafka-go
-func NewConfluentMessagingService(config *config.Config) MessagingService {
+func NewConfluentMessagingService(config *config.Config, factory confluent.KafkaFactory) (MessagingService, error) {
 	// Create factory
-	factory := confluent.NewFactory()
 
 	// Create a base config
 	kafkaConfig := confluent.KafkaConfig{
@@ -82,14 +81,7 @@ func NewConfluentMessagingService(config *config.Config) MessagingService {
 	}
 
 	if err != nil {
-		logger.LogErrorEvent("", "confluent_admin_creation_failed", "", "error",
-			fmt.Sprintf("Failed to create Confluent Kafka admin after %d attempts: %v", maxRetries, err))
-		// Create a null admin that logs errors but doesn't fail
-		admin, err = factory.CreateAdmin(config)
-		if err != nil {
-			logger.LogErrorEvent("", "confluent_admin_creation_failed", "", "error",
-				fmt.Sprintf("Failed to create Confluent Kafka admin after %d attempts: %v", maxRetries, err))
-		}
+		return &ConfluentMessagingService{}, fmt.Errorf("failed to create Confluent Kafka admin after %d attempts: %v", maxRetries, err)
 	}
 
 	return &ConfluentMessagingService{
@@ -99,40 +91,23 @@ func NewConfluentMessagingService(config *config.Config) MessagingService {
 		Config:      config,
 		KafkaConfig: kafkaConfig,
 		mu:          sync.RWMutex{},
-	}
+	}, nil
 }
 
 // PublishMessage publishes a message to Kafka
-func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg interface{}, req *pb.PublishRequest) *errors.CustomError {
-	// Input validation
-	if req.Topic == "" {
-		return errors.NewCustomError(
-			errors.MSGErrInvalidTopic,
-			fmt.Errorf("topic is required"),
-		)
-	}
+func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, confluentConfig confluent.KafkaConfig, req *pb.PublishRequest) *errors.CustomError {
 
-	// Convert to confluent config if needed
-	var confluentConfig confluent.KafkaConfig
-	switch c := cfg.(type) {
-	case confluent.KafkaConfig:
-		// Already the right type
-		confluentConfig = c
-		// Set the topic from the request
-		confluentConfig.Topic = req.Topic
-	default:
-		// Unknown config type
-		return errors.NewCustomError(
-			errors.PUBErrInvalidConfig,
-			fmt.Errorf("unsupported config type"),
-		)
-	}
+	confluentConfig.Topic = req.Topic
 
 	// First check if topic exists
 	topicExists, err := s.TopicExists(ctx, req.Topic)
 	if err != nil {
 		logger.LogWarnEvent("", "kafka_check_topic_failed", req.Topic, "warn",
 			fmt.Sprintf("Failed to check if topic exists: %v", err))
+		return errors.NewCustomError(
+			errors.PUBErrTopicNotExists,
+			fmt.Errorf("topic able to get existing topic: %s", req.Topic),
+		)
 		// Continue anyway with a warning
 	} else if !topicExists {
 		return errors.NewCustomError(
@@ -172,22 +147,15 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 
 	// Parse value
 	var value []byte
-	if len(req.Value) > 0 {
-		// Convert map to JSON
-		jsonBytes, err := json.Marshal(req.Value)
-		if err != nil {
-			return errors.NewCustomError(
-				errors.PUBErrInvalidMessage,
-				fmt.Errorf("failed to serialize message value: %v", err),
-			)
-		}
-		value = jsonBytes
-	} else {
+	// Convert map to JSON
+	jsonBytes, err := json.Marshal(req.Value)
+	if err != nil {
 		return errors.NewCustomError(
 			errors.PUBErrInvalidMessage,
-			fmt.Errorf("message value is required"),
+			fmt.Errorf("failed to serialize message value: %v", err),
 		)
 	}
+	value = jsonBytes
 
 	var key []byte
 	if req.Key != "" {
@@ -315,27 +283,11 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 }
 
 // ConsumeMessage implements the consumer streaming RPC
-func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, cfg interface{}) *errors.CustomError {
+func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, confluentConfig confluent.KafkaConfig) *errors.CustomError {
 	// Extract topic and group information
 	ctx := stream.Context()
 
-	// Convert to confluent config if needed
-	var confluentConfig confluent.KafkaConfig
-	var groupID string
-
-	// Handle different config types
-	switch c := cfg.(type) {
-	case confluent.KafkaConfig:
-		// Already the right type
-		confluentConfig = c
-		groupID = c.ConsumerConfig.GroupID
-	default:
-		// Unknown config type
-		return errors.NewCustomError(
-			errors.SUBErrInvalidConfig,
-			fmt.Errorf("unsupported config type"),
-		)
-	}
+	groupID := confluentConfig.ConsumerConfig.GroupID
 
 	// Input validation
 	if confluentConfig.Topic == "" {
@@ -459,14 +411,8 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 }
 
 // CreateTopic creates a new Kafka topic
-func (s *ConfluentMessagingService) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg interface{}) *errors.CustomError {
-	// Input validation
-	if req.Topic == "" {
-		return errors.NewCustomError(
-			errors.MSGErrInvalidTopic,
-			fmt.Errorf("Topic name is required"),
-		)
-	}
+func (s *ConfluentMessagingService) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg confluent.KafkaConfig) *errors.CustomError {
+
 	// Check if the admin is nil
 	if s.Admin == nil {
 		errors.NewCustomError(
@@ -535,9 +481,6 @@ func (s *ConfluentMessagingService) CreateTopic(ctx context.Context, req *pb.Cre
 
 // getOrCreateProducer gets an existing producer for a topic or creates a new one
 func (s *ConfluentMessagingService) getOrCreateProducer(cfg confluent.KafkaConfig) (confluent.Producer, error) {
-	if cfg.Topic == "" {
-		return nil, fmt.Errorf("topic is required")
-	}
 
 	// Check if we already have a producer for this topic
 	s.mu.RLock()

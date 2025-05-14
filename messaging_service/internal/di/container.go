@@ -4,6 +4,7 @@ import (
 	"messaging_service/internal/config"
 	"messaging_service/internal/messaging_service/handler"
 	"messaging_service/internal/messaging_service/service"
+	"messaging_service/pkg/confluent"
 	"messaging_service/pkg/logger"
 )
 
@@ -37,8 +38,12 @@ func NewContainer() (*Container, error) {
 		return nil, err
 	}
 
+	factory := confluent.NewFactory()
 	// Create the messaging service with confluent-kafka-go
-	messagingService := service.NewConfluentMessagingService(cfg)
+	messagingService, err := service.NewConfluentMessagingService(cfg, factory)
+	if err != nil {
+		return nil, err
+	}
 
 	// Create the handler with the service
 	msgHandler := handler.NewMessagingHandler(cfg, messagingService)

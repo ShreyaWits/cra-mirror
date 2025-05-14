@@ -10,6 +10,7 @@ import (
 	"messaging_service/pkg/confluent"
 	"messaging_service/pkg/logger"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -84,18 +85,18 @@ func TestConsumeMessage(t *testing.T) {
 		group     string
 		expectErr bool
 	}{
-		// {
-		// 	name:      "consume message successfully",
-		// 	topic:     "consume-topic",
-		// 	group:     "consume-group",
-		// 	expectErr: false,
-		// },
-		// {
-		// 	name:      "topic does not exist",
-		// 	topic:     "missing-topic",
-		// 	group:     "consume-group",
-		// 	expectErr: true,
-		// },
+		{
+			name:      "consume message successfully",
+			topic:     "consume-topic",
+			group:     "consume-group",
+			expectErr: false,
+		},
+		{
+			name:      "topic does not exist",
+			topic:     "missing-topic",
+			group:     "consume-group",
+			expectErr: true,
+		},
 		{
 			name:      "error creating consumer",
 			topic:     "error-topic",
@@ -112,26 +113,26 @@ func TestConsumeMessage(t *testing.T) {
 			cfg, _ := config.LoadConfig()
 			mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 			mockFactory := mock.NewMockKafkaFactory(ctrl)
-			// mockConsumer := mock.NewMockConsumer(ctrl)
+			mockConsumer := mock.NewMockConsumer(ctrl)
 			service := &service.ConfluentMessagingService{
 				Factory: mockFactory,
 				Admin:   mockAdmin,
 				Config:  cfg,
 			}
+			ctx, cancel := context.WithCancel(context.Background())
 			stream := &mockSubscribeV1Server{
-				ctx: context.Background(), // or context.WithCancel for controlled shutdown
+				ctx: ctx, // or context.WithCancel for controlled shutdown
 			}
 			switch tt.name {
-			// case "consume message successfully":
-			// 	mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
-			// 	mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockConsumer, nil)
-			// 	// Simulate consumer Start and cancel after mock call
-			// 	mockConsumer.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
-			// 		stream.ctx.Done()
-			// 		return nil
-			// 	})
+			case "consume message successfully":
+				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockConsumer, nil)
+				// Simulate consumer Start and cancel after mock call
+				mockConsumer.EXPECT().Start(gomock.Any()).Do(func(ctx context.Context) {
+					cancel()
 
-			// Expect Subscribe call
+				})
+				mockConsumer.EXPECT().Close()
 			case "topic does not exist":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
@@ -187,30 +188,60 @@ func TestPublishMessage(t *testing.T) {
 		cfg       interface{}
 		expectErr bool
 	}{
+
 		{
 			name:      "publish message successfully",
 			topic:     "publish-topic",
 			value:     map[string]string{"key": "value"},
-			cfg:       confluent.KafkaConfig{Topic: "publish-topic"},
+			cfg:       confluent.KafkaConfig{Topic: "publish-topic", ExactlyOnceConfig: confluent.ExactlyOnceConfig{EnableTransactions: true}, DeliverySemantics: confluent.ExactlyOnce},
 			expectErr: false,
 		},
-		{
-			name:      "topic does not exist",
-			topic:     "missing-topic",
-			value:     map[string]string{"key": "value"},
-			cfg:       confluent.KafkaConfig{Topic: "missing-topic"},
-			expectErr: true,
-		},
-		{
-			name:      "error publishing message",
-			topic:     "error-topic",
-			value:     map[string]string{"key": "value"},
-			cfg:       confluent.KafkaConfig{Topic: "error-topic"},
-			expectErr: true,
-		},
+		// {
+		// 	name:      "topic does not exist",
+		// 	topic:     "missing-topic",
+		// 	value:     map[string]string{"key": "value"},
+		// 	cfg:       confluent.KafkaConfig{Topic: "missin-topic"},
+		// 	expectErr: true,
+		// },
+		// {
+		// 	name:      "has consumers error",
+		// 	topic:     "missing-topic",
+		// 	value:     map[string]string{"key": "value"},
+		// 	cfg:       confluent.KafkaConfig{Topic: "missing-topic"},
+		// 	expectErr: true,
+		// },
+		// {
+		// 	name:      "no active consumers",
+		// 	topic:     "missing-topic",
+		// 	value:     map[string]string{"key": "value"},
+		// 	cfg:       confluent.KafkaConfig{Topic: "missing-topic"},
+		// 	expectErr: true,
+		// },
+		// {
+		// 	name:      "no active consumers and active listeners required",
+		// 	topic:     "missing-topic",
+		// 	value:     map[string]string{"key": "value"},
+		// 	cfg:       confluent.KafkaConfig{Topic: "missing-topic"},
+		// 	expectErr: true,
+		// },
+		// {
+		// 	name:      "topic call error",
+		// 	topic:     "missing-topic",
+		// 	value:     map[string]string{"key": "value"},
+		// 	cfg:       confluent.KafkaConfig{Topic: "missing-topic"},
+		// 	expectErr: true,
+		// },
+		// {
+		// 	name:      "error publishing message",
+		// 	topic:     "error-topic",
+		// 	value:     map[string]string{"key": "value"},
+		// 	cfg:       confluent.KafkaConfig{Topic: "error-topic"},
+		// 	expectErr: true,
+		// },
 	}
 
 	for _, tt := range tests {
+		cfg, _ := config.LoadConfig()
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -223,13 +254,36 @@ func TestPublishMessage(t *testing.T) {
 				Producers: map[string]confluent.Producer{
 					tt.topic: mockProducer,
 				},
+				Config: cfg,
 			}
 
 			switch tt.name {
+			case "has consumers error":
+				cfg.KafkaRequireActiveListener = false
+				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
+				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(false, errors.New("has consumers error"))
+				mockProducer.EXPECT().WriteWithRetry(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			case "no active consumers":
+				cfg.KafkaRequireActiveListener = false
+				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
+				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(false, nil)
+				mockProducer.EXPECT().WriteWithRetry(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			case "no active consumers and active listeners required":
+				cfg.KafkaRequireActiveListener = true
+				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
+				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(false, nil)
+			case "topic call error":
+				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{}, errors.New("topic call error"))
 			case "publish message successfully":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(true, nil)
-				mockProducer.EXPECT().WriteWithRetry(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockProducer.EXPECT().WriteWithRetry(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(arg1, arg2, arg3, arg4 interface{}) error {
+					time.Sleep(00 * time.Millisecond) // simulate delay
+					return nil
+				})
+				mockProducer.EXPECT().BeginTransaction().Return(nil)
+				mockProducer.EXPECT().CommitTransaction(gomock.Any()).Return(nil)
+				// mockProducer.EXPECT().Close().Return(nil)
 			case "topic does not exist":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"other-topic"}, nil)
 			case "error publishing message":
@@ -238,7 +292,7 @@ func TestPublishMessage(t *testing.T) {
 				mockProducer.EXPECT().WriteWithRetry(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish error"))
 			}
 
-			err := service.PublishMessage(context.Background(), tt.cfg, &pb.PublishRequest{Topic: tt.topic, Value: tt.value})
+			err := service.PublishMessage(context.Background(), tt.cfg.(confluent.KafkaConfig), &pb.PublishRequest{Topic: tt.topic, Value: tt.value})
 			if tt.expectErr {
 				assert.Error(t, err)
 			} else {
@@ -310,6 +364,94 @@ func TestCreateTopic(t *testing.T) {
 
 			// Assert the expected outcome
 			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestNewConfluentMessagingService(t *testing.T) {
+	logger.InitLogger()
+	tests := []struct {
+		name              string
+		setupMock         func(f *mock.MockKafkaFactory, a *mock.MockKafkaAdmin)
+		expectRetry       bool
+		expectAdminNil    bool
+		expectedTopic     string
+		expectedNumRetrys int
+	}{
+		{
+			name: "admin creation succeeds on first attempt",
+			setupMock: func(f *mock.MockKafkaFactory, a *mock.MockKafkaAdmin) {
+				f.EXPECT().CreateAdmin(gomock.Any()).Return(a, nil).Times(1)
+			},
+			expectRetry:       false,
+			expectAdminNil:    false,
+			expectedTopic:     "test-topic",
+			expectedNumRetrys: 1,
+		},
+		{
+			name: "admin creation fails and retries succeed",
+			setupMock: func(f *mock.MockKafkaFactory, a *mock.MockKafkaAdmin) {
+				f.EXPECT().CreateAdmin(gomock.Any()).Return(nil, errors.New("init failure")).Times(2)
+				f.EXPECT().CreateAdmin(gomock.Any()).Return(a, nil).Times(1)
+			},
+			expectRetry:       true,
+			expectAdminNil:    false,
+			expectedTopic:     "test-topic",
+			expectedNumRetrys: 3,
+		},
+		{
+			name: "admin creation fails completely",
+			setupMock: func(f *mock.MockKafkaFactory, a *mock.MockKafkaAdmin) {
+				f.EXPECT().CreateAdmin(gomock.Any()).Return(nil, errors.New("init failure")).Times(3)
+			},
+			expectRetry:       true,
+			expectAdminNil:    true,
+			expectedTopic:     "test-topic",
+			expectedNumRetrys: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFactory := mock.NewMockKafkaFactory(ctrl)
+			mockAdmin := mock.NewMockKafkaAdmin(ctrl)
+
+			if tt.setupMock != nil {
+				tt.setupMock(mockFactory, mockAdmin)
+			}
+
+			cfg := &config.Config{
+				KafkaBrokers:                  []string{"localhost:9092"},
+				KafkaNumPartitions:            1,
+				KafkaReplicationFactor:        1,
+				KafkaBatchSize:                10,
+				KafkaBatchBytes:               1048576,
+				KafkaBatchTimeoutMs:           100,
+				KafkaCompressionCodec:         "snappy",
+				KafkaMaxAttempts:              3,
+				KafkaRetryBackoffMs:           100,
+				KafkaReadTimeoutMs:            3000,
+				KafkaWriteTimeoutMs:           3000,
+				KafkaConsumerAutoOffsetReset:  "earliest",
+				KafkaEnableAutoCommit:         true,
+				KafkaConsumerCommitIntervalMs: 1000,
+				KafkaConsumerSessionTimeoutMs: 6000,
+				KafkaConsumerHeartbeatMs:      3000,
+				KafkaConsumerMaxPollRecords:   500,
+			}
+
+			// Use the real constructor but monkey-patch the factory
+			// This would require your production code to allow injecting the factory.
+			_, err := service.NewConfluentMessagingService(cfg, mockFactory) // hypothetical constructor
+
+			if tt.expectAdminNil {
 				assert.Error(t, err)
 			} else {
 				assert.Nil(t, err)

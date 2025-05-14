@@ -7,6 +7,7 @@ package mock
 import (
 	context "context"
 	messaging_service "cra-protos/messaging_service"
+	"messaging_service/pkg/confluent"
 	errors "messaging_service/pkg/errors"
 	reflect "reflect"
 
@@ -37,7 +38,7 @@ func (m *MockMessagingService) EXPECT() *MockMessagingServiceMockRecorder {
 }
 
 // ConsumeMessage mocks base method.
-func (m *MockMessagingService) ConsumeMessage(stream messaging_service.MessagingService_SubscribeV1Server, cfg interface{}) *errors.CustomError {
+func (m *MockMessagingService) ConsumeMessage(stream messaging_service.MessagingService_SubscribeV1Server, cfg confluent.KafkaConfig) *errors.CustomError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConsumeMessage", stream, cfg)
 	ret0, _ := ret[0].(*errors.CustomError)
@@ -45,13 +46,13 @@ func (m *MockMessagingService) ConsumeMessage(stream messaging_service.Messaging
 }
 
 // ConsumeMessage indicates an expected call of ConsumeMessage.
-func (mr *MockMessagingServiceMockRecorder) ConsumeMessage(stream, cfg interface{}) *gomock.Call {
+func (mr *MockMessagingServiceMockRecorder) ConsumeMessage(stream, cfg  interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsumeMessage", reflect.TypeOf((*MockMessagingService)(nil).ConsumeMessage), stream, cfg)
 }
 
 // CreateTopic mocks base method.
-func (m *MockMessagingService) CreateTopic(ctx context.Context, req *messaging_service.CreateTopicRequest, cfg interface{}) *errors.CustomError {
+func (m *MockMessagingService) CreateTopic(ctx context.Context, req *messaging_service.CreateTopicRequest, cfg confluent.KafkaConfig) *errors.CustomError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateTopic", ctx, req, cfg)
 	ret0, _ := ret[0].(*errors.CustomError)
@@ -65,7 +66,7 @@ func (mr *MockMessagingServiceMockRecorder) CreateTopic(ctx, req, cfg interface{
 }
 
 // PublishMessage mocks base method.
-func (m *MockMessagingService) PublishMessage(ctx context.Context, cfg interface{}, req *messaging_service.PublishRequest) *errors.CustomError {
+func (m *MockMessagingService) PublishMessage(ctx context.Context, cfg confluent.KafkaConfig, req *messaging_service.PublishRequest) *errors.CustomError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PublishMessage", ctx, cfg, req)
 	ret0, _ := ret[0].(*errors.CustomError)
