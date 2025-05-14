@@ -3,14 +3,16 @@ package confluent
 import (
 	"fmt"
 	"messaging_service/pkg/logger"
+
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-// kafkaMonitorDeliveryReports handles delivery reports from the producer
+// KafkaMonitorDeliveryReports handles delivery reports from the producer
 // This is a common utility used by both Producer and DLQProducer
-func kafkaMonitorDeliveryReports(producer *KafkaProducer, topic string) {
+func KafkaMonitorDeliveryReports(producer KafkaProducerInterface, topic string) {
 	for e := range producer.Events() {
 		switch ev := e.(type) {
-		case *Message:
+		case *kafka.Message:
 			if ev.TopicPartition.Error != nil {
 				logger.LogErrorEvent("", "kafka_delivery_failed", topic, "error",
 					fmt.Sprintf("Message delivery failed: %v", ev.TopicPartition.Error))

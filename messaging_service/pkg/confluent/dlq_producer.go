@@ -29,9 +29,9 @@ func DefaultDLQConfig() DLQConfig {
 
 // DLQProducerImpl implements the DLQProducer interface
 type DLQProducerImpl struct {
-	producer *KafkaProducer
-	topic    string
-	config   KafkaConfig
+	Producer KafkaProducerInterface
+	Topic    string
+	Config   KafkaConfig
 }
 
 // NewDLQProducer creates a new DLQ producer
@@ -55,12 +55,12 @@ func NewDLQProducer(cfg KafkaConfig) (DLQProducer, error) {
 	}
 
 	// Start monitoring delivery reports
-	go kafkaMonitorDeliveryReports(producer, dlqTopic)
+	go KafkaMonitorDeliveryReports(producer, dlqTopic)
 
 	return &DLQProducerImpl{
-		producer: producer,
-		topic:    dlqTopic,
-		config:   dlqConfig,
+		Producer: producer,
+		Topic:    dlqTopic,
+		Config:   dlqConfig,
 	}, nil
 }
 
@@ -70,7 +70,7 @@ func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value
 	dlqHeaders := append(headers, []Header{
 		{
 			Key:   "x-dlq-source-topic",
-			Value: []byte(d.config.Topic),
+			Value: []byte(d.Config.Topic),
 		},
 		{
 			Key:   "x-dlq-failure-reason",
@@ -84,11 +84,11 @@ func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value
 
 	// Log the DLQ event
 	logger.LogEvent("", "kafka_dlq_event", messageID, "info",
-		fmt.Sprintf("Sending message to DLQ %s: %s", d.topic, failureReason))
+		fmt.Sprintf("Sending message to DLQ %s: %s", d.Topic, failureReason))
 
 	// Create Kafka message
 	msg := &Message{
-		TopicPartition: TopicPartition{Topic: &d.topic, Partition: PartitionAny},
+		TopicPartition: TopicPartition{Topic: &d.Topic, Partition: PartitionAny},
 		Key:            []byte(messageID),
 		Value:          value,
 		Headers:        dlqHeaders,
@@ -96,17 +96,17 @@ func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value
 	}
 
 	// Produce the message
-	err := d.producer.Produce(msg, nil)
+	err := d.Producer.Produce(msg, nil)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_dlq_send_failed", d.topic, "error",
+		logger.LogErrorEvent("", "kafka_dlq_send_failed", d.Topic, "error",
 			fmt.Sprintf("Failed to send message to DLQ: %v", err))
 		return fmt.Errorf("failed to send message to DLQ: %w", err)
 	}
 
 	// Flush to ensure delivery
-	remaining := d.producer.Flush(int(d.config.WriteTimeout.Milliseconds()))
+	remaining := d.Producer.Flush(int(d.Config.WriteTimeout.Milliseconds()))
 	if remaining > 0 {
-		logger.LogWarnEvent("", "kafka_dlq_flush_incomplete", d.topic, "warn",
+		logger.LogWarnEvent("", "kafka_dlq_flush_incomplete", d.Topic, "warn",
 			fmt.Sprintf("%d messages still in queue after flush timeout", remaining))
 	}
 
@@ -116,14 +116,14 @@ func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value
 // Close closes the DLQ producer
 func (d *DLQProducerImpl) Close() error {
 	// Flush any pending messages
-	remaining := d.producer.Flush(int(d.config.WriteTimeout.Milliseconds()))
+	remaining := d.Producer.Flush(int(d.Config.WriteTimeout.Milliseconds()))
 	if remaining > 0 {
-		logger.LogWarnEvent("", "kafka_dlq_close_incomplete", d.topic, "warn",
+		logger.LogWarnEvent("", "kafka_dlq_close_incomplete", d.Topic, "warn",
 			fmt.Sprintf("%d messages still in queue after close flush timeout", remaining))
 	}
 
 	// Close the producer
-	d.producer.Close()
+	d.Producer.Close()
 	return nil
 }
 

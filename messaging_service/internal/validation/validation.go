@@ -12,7 +12,7 @@ func ValidatePublishRequest(req *pb.PublishRequest) *errors.CustomError {
 	if req.Topic == "" {
 		return errors.NewCustomError(errors.MSGErrInvalidTopic, fmt.Errorf("topic is required"))
 	}
-	if req.Value == nil || len(req.Value) == 0 {
+	if len(req.Value) == 0 { // Check only the length of the map
 		return errors.NewCustomError(errors.PUBErrInvalidMessage, fmt.Errorf("message value is required"))
 	}
 	return nil
@@ -22,6 +22,9 @@ func ValidatePublishRequest(req *pb.PublishRequest) *errors.CustomError {
 func ValidateSubscribeRequest(req *pb.SubscribeRequest) *errors.CustomError {
 	if req.Topic == "" {
 		return errors.NewCustomError(errors.MSGErrInvalidTopic, fmt.Errorf("topic is required"))
+	}
+	if !IsValidTopicName(req.GroupId) {
+		return errors.NewCustomError(errors.MSGErrInvalidGroup, fmt.Errorf("invalid group name: must contain only alphanumeric characters, '.', '_', or '-'"))
 	}
 	if req.GroupId == "" {
 		return errors.NewCustomError(errors.MSGErrInvalidGroup, fmt.Errorf("group_id is required"))
@@ -34,14 +37,14 @@ func ValidateCreateTopicRequest(req *pb.CreateTopicRequest) *errors.CustomError 
 	if req.Topic == "" {
 		return errors.NewCustomError(errors.MSGErrInvalidTopic, fmt.Errorf("topic is required"))
 	}
-	if !isValidTopicName(req.Topic) {
+	if !IsValidTopicName(req.Topic) {
 		return errors.NewCustomError(errors.MSGErrInvalidTopic, fmt.Errorf("invalid topic name: must contain only alphanumeric characters, '.', '_', or '-'"))
 	}
 	return nil
 }
 
-// isValidTopicName checks if a topic name is valid
-func isValidTopicName(name string) bool {
+// IsValidTopicName checks if a topic name is valid
+func IsValidTopicName(name string) bool {
 	if name == "" {
 		return false
 	}

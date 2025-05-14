@@ -5,33 +5,18 @@ import (
 	"fmt"
 	"time"
 
+	"messaging_service/internal/config"
 	"messaging_service/pkg/logger"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 // KafkaAdmin interface defines admin operations for Kafka
-type KafkaAdmin interface {
-	// CreateTopic creates a new topic with the given configuration
-	CreateTopic(ctx context.Context, topic string, numPartitions, replicationFactor int, configs map[string]string) error
-
-	// DeleteTopic deletes an existing topic
-	DeleteTopic(ctx context.Context, topic string) error
-
-	// ListTopics lists all available topics
-	ListTopics(ctx context.Context) ([]string, error)
-
-	// HasActiveConsumers checks if a topic has any active consumer groups
-	HasActiveConsumers(ctx context.Context, topic string) (bool, error)
-
-	// Close releases any resources held by the admin client
-	Close() error
-}
 
 // AdminImpl implements the KafkaAdmin interface
 type AdminImpl struct {
 	adminClient *AdminClient
-	config      *KafkaConfig
+	config      *config.Config
 }
 
 // DefaultTopicConfig returns a default configuration for a new topic
@@ -47,10 +32,10 @@ func DefaultTopicConfig() map[string]string {
 }
 
 // NewAdmin creates a new Kafka admin client
-func NewAdmin(cfg KafkaConfig) (KafkaAdmin, error) {
+func NewAdmin(cfg *config.Config) (KafkaAdmin, error) {
 	// Create admin client configuration
 	adminConfig := &ConfigMap{
-		"bootstrap.servers": buildBrokerString(cfg.Brokers),
+		"bootstrap.servers": buildBrokerString(cfg.KafkaBrokers),
 	}
 
 	// Create admin client
@@ -63,7 +48,7 @@ func NewAdmin(cfg KafkaConfig) (KafkaAdmin, error) {
 
 	return &AdminImpl{
 		adminClient: adminClient,
-		config:      &cfg,
+		config:      cfg,
 	}, nil
 }
 

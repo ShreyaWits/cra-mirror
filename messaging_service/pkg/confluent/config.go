@@ -10,7 +10,6 @@ type DeliverySemantics string
 const (
 	// AtLeastOnce guarantees that messages are never lost but may be delivered more than once
 	// This is the default with DLQ and retry policies for resilience
-	AtLeastOnce DeliverySemantics = "at-least-once"
 
 	// ExactlyOnce guarantees that messages are delivered exactly once
 	// Should only be used where duplicate side effects are catastrophic (e.g., payments, audit trails)
@@ -20,8 +19,9 @@ const (
 // KafkaConfig holds the configuration for Kafka producers and consumers
 type KafkaConfig struct {
 	// Connection settings
-	Brokers []string
-	Topic   string
+	SkipTransactionInit bool
+	Brokers             []string
+	Topic               string
 
 	// Topic configuration
 	NumPartitions     int
@@ -29,7 +29,7 @@ type KafkaConfig struct {
 
 	// Producer configuration
 	BatchSize       int
-	BatchBytes      int64
+	BatchBytes      int
 	BatchTimeout    time.Duration
 	CompressionType string
 	MaxAttempts     int
@@ -133,7 +133,7 @@ func NewDefaultKafkaConfig(brokers []string, topic string) KafkaConfig {
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      5 * time.Second,
 		BalancerType:      "roundrobin",
-		DeliverySemantics: AtLeastOnce,
+		DeliverySemantics: ExactlyOnce,
 		ExactlyOnceConfig: DefaultExactlyOnceConfig(),
 		ConsumerConfig:    DefaultConsumerConfig(),
 	}
@@ -161,7 +161,7 @@ func DefaultConsumerConfig() ConsumerConfig {
 		MaxWait:           1 * time.Second,
 		ReadBackoffMin:    100 * time.Millisecond,
 		ReadBackoffMax:    1 * time.Second,
-		AutoOffsetReset:   "earliest",
+		AutoOffsetReset:   "latest",
 		RetentionTime:     7 * 24 * time.Hour, // 7 days
 		MaxAttempts:       3,
 		AutoCommit:        false,

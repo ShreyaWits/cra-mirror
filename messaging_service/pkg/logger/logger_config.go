@@ -1,15 +1,64 @@
 package logger
 
 import (
+	"fmt"
 	"log"
 	"net"
+	"strings"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/sirupsen/logrus"
 )
 
-var Logger *zap.Logger
+var Logger *logrus.Logger
 var srcIP string
+
+type myFormatter struct{}
+
+func (f *myFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	// Format timestamp with milliseconds, replacing the dot with a comma.
+	timestamp := entry.Time.Format("2006-01-02 15:04:05.000")
+	// Replace dot with comma in milliseconds part.
+	if len(timestamp) > 19 {
+		timestamp = timestamp[:19] + "," + timestamp[20:]
+	}
+
+	// Get caller info (file, line and function)
+	// var fileName string
+	var line int
+	// var funcName string
+	if entry.HasCaller() {
+		// You can further process the file name if desired.
+		// _, file := path.Split(entry.Caller.File)
+		// fileName = file
+		line = entry.Caller.Line
+
+		// Function name is usually the full path, so you might want to trim it.
+		// funcParts := strings.Split(entry.Caller.Function, ".")
+		// funcName = funcParts[len(funcParts)-1]
+	}
+
+	// Build a pseudo "package.class.method" string.
+	// In Go, we don't have classes, but you can use the caller's function name.
+	// For more detailed info, you could process entry.Caller.Function.
+	callerInfo := entry.Caller.Function
+	if callerInfo == "" {
+		callerInfo = "unknown"
+	}
+
+	// Assemble the final log message.
+	// Format:
+	// <timestamp callerInfo line logLevel : srcIP message>
+	logLine := fmt.Sprintf("%s %s %d %s : %s %s\n",
+		timestamp,
+		callerInfo,
+		line,
+		strings.ToUpper(entry.Level.String()),
+		srcIP,
+		entry.Message,
+	)
+
+	return []byte(logLine), nil
+}
 
 // Get preferred outbound ip of this machine
 func getOutboundIP() {
@@ -23,88 +72,40 @@ func getOutboundIP() {
 }
 
 func InitLogger() {
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
-
-	var err error
-	Logger, err = config.Build()
-	if err != nil {
-		log.Fatal(err)
-	}
+	Logger = logrus.New()
 
 	getOutboundIP()
+
+	// Enable reporting the caller information.
+	Logger.SetReportCaller(true)
+
+	// Set our custom formatter.
+	Logger.SetFormatter(new(myFormatter))
 }
 
-// LogEvent logs an event with the given parameters
-func LogEvent(requestID, eventType, userID, status, message string) {
-	if Logger == nil {
-		return
-	}
-	Logger.Info(message,
-		zap.String("request_id", requestID),
-		zap.String("event_type", eventType),
-		zap.String("user_id", userID),
-		zap.String("status", status),
-		zap.String("source_ip", srcIP),
-	)
+// LogEvent logs an event with info level
+func LogEvent(traceID, eventType, entity, level, message string) {
+	Logger.WithFields(logrus.Fields{
+		"trace_id":   traceID,
+		"event_type": eventType,
+		"entity":     entity,
+	}).Info(message)
 }
 
-// LogErrorEvent logs an error event with the given parameters
-func LogErrorEvent(requestID, eventType, userID, status, message string) {
-	if Logger == nil {
-		return
-	}
-	Logger.Error(message,
-		zap.String("request_id", requestID),
-		zap.String("event_type", eventType),
-		zap.String("user_id", userID),
-		zap.String("status", status),
-		zap.String("source_ip", srcIP),
-	)
+// LogErrorEvent logs an event with error level
+func LogErrorEvent(traceID, eventType, entity, level, message string) {
+	Logger.WithFields(logrus.Fields{
+		"trace_id":   traceID,
+		"event_type": eventType,
+		"entity":     entity,
+	}).Error(message)
 }
 
-// LogWarnEvent logs a warning event with the given parameters
-func LogWarnEvent(requestID, eventType, userID, status, message string) {
-	if Logger == nil {
-		return
-	}
-	Logger.Warn(message,
-		zap.String("request_id", requestID),
-		zap.String("event_type", eventType),
-		zap.String("user_id", userID),
-		zap.String("status", status),
-		zap.String("source_ip", srcIP),
-	)
-}
-
-// LogDebugEvent logs a debug event with the given parameters
-func LogDebugEvent(requestID, eventType, userID, status, message string) {
-	if Logger == nil {
-		return
-	}
-	Logger.Debug(message,
-		zap.String("request_id", requestID),
-		zap.String("event_type", eventType),
-		zap.String("user_id", userID),
-		zap.String("status", status),
-		zap.String("source_ip", srcIP),
-	)
-}
-
-// Error logs an error message with optional error
-func Error(message string, err error) {
-	if Logger == nil {
-		return
-	}
-	if err != nil {
-		Logger.Error(message,
-			zap.Error(err),
-			zap.String("source_ip", srcIP),
-		)
-	} else {
-		Logger.Error(message,
-			zap.String("source_ip", srcIP),
-		)
-	}
+// LogWarnEvent logs an event with warning level
+func LogWarnEvent(traceID, eventType, entity, level, message string) {
+	Logger.WithFields(logrus.Fields{
+		"trace_id":   traceID,
+		"event_type": eventType,
+		"entity":     entity,
+	}).Warn(message)
 }

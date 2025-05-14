@@ -38,7 +38,7 @@ func GetAppErrorMessage(code string) string {
 		MSGErrInvalidRequest: "Invalid request format",
 		MSGErrInvalidTopic:   "Invalid topic name or format",
 		MSGErrInvalidGroup:   "Invalid consumer group ID",
-
+		MSGErrArgument:       "Invalid argument",
 		// PUBxxx (Publish)
 		PUBErrInvalidMessage:   "Invalid message format or content",
 		PUBErrPublishFailed:    "Failed to publish message to topic",

@@ -7,7 +7,9 @@ toolchain go1.23.9
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.10.0
 	github.com/golang/mock v1.6.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
+	go.uber.org/mock v0.4.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.72.0
 )
