@@ -25,10 +25,10 @@ type TemplateServiceInterface interface {
 // Struct renamed to avoid conflict
 type TemplateServiceImpl struct {
 	repo  repository.TemplateRepository
-	cache *cache.RedisCache
+	cache cache.CacheInterface
 }
 
-func NewTemplateService(repo repository.TemplateRepository, cache *cache.RedisCache) *TemplateServiceImpl {
+func NewTemplateService(repo repository.TemplateRepository, cache cache.CacheInterface) *TemplateServiceImpl {
 	return &TemplateServiceImpl{
 		repo:  repo,
 		cache: cache,
@@ -40,7 +40,7 @@ func (s *TemplateServiceImpl) CreateTemplate(ctx context.Context, template *mode
 		return nil, fmt.Errorf("failed to create template: %w", err)
 	}
 	cacheKey := fmt.Sprintf("template:%s:%s:%s", template.Name, template.Channel, template.Language)
-	if err := s.cache.Set(cacheKey, template); err != nil {
+	if err := s.cache.Set(cacheKey, template, 0); err != nil {
 		log.Printf("Failed to cache template: %v", err)
 	}
 	return template, nil
@@ -62,7 +62,7 @@ func (s *TemplateServiceImpl) GetTemplate(ctx context.Context, id, name, channel
 	if err != nil {
 		return nil, fmt.Errorf("failed to get template: %w", err)
 	}
-	if err := s.cache.Set(cacheKey, template); err != nil {
+	if err := s.cache.Set(cacheKey, template,0); err != nil {
 		log.Printf("Failed to cache template: %v", err)
 	}
 	return template, nil

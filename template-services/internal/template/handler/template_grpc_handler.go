@@ -16,12 +16,15 @@ type TemplateGRPCHandler struct {
 	pb.UnimplementedTemplateServiceServer
 }
 
+func (h *TemplateGRPCHandler) GetTemplate(ctx context.Context, param any) (any, any) {
+	panic("unimplemented")
+}
+
 func NewTemplateGRPCHandler(service service.TemplateServiceInterface) *TemplateGRPCHandler {
 	return &TemplateGRPCHandler{
 		service: service,
 	}
 }
-
 
 func (h *TemplateGRPCHandler) GetTemplateV1(ctx context.Context, req *pb.GetTemplateRequest) (*pb.TemplateResponse, error) {
 	// Map gRPC request to DTO

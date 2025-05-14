@@ -14,7 +14,7 @@ type Container struct {
 	TemplateService     *service.TemplateServiceImpl
 	TemplateHandler     *handler.TemplateHandler
 	TemplateGRPCHandler *handler.TemplateGRPCHandler
-	YugabyteDB          *db.YugabyteDB
+	YugabyteDB          db.DBModeler
 	RedisCache          *cache.RedisCache
 }
 
