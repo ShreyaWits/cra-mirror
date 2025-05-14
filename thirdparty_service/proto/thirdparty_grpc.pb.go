@@ -23,6 +23,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ThirdPartyService_InvokeTwilioSms_FullMethodName     = "/pb.ThirdPartyService/InvokeTwilioSms"
 	ThirdPartyService_InvokeSendgridEmail_FullMethodName = "/pb.ThirdPartyService/InvokeSendgridEmail"
+	ThirdPartyService_VerifyAadhar_FullMethodName        = "/pb.ThirdPartyService/VerifyAadhar"
+	ThirdPartyService_VerifyPan_FullMethodName           = "/pb.ThirdPartyService/VerifyPan"
 )
 
 // ThirdPartyServiceClient is the client API for ThirdPartyService service.
@@ -33,6 +35,8 @@ const (
 type ThirdPartyServiceClient interface {
 	InvokeTwilioSms(ctx context.Context, in *InvokeTwilioRequest, opts ...grpc.CallOption) (*InvokeTwilioResponse, error)
 	InvokeSendgridEmail(ctx context.Context, in *InvokeSendGridRequest, opts ...grpc.CallOption) (*InvokeSendGridResponse, error)
+	VerifyAadhar(ctx context.Context, in *AadharVerifyRequest, opts ...grpc.CallOption) (*AadharVerifyResponse, error)
+	VerifyPan(ctx context.Context, in *PANVerifyRequest, opts ...grpc.CallOption) (*PANVerifyResponse, error)
 }
 
 type thirdPartyServiceClient struct {
@@ -63,6 +67,26 @@ func (c *thirdPartyServiceClient) InvokeSendgridEmail(ctx context.Context, in *I
 	return out, nil
 }
 
+func (c *thirdPartyServiceClient) VerifyAadhar(ctx context.Context, in *AadharVerifyRequest, opts ...grpc.CallOption) (*AadharVerifyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AadharVerifyResponse)
+	err := c.cc.Invoke(ctx, ThirdPartyService_VerifyAadhar_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *thirdPartyServiceClient) VerifyPan(ctx context.Context, in *PANVerifyRequest, opts ...grpc.CallOption) (*PANVerifyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PANVerifyResponse)
+	err := c.cc.Invoke(ctx, ThirdPartyService_VerifyPan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ThirdPartyServiceServer is the server API for ThirdPartyService service.
 // All implementations must embed UnimplementedThirdPartyServiceServer
 // for forward compatibility.
@@ -71,6 +95,8 @@ func (c *thirdPartyServiceClient) InvokeSendgridEmail(ctx context.Context, in *I
 type ThirdPartyServiceServer interface {
 	InvokeTwilioSms(context.Context, *InvokeTwilioRequest) (*InvokeTwilioResponse, error)
 	InvokeSendgridEmail(context.Context, *InvokeSendGridRequest) (*InvokeSendGridResponse, error)
+	VerifyAadhar(context.Context, *AadharVerifyRequest) (*AadharVerifyResponse, error)
+	VerifyPan(context.Context, *PANVerifyRequest) (*PANVerifyResponse, error)
 	mustEmbedUnimplementedThirdPartyServiceServer()
 }
 
@@ -86,6 +112,12 @@ func (UnimplementedThirdPartyServiceServer) InvokeTwilioSms(context.Context, *In
 }
 func (UnimplementedThirdPartyServiceServer) InvokeSendgridEmail(context.Context, *InvokeSendGridRequest) (*InvokeSendGridResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvokeSendgridEmail not implemented")
+}
+func (UnimplementedThirdPartyServiceServer) VerifyAadhar(context.Context, *AadharVerifyRequest) (*AadharVerifyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyAadhar not implemented")
+}
+func (UnimplementedThirdPartyServiceServer) VerifyPan(context.Context, *PANVerifyRequest) (*PANVerifyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyPan not implemented")
 }
 func (UnimplementedThirdPartyServiceServer) mustEmbedUnimplementedThirdPartyServiceServer() {}
 func (UnimplementedThirdPartyServiceServer) testEmbeddedByValue()                           {}
@@ -144,6 +176,42 @@ func _ThirdPartyService_InvokeSendgridEmail_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ThirdPartyService_VerifyAadhar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AadharVerifyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ThirdPartyServiceServer).VerifyAadhar(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ThirdPartyService_VerifyAadhar_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ThirdPartyServiceServer).VerifyAadhar(ctx, req.(*AadharVerifyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ThirdPartyService_VerifyPan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PANVerifyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ThirdPartyServiceServer).VerifyPan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ThirdPartyService_VerifyPan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ThirdPartyServiceServer).VerifyPan(ctx, req.(*PANVerifyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ThirdPartyService_ServiceDesc is the grpc.ServiceDesc for ThirdPartyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -158,6 +226,14 @@ var ThirdPartyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InvokeSendgridEmail",
 			Handler:    _ThirdPartyService_InvokeSendgridEmail_Handler,
+		},
+		{
+			MethodName: "VerifyAadhar",
+			Handler:    _ThirdPartyService_VerifyAadhar_Handler,
+		},
+		{
+			MethodName: "VerifyPan",
+			Handler:    _ThirdPartyService_VerifyPan_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

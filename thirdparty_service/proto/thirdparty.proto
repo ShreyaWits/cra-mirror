@@ -10,6 +10,8 @@ package pb;
 service ThirdPartyService {
   rpc InvokeTwilioSms(InvokeTwilioRequest) returns (InvokeTwilioResponse);
   rpc InvokeSendgridEmail(InvokeSendGridRequest) returns (InvokeSendGridResponse);
+  rpc VerifyAadhar(AadharVerifyRequest) returns (AadharVerifyResponse);
+  rpc VerifyPan(PANVerifyRequest) returns (PANVerifyResponse);
 }
 
 message InvokeTwilioRequest {
@@ -23,20 +25,47 @@ message InvokeTwilioResponse {
   string message = 2;
 }
 
-enum EmailContentType {
-  EMAIL_CONTENT_TYPE_UNSPECIFIED = 0;
-  TEXT = 1;
-  HTML = 2;
-}
-
 message InvokeSendGridRequest {
   string to = 1;
   string subject = 2;
   string body = 3;
-  EmailContentType type = 4;
+  string type = 4;
 }
 
 message InvokeSendGridResponse {
   string code = 1;
   string message = 2;
+}
+
+message AadharVerifyRequest {
+  string number = 1;
+}
+
+message aadharResult {
+  string name = 1;
+  string dob = 2;
+}
+message AadharVerifyResponse {
+  string code = 1;
+  string message = 2;
+  bool verified = 3;
+  aadharResult data = 4;
+}
+
+
+message PANVerifyRequest {
+  string number = 1;
+}
+
+message panResult {
+  string name = 1;
+  string dob = 2;
+  string pan_type=3;
+}
+
+message PANVerifyResponse {
+  string code = 1;
+  string message = 2;
+  bool verified = 3;
+  panResult data = 4;
 }

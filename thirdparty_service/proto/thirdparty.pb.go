@@ -23,55 +23,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type EmailContentType int32
-
-const (
-	EmailContentType_EMAIL_CONTENT_TYPE_UNSPECIFIED EmailContentType = 0
-	EmailContentType_TEXT                           EmailContentType = 1
-	EmailContentType_HTML                           EmailContentType = 2
-)
-
-// Enum value maps for EmailContentType.
-var (
-	EmailContentType_name = map[int32]string{
-		0: "EMAIL_CONTENT_TYPE_UNSPECIFIED",
-		1: "TEXT",
-		2: "HTML",
-	}
-	EmailContentType_value = map[string]int32{
-		"EMAIL_CONTENT_TYPE_UNSPECIFIED": 0,
-		"TEXT":                           1,
-		"HTML":                           2,
-	}
-)
-
-func (x EmailContentType) Enum() *EmailContentType {
-	p := new(EmailContentType)
-	*p = x
-	return p
-}
-
-func (x EmailContentType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (EmailContentType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_thirdparty_proto_enumTypes[0].Descriptor()
-}
-
-func (EmailContentType) Type() protoreflect.EnumType {
-	return &file_proto_thirdparty_proto_enumTypes[0]
-}
-
-func (x EmailContentType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use EmailContentType.Descriptor instead.
-func (EmailContentType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_thirdparty_proto_rawDescGZIP(), []int{0}
-}
-
 type InvokeTwilioRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Phone         string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
@@ -189,7 +140,7 @@ type InvokeSendGridRequest struct {
 	To            string                 `protobuf:"bytes,1,opt,name=to,proto3" json:"to,omitempty"`
 	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
 	Body          string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
-	Type          EmailContentType       `protobuf:"varint,4,opt,name=type,proto3,enum=pb.EmailContentType" json:"type,omitempty"`
+	Type          string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -245,11 +196,11 @@ func (x *InvokeSendGridRequest) GetBody() string {
 	return ""
 }
 
-func (x *InvokeSendGridRequest) GetType() EmailContentType {
+func (x *InvokeSendGridRequest) GetType() string {
 	if x != nil {
 		return x.Type
 	}
-	return EmailContentType_EMAIL_CONTENT_TYPE_UNSPECIFIED
+	return ""
 }
 
 type InvokeSendGridResponse struct {
@@ -304,6 +255,342 @@ func (x *InvokeSendGridResponse) GetMessage() string {
 	return ""
 }
 
+type AadharVerifyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Number        string                 `protobuf:"bytes,1,opt,name=number,proto3" json:"number,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AadharVerifyRequest) Reset() {
+	*x = AadharVerifyRequest{}
+	mi := &file_proto_thirdparty_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AadharVerifyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AadharVerifyRequest) ProtoMessage() {}
+
+func (x *AadharVerifyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AadharVerifyRequest.ProtoReflect.Descriptor instead.
+func (*AadharVerifyRequest) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AadharVerifyRequest) GetNumber() string {
+	if x != nil {
+		return x.Number
+	}
+	return ""
+}
+
+type AadharResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Dob           string                 `protobuf:"bytes,2,opt,name=dob,proto3" json:"dob,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AadharResult) Reset() {
+	*x = AadharResult{}
+	mi := &file_proto_thirdparty_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AadharResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AadharResult) ProtoMessage() {}
+
+func (x *AadharResult) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AadharResult.ProtoReflect.Descriptor instead.
+func (*AadharResult) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AadharResult) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AadharResult) GetDob() string {
+	if x != nil {
+		return x.Dob
+	}
+	return ""
+}
+
+type AadharVerifyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Verified      bool                   `protobuf:"varint,3,opt,name=verified,proto3" json:"verified,omitempty"`
+	Data          *AadharResult          `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AadharVerifyResponse) Reset() {
+	*x = AadharVerifyResponse{}
+	mi := &file_proto_thirdparty_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AadharVerifyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AadharVerifyResponse) ProtoMessage() {}
+
+func (x *AadharVerifyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AadharVerifyResponse.ProtoReflect.Descriptor instead.
+func (*AadharVerifyResponse) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AadharVerifyResponse) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *AadharVerifyResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *AadharVerifyResponse) GetVerified() bool {
+	if x != nil {
+		return x.Verified
+	}
+	return false
+}
+
+func (x *AadharVerifyResponse) GetData() *AadharResult {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type PANVerifyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Number        string                 `protobuf:"bytes,1,opt,name=number,proto3" json:"number,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PANVerifyRequest) Reset() {
+	*x = PANVerifyRequest{}
+	mi := &file_proto_thirdparty_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PANVerifyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PANVerifyRequest) ProtoMessage() {}
+
+func (x *PANVerifyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PANVerifyRequest.ProtoReflect.Descriptor instead.
+func (*PANVerifyRequest) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *PANVerifyRequest) GetNumber() string {
+	if x != nil {
+		return x.Number
+	}
+	return ""
+}
+
+type PanResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Dob           string                 `protobuf:"bytes,2,opt,name=dob,proto3" json:"dob,omitempty"`
+	PanType       string                 `protobuf:"bytes,3,opt,name=pan_type,json=panType,proto3" json:"pan_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PanResult) Reset() {
+	*x = PanResult{}
+	mi := &file_proto_thirdparty_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PanResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PanResult) ProtoMessage() {}
+
+func (x *PanResult) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PanResult.ProtoReflect.Descriptor instead.
+func (*PanResult) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PanResult) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PanResult) GetDob() string {
+	if x != nil {
+		return x.Dob
+	}
+	return ""
+}
+
+func (x *PanResult) GetPanType() string {
+	if x != nil {
+		return x.PanType
+	}
+	return ""
+}
+
+type PANVerifyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Verified      bool                   `protobuf:"varint,3,opt,name=verified,proto3" json:"verified,omitempty"`
+	Data          *PanResult             `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PANVerifyResponse) Reset() {
+	*x = PANVerifyResponse{}
+	mi := &file_proto_thirdparty_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PANVerifyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PANVerifyResponse) ProtoMessage() {}
+
+func (x *PANVerifyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_thirdparty_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PANVerifyResponse.ProtoReflect.Descriptor instead.
+func (*PANVerifyResponse) Descriptor() ([]byte, []int) {
+	return file_proto_thirdparty_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PANVerifyResponse) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *PANVerifyResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *PANVerifyResponse) GetVerified() bool {
+	if x != nil {
+		return x.Verified
+	}
+	return false
+}
+
+func (x *PANVerifyResponse) GetData() *PanResult {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 var File_proto_thirdparty_proto protoreflect.FileDescriptor
 
 const file_proto_thirdparty_proto_rawDesc = "" +
@@ -315,22 +602,41 @@ const file_proto_thirdparty_proto_rawDesc = "" +
 	"\fcountry_code\x18\x03 \x01(\tR\vcountryCode\"D\n" +
 	"\x14InvokeTwilioResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\x7f\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"i\n" +
 	"\x15InvokeSendGridRequest\x12\x0e\n" +
 	"\x02to\x18\x01 \x01(\tR\x02to\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x12\n" +
-	"\x04body\x18\x03 \x01(\tR\x04body\x12(\n" +
-	"\x04type\x18\x04 \x01(\x0e2\x14.pb.EmailContentTypeR\x04type\"F\n" +
+	"\x04body\x18\x03 \x01(\tR\x04body\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\"F\n" +
 	"\x16InvokeSendGridResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage*J\n" +
-	"\x10EmailContentType\x12\"\n" +
-	"\x1eEMAIL_CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\b\n" +
-	"\x04TEXT\x10\x01\x12\b\n" +
-	"\x04HTML\x10\x022\xa7\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"-\n" +
+	"\x13AadharVerifyRequest\x12\x16\n" +
+	"\x06number\x18\x01 \x01(\tR\x06number\"4\n" +
+	"\faadharResult\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
+	"\x03dob\x18\x02 \x01(\tR\x03dob\"\x86\x01\n" +
+	"\x14AadharVerifyResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1a\n" +
+	"\bverified\x18\x03 \x01(\bR\bverified\x12$\n" +
+	"\x04data\x18\x04 \x01(\v2\x10.pb.aadharResultR\x04data\"*\n" +
+	"\x10PANVerifyRequest\x12\x16\n" +
+	"\x06number\x18\x01 \x01(\tR\x06number\"L\n" +
+	"\tpanResult\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
+	"\x03dob\x18\x02 \x01(\tR\x03dob\x12\x19\n" +
+	"\bpan_type\x18\x03 \x01(\tR\apanType\"\x80\x01\n" +
+	"\x11PANVerifyResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1a\n" +
+	"\bverified\x18\x03 \x01(\bR\bverified\x12!\n" +
+	"\x04data\x18\x04 \x01(\v2\r.pb.panResultR\x04data2\xa4\x02\n" +
 	"\x11ThirdPartyService\x12D\n" +
 	"\x0fInvokeTwilioSms\x12\x17.pb.InvokeTwilioRequest\x1a\x18.pb.InvokeTwilioResponse\x12L\n" +
-	"\x13InvokeSendgridEmail\x12\x19.pb.InvokeSendGridRequest\x1a\x1a.pb.InvokeSendGridResponseB1Z/github.com/kkwitslab/go-boilerplate/internal/pbb\x06proto3"
+	"\x13InvokeSendgridEmail\x12\x19.pb.InvokeSendGridRequest\x1a\x1a.pb.InvokeSendGridResponse\x12A\n" +
+	"\fVerifyAadhar\x12\x17.pb.AadharVerifyRequest\x1a\x18.pb.AadharVerifyResponse\x128\n" +
+	"\tVerifyPan\x12\x14.pb.PANVerifyRequest\x1a\x15.pb.PANVerifyResponseB1Z/github.com/kkwitslab/go-boilerplate/internal/pbb\x06proto3"
 
 var (
 	file_proto_thirdparty_proto_rawDescOnce sync.Once
@@ -344,26 +650,35 @@ func file_proto_thirdparty_proto_rawDescGZIP() []byte {
 	return file_proto_thirdparty_proto_rawDescData
 }
 
-var file_proto_thirdparty_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_thirdparty_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_thirdparty_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_thirdparty_proto_goTypes = []any{
-	(EmailContentType)(0),          // 0: pb.EmailContentType
-	(*InvokeTwilioRequest)(nil),    // 1: pb.InvokeTwilioRequest
-	(*InvokeTwilioResponse)(nil),   // 2: pb.InvokeTwilioResponse
-	(*InvokeSendGridRequest)(nil),  // 3: pb.InvokeSendGridRequest
-	(*InvokeSendGridResponse)(nil), // 4: pb.InvokeSendGridResponse
+	(*InvokeTwilioRequest)(nil),    // 0: pb.InvokeTwilioRequest
+	(*InvokeTwilioResponse)(nil),   // 1: pb.InvokeTwilioResponse
+	(*InvokeSendGridRequest)(nil),  // 2: pb.InvokeSendGridRequest
+	(*InvokeSendGridResponse)(nil), // 3: pb.InvokeSendGridResponse
+	(*AadharVerifyRequest)(nil),    // 4: pb.AadharVerifyRequest
+	(*AadharResult)(nil),           // 5: pb.aadharResult
+	(*AadharVerifyResponse)(nil),   // 6: pb.AadharVerifyResponse
+	(*PANVerifyRequest)(nil),       // 7: pb.PANVerifyRequest
+	(*PanResult)(nil),              // 8: pb.panResult
+	(*PANVerifyResponse)(nil),      // 9: pb.PANVerifyResponse
 }
 var file_proto_thirdparty_proto_depIdxs = []int32{
-	0, // 0: pb.InvokeSendGridRequest.type:type_name -> pb.EmailContentType
-	1, // 1: pb.ThirdPartyService.InvokeTwilioSms:input_type -> pb.InvokeTwilioRequest
-	3, // 2: pb.ThirdPartyService.InvokeSendgridEmail:input_type -> pb.InvokeSendGridRequest
-	2, // 3: pb.ThirdPartyService.InvokeTwilioSms:output_type -> pb.InvokeTwilioResponse
-	4, // 4: pb.ThirdPartyService.InvokeSendgridEmail:output_type -> pb.InvokeSendGridResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5, // 0: pb.AadharVerifyResponse.data:type_name -> pb.aadharResult
+	8, // 1: pb.PANVerifyResponse.data:type_name -> pb.panResult
+	0, // 2: pb.ThirdPartyService.InvokeTwilioSms:input_type -> pb.InvokeTwilioRequest
+	2, // 3: pb.ThirdPartyService.InvokeSendgridEmail:input_type -> pb.InvokeSendGridRequest
+	4, // 4: pb.ThirdPartyService.VerifyAadhar:input_type -> pb.AadharVerifyRequest
+	7, // 5: pb.ThirdPartyService.VerifyPan:input_type -> pb.PANVerifyRequest
+	1, // 6: pb.ThirdPartyService.InvokeTwilioSms:output_type -> pb.InvokeTwilioResponse
+	3, // 7: pb.ThirdPartyService.InvokeSendgridEmail:output_type -> pb.InvokeSendGridResponse
+	6, // 8: pb.ThirdPartyService.VerifyAadhar:output_type -> pb.AadharVerifyResponse
+	9, // 9: pb.ThirdPartyService.VerifyPan:output_type -> pb.PANVerifyResponse
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_thirdparty_proto_init() }
@@ -376,14 +691,13 @@ func file_proto_thirdparty_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_thirdparty_proto_rawDesc), len(file_proto_thirdparty_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   4,
+			NumEnums:      0,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_proto_thirdparty_proto_goTypes,
 		DependencyIndexes: file_proto_thirdparty_proto_depIdxs,
-		EnumInfos:         file_proto_thirdparty_proto_enumTypes,
 		MessageInfos:      file_proto_thirdparty_proto_msgTypes,
 	}.Build()
 	File_proto_thirdparty_proto = out.File

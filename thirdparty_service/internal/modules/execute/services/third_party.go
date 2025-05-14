@@ -55,6 +55,15 @@ func (s *service) SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error 
 	fromEmail := config.AppConfig.SendGridFromEmail
 	name := config.AppConfig.SendGridFromName
 
+	contentType := "text/plain"
+
+	switch payload.Type {
+	case "TEXT":
+		contentType = "text/plain"
+	case "HTML":
+		contentType = "text/html"
+	}
+
 	// new SendGrid client
 	client := sendgrid.NewSendGridClient(apiKey)
 
@@ -69,7 +78,7 @@ func (s *service) SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error 
 		},
 		Content: []sendgrid.Content{
 			{
-				Type:  "text/plain",
+				Type:  contentType,
 				Value: payload.Body,
 			},
 		},
