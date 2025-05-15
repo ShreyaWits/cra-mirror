@@ -3,15 +3,16 @@ package services
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 	"sync"
 	"time"
 
-	"Document-Processing/internal/repository"
-	// "Document-Processing/internal/utils"
 	"Document-Processing/internal/enums"
+	"Document-Processing/internal/models"
+	"Document-Processing/internal/repository"
 	pb "Document-Processing/proto"
 )
 
@@ -29,15 +30,17 @@ type DocumentService struct {
 	geminiService *GeminiService
 	llamaService  *LlamaService
 	minioRepo     *repository.MinioRepository
+	yugabyteRepo  repository.DocumentDataRepository
 	batchStates   map[string]*BatchProcessingState
 	batchStatesMu sync.RWMutex
 }
 
-func NewDocumentService(geminiService *GeminiService, llamaService *LlamaService, minioRepo *repository.MinioRepository) *DocumentService {
+func NewDocumentService(geminiService *GeminiService, llamaService *LlamaService, minioRepo *repository.MinioRepository, yugabyteRepo repository.DocumentDataRepository) *DocumentService {
 	return &DocumentService{
 		geminiService: geminiService,
 		llamaService:  llamaService,
 		minioRepo:     minioRepo,
+		yugabyteRepo:  yugabyteRepo,
 		batchStates:   make(map[string]*BatchProcessingState),
 	}
 }
@@ -87,7 +90,7 @@ func (s *DocumentService) ProcessBatchFilesV1(ctx context.Context, req *pb.Batch
 	s.batchStatesMu.Unlock()
 
 	// Start processing in the background
-	go s.processBatchInBackground(ctx, batchID, req)
+	go s.processBatchInBackground(ctx, batchID, req, fileURLs)
 
 	return &pb.BatchProcessingAck{
 		BatchId:  batchID,
@@ -99,35 +102,65 @@ func (s *DocumentService) ProcessBatchFilesV1(ctx context.Context, req *pb.Batch
 
 // GetBatchStatusV1 returns the current status of a batch processing job
 func (s *DocumentService) GetBatchStatusV1(ctx context.Context, req *pb.BatchStatusRequest) (*pb.BatchFileProcessingResponse, error) {
-	log.Printf("GetBatchStatusV1 called for batch: %s", req.BatchId)
-
-	s.batchStatesMu.RLock()
-	batchState, exists := s.batchStates[req.BatchId]
-	s.batchStatesMu.RUnlock()
-
-	if !exists {
-		return nil, fmt.Errorf("batch ID not found: %s", req.BatchId)
-	}
-
-	batchState.mu.RLock()
-	defer batchState.mu.RUnlock()
-
-	if batchState.Error != nil {
+	data, err := s.yugabyteRepo.GetDocumentDataByID(req.BatchId)
+	if err != nil {
+		log.Printf("Error retrieving batch data for ID %s: %v", req.BatchId, err)
 		return &pb.BatchFileProcessingResponse{
 			Success: false,
-			Message: fmt.Sprintf("Error processing batch: %v", batchState.Error),
+			Message: "Failed to retrieve batch data.",
 		}, nil
 	}
 
+	if data == nil {
+		log.Printf("No batch data found or still processing for ID %s", req.BatchId)
+		return &pb.BatchFileProcessingResponse{
+			Success: false,
+			Message: "Document is currently being processed.",
+		}, nil
+	}
+
+	// decoding JSON
+
+	var decodeExtractedData []map[string]interface{}
+
+	decodeErr := json.Unmarshal([]byte(data.Data), &decodeExtractedData)
+	if decodeErr != nil {
+		log.Fatal("Failed to decode JSON:", err)
+	}
+
+	// converting map to proto
+
+	var processedFiles []*pb.ProcessedFileData
+
+	for _, item := range decodeExtractedData {
+		processedFile := &pb.ProcessedFileData{
+			FileId:     item["file_id"].(string),
+			FileUrl:    item["file_url"].(string),
+			Confidence: float32(item["confidence"].(float64)),
+		}
+		// Handle extracted_data: Convert it to map[string]string
+		extractedData := map[string]string{}
+		if extractedDataRaw, ok := item["extracted_data"].(map[string]interface{}); ok {
+			for key, value := range extractedDataRaw {
+				extractedData[key] = value.(string)
+			}
+		}
+		processedFile.ExtractedData = extractedData
+
+		// Step 3: Append the converted proto message to the list
+		processedFiles = append(processedFiles, processedFile)
+	}
+
 	return &pb.BatchFileProcessingResponse{
-		Success:        batchState.Status == "COMPLETED",
-		Message:        batchState.Message,
-		ProcessedFiles: batchState.ProcessedFiles,
+		Success:        data.Status == "COMPLETED",
+		Message:        data.Message,
+		ProcessedFiles: processedFiles,
+		CreatedAt:      data.CreatedAt.Format(time.RFC3339),
 	}, nil
 }
 
 // processBatchInBackground handles the actual file processing
-func (s *DocumentService) processBatchInBackground(ctx context.Context, batchID string, req *pb.BatchFileProcessingRequest) {
+func (s *DocumentService) processBatchInBackground(ctx context.Context, batchID string, req *pb.BatchFileProcessingRequest, fileURLs []string) {
 	s.batchStatesMu.RLock()
 	batchState := s.batchStates[batchID]
 	s.batchStatesMu.RUnlock()
@@ -155,7 +188,7 @@ func (s *DocumentService) processBatchInBackground(ctx context.Context, batchID 
 			fileCtx, fileCancel := context.WithTimeout(batchCtx, 2*time.Minute)
 			defer fileCancel()
 
-			processedFile, err := s.processFile(fileCtx, fileReq, req.Classifier)
+			processedFile, err := s.processFile(fileCtx, fileReq, req.Classifier, fileURLs[index])
 			if err != nil {
 				log.Printf("Error processing file %d: %v", index, err)
 				errChan <- err
@@ -193,6 +226,40 @@ func (s *DocumentService) processBatchInBackground(ctx context.Context, batchID 
 		batchState.Message = "All files processed successfully"
 		batchState.ProcessedFiles = processedFiles
 	}
+
+	var extracted_data []map[string]interface{}
+	for _, f := range processedFiles {
+		item := map[string]interface{}{
+			"file_id":        f.FileId,
+			"file_url":       f.FileUrl,
+			"extracted_data": f.ExtractedData,
+			"confidence":     f.Confidence,
+		}
+		extracted_data = append(extracted_data, item)
+	}
+
+	jsonBytes, jsonBytesErr := json.Marshal(extracted_data) // Use json.MarshalIndent for pretty format
+	if jsonBytesErr != nil {
+		log.Fatalf("Failed to encode JSON: %v", jsonBytesErr)
+	}
+
+	extractedData := &models.DocumentData{
+		Batch_id:  batchID,
+		Data:      string(jsonBytes),
+		Status:    batchState.Status,
+		Message:   batchState.Message,
+		CreatedAt: time.Now(),
+	}
+
+	_, err := s.yugabyteRepo.CreateDocumentData(extractedData)
+
+	if err != nil {
+		log.Printf("Error saving processed data to DB: %v", err)
+		batchState.Error = fmt.Errorf("failed to save processed data to DB: %v", err)
+	} else {
+		log.Printf("Processed data saved to DB successfully")
+	}
+
 	batchState.mu.Unlock()
 }
 
@@ -201,7 +268,7 @@ func (s *DocumentService) GeminiService() *GeminiService {
 	return s.geminiService
 }
 
-func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessingRequest, classifier string) (*pb.ProcessedFileData, error) {
+func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessingRequest, classifier string, fileUrl string) (*pb.ProcessedFileData, error) {
 	base64Data := req.File.Base64File
 	mimeType := req.File.FileType
 
@@ -236,6 +303,10 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 	log.Printf("Cleaned base64 data length: %d", len(base64Data))
 
 	if len(base64Data) == 0 {
+		// Delete file from MinIO if base64 data is empty
+		if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
+			log.Printf("Failed to delete file from MinIO: %v", err)
+		}
 		return nil, fmt.Errorf("empty base64 data")
 	}
 
@@ -250,6 +321,10 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 	for i, c := range base64Data {
 		if !isValidBase64Char(c) {
 			log.Printf("Invalid base64 character at position %d: %c (ASCII: %d)", i, c, c)
+			// Delete file from MinIO if base64 data is invalid
+			if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
+				log.Printf("Failed to delete file from MinIO: %v", err)
+			}
 			return nil, fmt.Errorf("invalid base64 character at position %d: %c", i, c)
 		}
 	}
@@ -261,6 +336,10 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 		log.Printf("Base64 data length: %d", len(base64Data))
 		if len(base64Data) > 100 {
 			log.Printf("First 100 chars: %s", base64Data[:100])
+		}
+		// Delete file from MinIO if base64 decoding fails
+		if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
+			log.Printf("Failed to delete file from MinIO: %v", err)
 		}
 		return nil, fmt.Errorf("failed to decode base64 data: %v (input length: %d)", err, len(base64Data))
 	}
@@ -274,26 +353,29 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 	if classifier == string(enums.ClassifierLlama) {
 		extractedData, err = s.llamaService.ProcessImage(ctx, base64Data, req.ExtractionFields)
 		if err != nil {
+			// Delete file from MinIO if Llama processing fails
+			if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
+				log.Printf("Failed to delete file from MinIO: %v", err)
+			}
 			return nil, fmt.Errorf("failed to process with LLaMA: %v", err)
 		}
 		// LLaMA doesn't provide confidence scores, so we'll use a default value
 		confidence = 100.0
 	} else {
 		// Gemini Doc Processing AI
-		extractedData, confidence, err = s.geminiService.ProcessImage(ctx, base64Data, req.ExtractionFields)
+		extractedData, confidence, err = s.geminiService.ProcessImage(ctx, base64Data, req.ExtractionFields, fileUrl)
 		if err != nil {
+			// Delete file from MinIO if Gemini processing fails
+			// if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
+			// 	log.Printf("Failed to delete file from MinIO: %v", err)
+			// }
 			return nil, fmt.Errorf("failed to process with Gemini: %v", err)
 		}
 	}
 
-	fileURL, err := s.minioRepo.StoreFile(ctx, fileData, mimeType)
-	if err != nil {
-		return nil, fmt.Errorf("failed to store file: %v", err)
-	}
-
 	return &pb.ProcessedFileData{
 		FileId:        fmt.Sprintf("file-%d", time.Now().UnixNano()),
-		FileUrl:       fileURL,
+		FileUrl:       fileUrl,
 		ExtractedData: extractedData,
 		Confidence:    confidence,
 	}, nil

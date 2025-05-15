@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,6 +57,7 @@ func (r *MinioRepository) StoreFile(ctx context.Context, fileData []byte, fileTy
 
 	// Create a reader from the file data
 	reader := bytes.NewReader(fileData)
+	fmt.Print("jjsdjdjdjbdjddjndjdn", r.bucketName)
 
 	// Upload file to MinIO
 	_, err := r.client.PutObject(ctx, r.bucketName, fileName, reader, int64(len(fileData)), minio.PutObjectOptions{
@@ -95,4 +97,26 @@ func (r *MinioRepository) GetFile(ctx context.Context, fileName string) ([]byte,
 	}
 
 	return buffer, nil
+}
+
+// DeleteFile deletes a file from MinIO using its URL
+func (r *MinioRepository) DeleteFile(ctx context.Context, fileURL string) error {
+	// Extract the object name from the URL
+	// The URL format is typically: http://endpoint/bucket/object-name
+	parts := strings.Split(fileURL, "/")
+	if len(parts) < 4 {
+		return fmt.Errorf("invalid file URL format")
+	}
+	
+	// Get the last part of the URL path and strip query parameters
+	rawObjectName := parts[len(parts)-1]
+	objectName := strings.Split(rawObjectName, "?")[0] // ✅ This removes query params
+	
+	// Remove the file from MinIO
+	err := r.client.RemoveObject(ctx, r.bucketName, objectName, minio.RemoveObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete file from MinIO: %v", err)
+	}
+
+	return nil
 }

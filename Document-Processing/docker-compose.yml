@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  yugabyte-db:
+    image: yugabytedb/yugabyte:2.21.1.0-b271
+    container_name: yugabyte-db1
+    ports:
+      - "5434:5433" 
+      - "7001:7000"  
+    command: >
+      bin/yugabyted start 
+      --base_dir=/home/yugabyte/yb_data 
+      --background=false
+    volumes:
+      - nps2.0-yb-data:/home/yugabyte/yb_data
+    networks:
+      - nps2.0
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5433"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  nps2.0-yb-data:
+
+networks:
+  nps2.0:
+    driver: bridge
