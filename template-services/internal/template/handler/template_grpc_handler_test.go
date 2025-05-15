@@ -11,6 +11,7 @@ import (
 
 	"template-services/internal/models"
 	appErrors "template-services/internal/pkg/errors"
+	"template-services/internal/template/mocks"
 	pb "template-services/proto"
 )
 
@@ -40,9 +41,6 @@ func (m *MockTemplateService) UpdateTemplate(ctx context.Context, template *mode
 	panic("unimplemented")
 }
 
-
-
-
 func (m *MockTemplateService) GetTemplate(ctx context.Context, id, name, channel, language string) (*models.Template, error) {
 	args := m.Called(ctx, id, name, channel, language)
 	resp := args.Get(0)
@@ -53,7 +51,7 @@ func (m *MockTemplateService) GetTemplate(ctx context.Context, id, name, channel
 }
 
 func TestGetTemplateV1_Success(t *testing.T) {
-	mockSvc := new(MockTemplateService)
+	mockSvc := new(mocks.MockTemplateService)
 	handler := NewTemplateGRPCHandler(mockSvc)
 
 	req := &pb.GetTemplateRequest{
@@ -80,7 +78,7 @@ func TestGetTemplateV1_Success(t *testing.T) {
 }
 
 func TestGetTemplateV1_InvalidRequest(t *testing.T) {
-	mockSvc := new(MockTemplateService)
+	mockSvc := new(mocks.MockTemplateService)
 	handler := NewTemplateGRPCHandler(mockSvc)
 
 	req := &pb.GetTemplateRequest{
@@ -98,7 +96,7 @@ func TestGetTemplateV1_InvalidRequest(t *testing.T) {
 }
 
 func TestGetTemplateV1_TemplateNotFound(t *testing.T) {
-	mockSvc := new(MockTemplateService)
+	mockSvc := new(mocks.MockTemplateService)
 	handler := NewTemplateGRPCHandler(mockSvc)
 
 	req := &pb.GetTemplateRequest{
@@ -115,4 +113,14 @@ func TestGetTemplateV1_TemplateNotFound(t *testing.T) {
 	assert.Equal(t, appErrors.TmpErrTemplateNotFound, resp.Error["code"])
 	assert.Equal(t, appErrors.GetAppErrorMessage(appErrors.TmpErrTemplateNotFound), resp.Message["template"])
 	mockSvc.AssertExpectations(t)
+}
+
+func TestMockTemplateService_CreateTemplate_Panics(t *testing.T) {
+	mockSvc := &MockTemplateService{}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	_, _ = mockSvc.CreateTemplate(context.Background(), &models.Template{})
 }

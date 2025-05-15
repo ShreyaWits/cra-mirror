@@ -29,12 +29,9 @@ func ValidateBody[T any]() fiber.Handler {
 		// Step 1: Parse JSON body
 		if err := c.BodyParser(&body); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"success": false,
-				"message": fiber.Map{
-					"body": "Invalid or malformed JSON",
-				},
+				"success":    false,
+				"message":    "Invalid or malformed JSON",
 				"error_code": appErrors.TmpErrInvalidRequestBody,
-				"data":       fiber.Map{},
 			})
 		}
 
@@ -42,81 +39,49 @@ func ValidateBody[T any]() fiber.Handler {
 		if err := validate.Struct(body); err != nil {
 			if ve, ok := err.(validator.ValidationErrors); ok {
 				errMap := make(fiber.Map)
-				var topErrorCode string
 
 				// Collect missing or invalid fields
 				for _, fe := range ve {
-					field := strings.ToLower(fe.Field())
-
-					// Default error message
-					msg := ""
-					switch fe.Tag() {
-					case "required":
-						msg = field + " is required"
-					case "len":
-						msg = field + " must be " + fe.Param() + " characters long"
-					case "oneof":
-						msg = field + " must be one of [" + fe.Param() + "]"
-					case "nonempty":
-						msg = field + " cannot be empty"
-					default:
-						msg = "Invalid value for " + field
+					field := fe.StructField()
+					fieldInfo, found := reflect.TypeOf(body).FieldByName(field)
+					if !found {
+						continue
 					}
 
-					// Attempt to override with error_code tag
-					t := reflect.TypeOf(body)
-					if t.Kind() == reflect.Ptr {
-						t = t.Elem()
+					// Get the JSON field name if available, otherwise use lowercased field name
+					jsonTag := fieldInfo.Tag.Get("json")
+					fieldName := strings.ToLower(fe.Field())
+					if jsonTag != "" {
+						fieldName = strings.Split(jsonTag, ",")[0]
 					}
-					if f, ok := t.FieldByName(fe.Field()); ok {
-						if customCode := f.Tag.Get("error_code"); customCode != "" {
-							msg = appErrors.GetAppErrorMessage(customCode)
-							// Map the error code to its constant value
-							switch customCode {
-							case "TmpErrmissingName":
-								topErrorCode = appErrors.TmpErrmissingName
-							case "TmpErrmissingChannel":
-								topErrorCode = appErrors.TmpErrmissingChannel
-							case "TmpErrmissingLanguage":
-								topErrorCode = appErrors.TmpErrmissingLanguage
-							case "TmpErrmissingContent":
-								topErrorCode = appErrors.TmpErrmissingContent
-							case "TmpErrmissingIsActive":
-								topErrorCode = appErrors.TmpErrmissingIsActive
-							case "TmpErrmissingTemplateID":
-								topErrorCode = appErrors.TmpErrmissingTemplateID
-							default:
-								topErrorCode = appErrors.TmpErrInvalidRequestBody
-							}
+
+					// Get error message from error_code tag
+					code := fieldInfo.Tag.Get("error_code")
+					var errMsg string
+					if code == "" || code == "TmpErrInvalidRequestBody" {
+						errMsg = "Invalid or malformed JSON"
+					} else {
+						errMsg = appErrors.GetAppErrorMessage(code)
+						if errMsg == "" {
+							errMsg = "An unknown error occurred"
 						}
 					}
 
-					// Store the error message for the field
-					errMap[field] = msg
+					errMap[fieldName] = errMsg
 				}
 
-				// If no specific error code was found, use the default
-				if topErrorCode == "" {
-					topErrorCode = appErrors.TmpErrInvalidRequestBody
-				}
-
-				// Return the error map with specific missing values
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"success":    false,
 					"message":    errMap,
-					"error_code": topErrorCode,
-					"data":       fiber.Map{},
+					"error_code": appErrors.TmpErrInvalidRequestBody,
 				})
 			}
 
 			// Unexpected validation error
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"success": false,
-				"message": fiber.Map{
-					"validation": err.Error(),
-				},
+				"success":    false,
+				"message":    "An unknown error occurred",
 				"error_code": appErrors.TmpErrInvalidRequestBody,
-				"data":       fiber.Map{},
 			})
 		}
 
@@ -137,16 +102,31 @@ func ValidateStruct[T any](input T) (map[string]string, bool) {
 				if !found {
 					continue
 				}
-				tag := fieldInfo.Tag
-				code := tag.Get("error_code")
-				if code == "" {
-					code = "TmpErrInvalidRequestBody"
+
+				// Get the JSON field name if available, otherwise use lowercased field name
+				jsonTag := fieldInfo.Tag.Get("json")
+				fieldName := strings.ToLower(fe.Field())
+				if jsonTag != "" {
+					fieldName = strings.Split(jsonTag, ",")[0]
 				}
-				errMap[strings.ToLower(fe.Field())] = appErrors.GetAppErrorMessage(code)
+
+				// Get error message from error_code tag
+				code := fieldInfo.Tag.Get("error_code")
+				var errMsg string
+				if code == "" || code == "TmpErrInvalidRequestBody" {
+					errMsg = "Invalid or malformed JSON"
+				} else {
+					errMsg = appErrors.GetAppErrorMessage(code)
+					if errMsg == "" {
+						errMsg = "An unknown error occurred"
+					}
+				}
+
+				errMap[fieldName] = errMsg
 			}
 			return errMap, false
 		}
-		return map[string]string{"general": "validation error"}, false
+		return map[string]string{"general": "An unknown error occurred"}, false
 	}
 
 	return nil, true

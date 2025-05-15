@@ -33,8 +33,18 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate required fields
+	if req.Name == "" || req.Channel == "" || req.Language == "" || req.Content == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Success:      false,
+			ErrorMessage: "Missing required fields",
+			ErrorCode:    errors.TmpErrInvalidRequestBody,
+			Data:         nil,
+		})
+	}
+
 	// Check if template with same name already exists
-	existingTemplate, err := h.service.GetTemplate(c.Context(), "", req.Name, req.Channel, req.Language)
+	existingTemplate, _ := h.service.GetTemplate(c.Context(), "", req.Name, req.Channel, req.Language)
 	if existingTemplate != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
 			Success:      false,
@@ -77,19 +87,23 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 
 // GetTemplate handles template retrieval
 func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
-	req := dto.GetTemplateRequest{
-		Name:     c.Query("name"),
-		Channel:  c.Query("channel"),
-		Language: c.Query("language"),
+	var req dto.GetTemplateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Success:      false,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrInvalidRequestBody),
+			ErrorCode:    errors.TmpErrInvalidRequestBody,
+			Data:         nil,
+		})
 	}
 
 	// Call service
 	resp, err := h.service.GetTemplate(c.Context(), "", req.Name, req.Channel, req.Language)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
+		return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse{
 			Success:      false,
-			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateFetch),
-			ErrorCode:    errors.TmpErrTemplateFetch,
+			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateNotFound),
+			ErrorCode:    errors.TmpErrTemplateNotFound,
 			Data:         nil,
 		})
 	}
@@ -136,8 +150,8 @@ func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	// Fetch existing template
 	existing, err := h.service.GetTemplateByID(c.Context(), uid)
 	log.Printf("Existing template: %+v", existing)
-	log.Printf("====>", err)
 	if err != nil {
+		log.Printf("Error fetching template: %v", err)
 		return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse{
 			Success:      false,
 			ErrorMessage: errors.GetAppErrorMessage(errors.TmpErrTemplateNotFound),
