@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog" 
 )
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
@@ -223,11 +224,14 @@ func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 	}
 
 	// Custom stdout exporter
-	stdout := &stdoutExporter{}
+	logStoutExporter, err := stdoutlog.New()
+	if err != nil {
+		return nil, err
+	} 
 
 	loggerProvider := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
-		log.WithProcessor(log.NewBatchProcessor(stdout)),
+		log.WithProcessor(log.NewBatchProcessor(logStoutExporter)),
 		log.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(config.SERVICE_NAME),

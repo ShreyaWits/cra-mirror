@@ -1,0 +1,35 @@
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4327
+        http:
+          endpoint: 0.0.0.0:4318
+ingester:
+  trace_idle_period: 10s
+  max_block_bytes: 1_000_000
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 1h
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/traces
+    # s3:
+    #   bucket: tempo-bucket # Replace with your MinIO bucket name
+    #   endpoint: your-minio:9000 # Replace with your MinIO server address and port (default is usually 9000)
+    #   auth:
+    #     method: credentials
+    #     access_key_id: "YOUR_MINIO_ACCESS_KEY" # Replace with your MinIO access key
+    #     secret_access_key: "YOUR_MINIO_SECRET_KEY" # Replace with your MinIO secret key
+    #   insecure: true # Set to true if you are not using TLS/SSL for your MinIO instance (not recommended for production)
+    #   force_path_style: true 
