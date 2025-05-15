@@ -7,6 +7,9 @@ services:
       dockerfile: ./messaging_service/Dockerfile
     ports:
       - "50051:50051"
+      - "5055:5055"
+    networks:
+      - messaging-service-network
     environment:
       GRPC_PORT: 50051
       # Kafka connection settings
@@ -33,6 +36,11 @@ services:
       KAFKA_ENABLE_AUTO_COMMIT: "false"
       # Exactly-once configuration
       KAFKA_ISOLATION_LEVEL: read_committed
+      CONFIG_SERVICE_URL: http://host.docker.internal:4001/api/v1
+      CONFIG_SERVICE_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNzQ3MzExOTcwfQ.JO1vuvRQSlyeYPhyh6OA-8AR3g7YvzDlKmJSYfvpZqU
+      ENVIRONMENT: dev
+      HttpPort: 5055
+
     depends_on:
       - kafka1
       - kafka2
@@ -47,6 +55,8 @@ services:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper1
     hostname: zookeeper1
+    networks:
+      - messaging-service-network
     ports:
       - "2181:2181"
     environment:
@@ -66,6 +76,8 @@ services:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper2
     hostname: zookeeper2
+    networks:
+      - messaging-service-network
     ports:
       - "2182:2182" # Map to a different host port if needed
     environment:
@@ -80,7 +92,9 @@ services:
   # Define the third Zookeeper node
   zookeeper3:
     image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper3
+    container_name: zookeeper3    
+    networks:
+      - messaging-service-network
     hostname: zookeeper3
     ports:
       - "2183:2183" # Map to a different host port if needed
@@ -98,6 +112,8 @@ services:
     image: confluentinc/cp-kafka:latest
     container_name: kafka1
     hostname: kafka1
+    networks:
+      - messaging-service-network    
     depends_on:
       - zookeeper1
       - zookeeper2
@@ -127,6 +143,7 @@ services:
       KAFKA_LOG_RETENTION_HOURS: 168 # 7 days
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_NUM_PARTITIONS: 3 
+
     volumes:
       # Use a unique volume for each broker's data
       - kafka1_data:/var/lib/kafka/data
@@ -137,6 +154,8 @@ services:
     image: confluentinc/cp-kafka:latest
     container_name: kafka2
     hostname: kafka2
+    networks:
+      - messaging-service-network
     depends_on:
       - zookeeper1
       - zookeeper2
@@ -171,6 +190,8 @@ services:
     image: confluentinc/cp-kafka:latest
     container_name: kafka3
     hostname: kafka3
+    networks:
+      - messaging-service-network
     depends_on:
       - zookeeper1
       - zookeeper2
@@ -207,6 +228,10 @@ volumes:
   zookeeper1_data:
   zookeeper2_data:
   zookeeper3_data:
+
+networks:
+  messaging-service-network:
+    external: true
 
 # Command to start the service:
 # docker compose -f 'messaging_service/docker-compose.yml' up --build 'messaging_service'

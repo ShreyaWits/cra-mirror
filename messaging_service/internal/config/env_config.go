@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"messaging_service/internal/modules/message_broker/models"
 	"os"
 	"strconv"
 	"strings"
@@ -9,42 +10,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds all configuration for the application
-type Config struct {
-	// Server settings
-	GrpcPort string
+type Config = models.MessaggingConfigResponse
 
-	// Kafka settings for client connection
-	KafkaBrokers          []string
-	KafkaAutoCreateTopics string
+var config *Config = &Config{}
 
-	// Kafka topic configuration
-	KafkaNumPartitions     int
-	KafkaReplicationFactor int
-
-	// Kafka producer configuration
-	KafkaBatchSize             int
-	KafkaBatchBytes            int
-	KafkaBatchTimeoutMs        int
-	KafkaCompressionCodec      string
-	KafkaMaxAttempts           int
-	KafkaRetryBackoffMs        int
-	KafkaReadTimeoutMs         int
-	KafkaWriteTimeoutMs        int
-	KafkaRequireActiveListener bool
-
-	// Kafka topic settings
-	KafkaRetentionMs int
-
-	// Kafka consumer configuration
-	KafkaConsumerMaxWaitMs        int
-	KafkaConsumerCommitIntervalMs int
-	KafkaConsumerSessionTimeoutMs int
-	KafkaConsumerHeartbeatMs      int
-	KafkaConsumerMaxPollRecords   int
-	KafkaConsumerAutoOffsetReset  string
-	KafkaEnableAutoCommit         bool
-	KafkaIsolationLevel           string
+func SetConfig(cfg *Config) {
+	config = cfg
 }
 
 // LoadConfig loads configuration from environment variables
@@ -52,9 +23,10 @@ func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
 	godotenv.Load()
 
-	config := &Config{
+	config = &Config{
 		// Server settings
 		GrpcPort: getEnvString("GRPC_PORT", "50051"),
+		HttpPort: getEnvString("HTTP_PORT", "5055"),
 
 		// Kafka connection settings
 		KafkaBrokers:          getEnvStringSlice("KAFKA_BROKERS", "localhost:9092"),
@@ -87,12 +59,20 @@ func LoadConfig() (*Config, error) {
 		KafkaConsumerAutoOffsetReset:  getEnvString("KAFKA_CONSUMER_AUTO_OFFSET_RESET", "earliest"),
 		KafkaEnableAutoCommit:         getEnvBool("KAFKA_ENABLE_AUTO_COMMIT", false),
 		KafkaIsolationLevel:           getEnvString("KAFKA_ISOLATION_LEVEL", "read_committed"),
+		ConfigServiceUrl:              getEnvString("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
+		ConfigServiceToken:            getEnvString("CONFIG_SERVICE_TOKEN", "kjdasklfjklajdkfljkl"),
+		Environment:                   getEnvString("ENVIRONMENT", "dev"),
+		ServiceName:                   getEnvString("SERVICE_NAME", "messaging_service"),
 	}
 
 	// --- Validation ---
 
 	if config.GrpcPort == "" {
 		return nil, fmt.Errorf("GRPC_PORT environment variable is required")
+	}
+
+	if config.HttpPort == "" {
+		return nil, fmt.Errorf("HTTP_PORT environment variable is required")
 	}
 
 	if len(config.KafkaBrokers) == 0 {

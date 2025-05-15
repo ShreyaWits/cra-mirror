@@ -1,0 +1,27 @@
+# Go build artifacts
+/bin
+/build
+/main
+*.exe
+*.test
+*.out
+
+# Dependency directories
+vendor/
+
+# VCS
+.git
+.gitignore
+
+# Docker-related
+Dockerfile
+docker-compose.*.yml
+
+# IDE/editor settings
+.vscode
+.idea
+*.swp
+
+# OS-specific
+.DS_Store
+Thumbs.db

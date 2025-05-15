@@ -2,7 +2,7 @@ package confluent_test
 
 import (
 	"fmt"
-	"messaging_service/internal/messaging_service/mock"
+	"messaging_service/internal/modules/message_broker/mock"
 	"messaging_service/pkg/confluent"
 	"messaging_service/pkg/logger"
 	"sync"

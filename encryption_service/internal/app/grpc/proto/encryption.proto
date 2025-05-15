@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package encryption_microservice;
+
+option go_package = "../../../encryption_microservice;encryption_microservice";
+
+message EncryptDataResponse {
+  repeated Data data = 1;
+}
+
+message EncryptDataRequest {
+  repeated Data data = 1;
+  string token = 2;
+  optional string userId = 3; 
+}
+
+message Data {
+  map<string, string> fields = 1;
+}
+
+message DecryptRequest { 
+  repeated Data data = 1;
+  string token = 2;
+  optional string userId = 3;
+}
+
+message DecryptResponse { 
+  repeated Data data = 1; 
+}
+
+message GenerateEDEKRequest {
+  string token = 1;
+}
+
+message GenerateEDEKResponse {
+  	string EDEKPrivate = 1;
+	  string EDEKPublic = 2;
+}
+
+message HealthCheckResponse {
+  	string HealthStatus = 1;
+}
+
+message HealthCheckRequest {}
+
+
+service EncryptionService {
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc Encrypt(EncryptDataRequest) returns (EncryptDataResponse);
+  rpc GenerateEDEK(GenerateEDEKRequest) returns (GenerateEDEKResponse);
+  rpc Decrypt(DecryptRequest) returns (DecryptResponse);
+}

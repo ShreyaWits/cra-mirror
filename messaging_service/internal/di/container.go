@@ -1,11 +1,17 @@
 package di
 
 import (
+	"fmt"
 	"messaging_service/internal/config"
-	"messaging_service/internal/messaging_service/handler"
-	"messaging_service/internal/messaging_service/service"
+	cacheclient "messaging_service/internal/modules/message_broker/client/cache_client"
+	client "messaging_service/internal/modules/message_broker/client/config_client"
+	constants "messaging_service/internal/modules/message_broker/constant"
+	"messaging_service/internal/modules/message_broker/handler"
+	"messaging_service/internal/modules/message_broker/service"
 	"messaging_service/pkg/confluent"
+	httpclient "messaging_service/pkg/http"
 	"messaging_service/pkg/logger"
+	"time"
 )
 
 // Container holds all the dependencies for the application
@@ -15,6 +21,7 @@ type Container struct {
 
 	// Service handlers
 	MessagingHandler *handler.MessagingHandler
+	ConfigHandler    *handler.ConfigHandler
 
 	// Services
 	MessagingService service.MessagingService
@@ -48,11 +55,31 @@ func NewContainer() (*Container, error) {
 	// Create the handler with the service
 	msgHandler := handler.NewMessagingHandler(cfg, messagingService)
 
+	httpClient := httpclient.New(5 * time.Second)
+	configClient := client.NewConfigClient(httpClient, cfg)
+	cacheClient, cacheErr := cacheclient.NewRedisClient(constants.CACHE_SERVICE_URL)
+
+	if cacheErr != nil {
+		return nil, cacheErr
+	}
+	// Create the config manager service
+	configManagerService := service.NewConfigManager(configClient, cacheClient)
+	// The service doesn't have a constructor, so we ini
+
+	cfg, err = configManagerService.GetFromApiConfiguration()
+	if err != nil {
+		return nil, fmt.Errorf("not able to fetch config %v", err)
+	}
+
+	// Create the config handler using the constructor
+	configHandler := handler.NewConfigHandler(configManagerService)
+
 	// Build container
 	container := &Container{
 		Config:           cfg,
 		MessagingHandler: msgHandler,
 		MessagingService: messagingService,
+		ConfigHandler:    configHandler,
 	}
 
 	return container, nil
