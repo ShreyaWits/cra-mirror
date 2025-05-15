@@ -57,7 +57,6 @@ func (r *MinioRepository) StoreFile(ctx context.Context, fileData []byte, fileTy
 
 	// Create a reader from the file data
 	reader := bytes.NewReader(fileData)
-	fmt.Print("jjsdjdjdjbdjddjndjdn", r.bucketName)
 
 	// Upload file to MinIO
 	_, err := r.client.PutObject(ctx, r.bucketName, fileName, reader, int64(len(fileData)), minio.PutObjectOptions{
