@@ -1,3 +1,0 @@
-[go]
-testingFramework = "Testify"
-mockingFramework = "Testify Mock"
