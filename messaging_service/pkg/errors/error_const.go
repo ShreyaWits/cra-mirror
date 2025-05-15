@@ -5,6 +5,7 @@ const (
 	MSGErrInvalidRequest = "MSG001"
 	MSGErrInvalidTopic   = "MSG002"
 	MSGErrInvalidGroup   = "MSG003"
+	MSGErrArgument       = "MSG004"
 
 	// PUBxxx (Publish)
 	PUBErrInvalidMessage   = "PUB001"

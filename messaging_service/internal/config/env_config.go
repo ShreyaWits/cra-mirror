@@ -24,7 +24,7 @@ type Config struct {
 
 	// Kafka producer configuration
 	KafkaBatchSize             int
-	KafkaBatchBytes            int64
+	KafkaBatchBytes            int
 	KafkaBatchTimeoutMs        int
 	KafkaCompressionCodec      string
 	KafkaMaxAttempts           int
@@ -66,7 +66,7 @@ func LoadConfig() (*Config, error) {
 
 		// Kafka producer configuration
 		KafkaBatchSize:             getEnvInt("KAFKA_BATCH_SIZE", 100),
-		KafkaBatchBytes:            getEnvInt64("KAFKA_BATCH_BYTES", 1048576),
+		KafkaBatchBytes:            getEnvInt("KAFKA_BATCH_BYTES", 1048576),
 		KafkaBatchTimeoutMs:        getEnvInt("KAFKA_BATCH_TIMEOUT_MS", 500),
 		KafkaCompressionCodec:      getEnvString("KAFKA_COMPRESSION_CODEC", "snappy"),
 		KafkaMaxAttempts:           getEnvInt("KAFKA_MAX_ATTEMPTS", 3),
@@ -154,21 +154,6 @@ func getEnvStringSlice(key, defaultValue string) []string {
 		}
 	}
 	return result
-}
-
-// getEnvInt64 gets an int64 environment variable or returns a default value
-func getEnvInt64(key string, defaultValue int64) int64 {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-
-	value, err := strconv.ParseInt(valueStr, 10, 64)
-	if err != nil {
-		return defaultValue
-	}
-
-	return value
 }
 
 // getEnvBool gets a boolean environment variable or returns a default value

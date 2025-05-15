@@ -1,19 +1,6 @@
 package confluent
 
-// KafkaFactory defines the factory interface for creating Confluent Kafka components
-type KafkaFactory interface {
-	// CreateProducer creates a new producer
-	CreateProducer(cfg KafkaConfig) (Producer, error)
-
-	// CreateConsumer creates a new consumer
-	CreateConsumer(cfg KafkaConfig, groupID string, handler func([]byte) error) (Consumer, error)
-
-	// CreateAdmin creates a new admin client
-	CreateAdmin(cfg KafkaConfig) (KafkaAdmin, error)
-
-	// CreateDLQProducer creates a new DLQ producer
-	CreateDLQProducer(cfg KafkaConfig) (DLQProducer, error)
-}
+import "messaging_service/internal/config"
 
 // Factory provides methods for creating Confluent Kafka components
 type Factory struct{}
@@ -34,7 +21,7 @@ func (f *Factory) CreateConsumer(cfg KafkaConfig, groupID string, handler func([
 }
 
 // CreateAdmin creates a new Confluent AdminClient
-func (f *Factory) CreateAdmin(cfg KafkaConfig) (KafkaAdmin, error) {
+func (f *Factory) CreateAdmin(cfg *config.Config) (KafkaAdmin, error) {
 	return NewAdmin(cfg)
 }
 

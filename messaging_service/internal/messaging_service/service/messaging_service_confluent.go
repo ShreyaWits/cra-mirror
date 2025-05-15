@@ -13,19 +13,25 @@ import (
 	"time"
 )
 
+type MessagingService interface {
+	PublishMessage(ctx context.Context, cfg confluent.KafkaConfig, req *pb.PublishRequest) *errors.CustomError
+	ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, cfg confluent.KafkaConfig) *errors.CustomError
+	CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg confluent.KafkaConfig) *errors.CustomError
+}
+
 // ConfluentMessagingService implements MessagingService using confluent-kafka-go
 type ConfluentMessagingService struct {
-	factory   confluent.KafkaFactory
-	admin     confluent.KafkaAdmin
-	producers map[string]confluent.Producer
-	config    *config.Config
-	mu        sync.RWMutex // Mutex for thread-safe access to producers map
+	Factory     confluent.KafkaFactory
+	Admin       confluent.KafkaAdmin
+	Producers   map[string]confluent.Producer
+	Config      *config.Config
+	KafkaConfig confluent.KafkaConfig
+	mu          sync.RWMutex // Mutex for thread-safe access to producers map
 }
 
 // NewConfluentMessagingService creates a new messaging service using confluent-kafka-go
-func NewConfluentMessagingService(config *config.Config) MessagingService {
+func NewConfluentMessagingService(config *config.Config, factory confluent.KafkaFactory) (MessagingService, error) {
 	// Create factory
-	factory := confluent.NewFactory()
 
 	// Create a base config
 	kafkaConfig := confluent.KafkaConfig{
@@ -65,7 +71,7 @@ func NewConfluentMessagingService(config *config.Config) MessagingService {
 	// Retry admin creation a few times before falling back to null admin
 	maxRetries := 3
 	for i := 0; i < maxRetries; i++ {
-		admin, err = factory.CreateAdmin(kafkaConfig)
+		admin, err = factory.CreateAdmin(config)
 		if err == nil {
 			break
 		}
@@ -75,52 +81,33 @@ func NewConfluentMessagingService(config *config.Config) MessagingService {
 	}
 
 	if err != nil {
-		logger.LogErrorEvent("", "confluent_admin_creation_failed", "", "error",
-			fmt.Sprintf("Failed to create Confluent Kafka admin after %d attempts: %v", maxRetries, err))
-		// Create a null admin that logs errors but doesn't fail
-		admin = &ConfluentAdmin{}
+		return &ConfluentMessagingService{}, fmt.Errorf("failed to create Confluent Kafka admin after %d attempts: %v", maxRetries, err)
 	}
 
 	return &ConfluentMessagingService{
-		factory:   factory,
-		admin:     admin,
-		producers: make(map[string]confluent.Producer),
-		config:    config,
-		mu:        sync.RWMutex{},
-	}
+		Factory:     factory,
+		Admin:       admin,
+		Producers:   make(map[string]confluent.Producer),
+		Config:      config,
+		KafkaConfig: kafkaConfig,
+		mu:          sync.RWMutex{},
+	}, nil
 }
 
 // PublishMessage publishes a message to Kafka
-func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg interface{}, req *pb.PublishRequest) *errors.CustomError {
-	// Input validation
-	if req.Topic == "" {
-		return errors.NewCustomError(
-			errors.MSGErrInvalidTopic,
-			fmt.Errorf("Topic is required"),
-		)
-	}
+func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, confluentConfig confluent.KafkaConfig, req *pb.PublishRequest) *errors.CustomError {
 
-	// Convert to confluent config if needed
-	var confluentConfig confluent.KafkaConfig
-	switch c := cfg.(type) {
-	case confluent.KafkaConfig:
-		// Already the right type
-		confluentConfig = c
-		// Set the topic from the request
-		confluentConfig.Topic = req.Topic
-	default:
-		// Unknown config type
-		return errors.NewCustomError(
-			errors.PUBErrInvalidConfig,
-			fmt.Errorf("Unsupported config type"),
-		)
-	}
+	confluentConfig.Topic = req.Topic
 
 	// First check if topic exists
-	topicExists, err := s.topicExists(ctx, req.Topic)
+	topicExists, err := s.TopicExists(ctx, req.Topic)
 	if err != nil {
 		logger.LogWarnEvent("", "kafka_check_topic_failed", req.Topic, "warn",
 			fmt.Sprintf("Failed to check if topic exists: %v", err))
+		return errors.NewCustomError(
+			errors.PUBErrTopicNotExists,
+			fmt.Errorf("topic able to get existing topic: %s", req.Topic),
+		)
 		// Continue anyway with a warning
 	} else if !topicExists {
 		return errors.NewCustomError(
@@ -131,12 +118,12 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 
 	// Check if topic has active consumers
 	if topicExists {
-		hasConsumers, err := s.admin.HasActiveConsumers(ctx, req.Topic)
+		hasConsumers, err := s.Admin.HasActiveConsumers(ctx, req.Topic)
 		if err != nil {
 			logger.LogWarnEvent("", "kafka_check_consumers_failed", req.Topic, "warn",
 				fmt.Sprintf("Failed to check for active consumers: %v", err))
 			// Continue anyway, don't fail the publish
-		} else if !hasConsumers && s.config.KafkaRequireActiveListener {
+		} else if !hasConsumers && s.Config.KafkaRequireActiveListener {
 			// Only return an error if active listeners are required by configuration
 			return errors.NewCustomError(
 				errors.PUBErrTopicNotExists,
@@ -150,32 +137,25 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 	}
 
 	// Get or create producer
-	producer, err := s.getOrCreateProducer(confluentConfig)
+	producer, err := s.GetOrCreateProducer(confluentConfig)
 	if err != nil {
 		return errors.NewCustomError(
 			errors.PUBErrProducerNotReady,
-			fmt.Errorf("Failed to create producer: %v", err),
+			fmt.Errorf("failed to create producer: %v", err),
 		)
 	}
 
 	// Parse value
 	var value []byte
-	if len(req.Value) > 0 {
-		// Convert map to JSON
-		jsonBytes, err := json.Marshal(req.Value)
-		if err != nil {
-			return errors.NewCustomError(
-				errors.PUBErrInvalidMessage,
-				fmt.Errorf("Failed to serialize message value: %v", err),
-			)
-		}
-		value = jsonBytes
-	} else {
+	// Convert map to JSON
+	jsonBytes, err := json.Marshal(req.Value)
+	if err != nil {
 		return errors.NewCustomError(
 			errors.PUBErrInvalidMessage,
-			fmt.Errorf("Message value is required"),
+			fmt.Errorf("failed to serialize message value: %v", err),
 		)
 	}
+	value = jsonBytes
 
 	var key []byte
 	if req.Key != "" {
@@ -203,11 +183,11 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 
 			// Remove the producer from the cache to force creation of a new one
 			s.mu.Lock()
-			delete(s.producers, confluentConfig.Topic)
+			delete(s.Producers, confluentConfig.Topic)
 			s.mu.Unlock()
 
 			// Try to create a new producer
-			producer, err = s.getOrCreateProducer(confluentConfig)
+			producer, err = s.GetOrCreateProducer(confluentConfig)
 			if err != nil {
 				return errors.NewCustomError(
 					errors.PUBErrProducerNotReady,
@@ -303,45 +283,14 @@ func (s *ConfluentMessagingService) PublishMessage(ctx context.Context, cfg inte
 }
 
 // ConsumeMessage implements the consumer streaming RPC
-func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, cfg interface{}) *errors.CustomError {
+func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_SubscribeV1Server, confluentConfig confluent.KafkaConfig) *errors.CustomError {
 	// Extract topic and group information
 	ctx := stream.Context()
 
-	// Convert to confluent config if needed
-	var confluentConfig confluent.KafkaConfig
-	var groupID string
-
-	// Handle different config types
-	switch c := cfg.(type) {
-	case confluent.KafkaConfig:
-		// Already the right type
-		confluentConfig = c
-		groupID = c.ConsumerConfig.GroupID
-	default:
-		// Unknown config type
-		return errors.NewCustomError(
-			errors.SUBErrInvalidConfig,
-			fmt.Errorf("unsupported config type"),
-		)
-	}
-
-	// Input validation
-	if confluentConfig.Topic == "" {
-		return errors.NewCustomError(
-			errors.MSGErrInvalidTopic,
-			fmt.Errorf("topic is required"),
-		)
-	}
-
-	if groupID == "" {
-		return errors.NewCustomError(
-			errors.SUBErrInvalidConfig,
-			fmt.Errorf("consumer group ID is required"),
-		)
-	}
+	groupID := confluentConfig.ConsumerConfig.GroupID
 
 	// Check if topic exists
-	topicExists, err := s.topicExists(ctx, confluentConfig.Topic)
+	topicExists, err := s.TopicExists(ctx, confluentConfig.Topic)
 	if err != nil {
 		logger.LogErrorEvent("", "kafka_check_topic_failed", confluentConfig.Topic, "error",
 			fmt.Sprintf("Failed to check if topic exists: %v", err))
@@ -366,7 +315,7 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 	maxRetries := 3
 
 	for i := 0; i < maxRetries; i++ {
-		consumer, errConsumer = s.factory.CreateConsumer(
+		consumer, errConsumer = s.Factory.CreateConsumer(
 			confluentConfig,
 			groupID,
 			func(data []byte) error {
@@ -410,7 +359,7 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 		case <-ctx.Done():
 			return errors.NewCustomError(
 				errors.SUBErrConsumerNotReady,
-				fmt.Errorf("Context cancelled while creating consumer: %v", ctx.Err()),
+				fmt.Errorf("context cancelled while creating consumer: %v", ctx.Err()),
 			)
 		case <-time.After(time.Duration(500*(i+1)) * time.Millisecond):
 			// Continue with retry
@@ -420,7 +369,7 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 	if errConsumer != nil {
 		return errors.NewCustomError(
 			errors.SUBErrConsumerNotReady,
-			fmt.Errorf("Failed to create consumer after %d attempts: %v", maxRetries, errConsumer),
+			fmt.Errorf("failed to create consumer after %d attempts: %v", maxRetries, errConsumer),
 		)
 	}
 
@@ -446,24 +395,13 @@ func (s *ConfluentMessagingService) ConsumeMessage(stream pb.MessagingService_Su
 	return nil
 }
 
-// CreateTopic creates a new Kafka topic
-func (s *ConfluentMessagingService) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg interface{}) *errors.CustomError {
-	// Input validation
-	if req.Topic == "" {
-		return errors.NewCustomError(
-			errors.MSGErrInvalidTopic,
-			fmt.Errorf("Topic name is required"),
-		)
-	}
-
+func (s *ConfluentMessagingService) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest, cfg confluent.KafkaConfig) *errors.CustomError {
 	// Check if topic already exists
-	topicExists, err := s.topicExists(ctx, req.Topic)
+	topicExists, err := s.TopicExists(ctx, req.Topic)
 	if err != nil {
 		logger.LogWarnEvent("", "kafka_check_topic_failed", req.Topic, "warn",
 			fmt.Sprintf("Failed to check if topic exists: %v", err))
-		// Continue anyway with topic creation
 	} else if topicExists {
-		// Topic already exists, return success with a specific error code
 		logger.LogEvent("", "kafka_topic_exists", req.Topic, "info",
 			fmt.Sprintf("Topic %s already exists", req.Topic))
 		return errors.NewCustomError(
@@ -472,64 +410,49 @@ func (s *ConfluentMessagingService) CreateTopic(ctx context.Context, req *pb.Cre
 		)
 	}
 
-	// Check if we have a null admin client
-	if _, isNull := s.admin.(*ConfluentAdmin); isNull {
-		logger.LogWarnEvent("", "create_topic_null_admin", req.Topic, "warn",
-			"Attempting to create topic with null admin client. Operation may not be performed.")
-	}
-
 	// Create the topic with retry logic
-	maxRetries := 3
-	var createErr error
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		if ctx.Err() != nil {
+			return errors.NewCustomError(errors.TOPErrCreateFailed, fmt.Errorf("Context cancelled: %v", ctx.Err()))
+		}
 
-	for i := 0; i < maxRetries; i++ {
-		createErr = s.admin.CreateTopic(
+		err := s.Admin.CreateTopic(
 			ctx,
 			req.Topic,
-			s.config.KafkaNumPartitions,
-			s.config.KafkaReplicationFactor,
-			nil, // Use default config
+			cfg.NumPartitions,
+			s.Config.KafkaReplicationFactor,
+			nil,
 		)
 
-		if createErr == nil {
-			break
+		if err == nil {
+			return nil
 		}
 
+		lastErr = err
 		logger.LogWarnEvent("", "create_topic_retry", req.Topic, "warn",
-			fmt.Sprintf("Failed to create topic (attempt %d/%d): %v", i+1, maxRetries, createErr))
+			fmt.Sprintf("Failed to create topic (attempt %d/3): %v", i+1, err))
 
-		// Wait before retrying
 		select {
 		case <-ctx.Done():
-			return errors.NewCustomError(
-				errors.TOPErrCreateFailed,
-				fmt.Errorf("Context cancelled while creating topic: %v", ctx.Err()),
-			)
+			return errors.NewCustomError(errors.TOPErrCreateFailed, fmt.Errorf("Context cancelled: %v", ctx.Err()))
 		case <-time.After(time.Duration(500*(i+1)) * time.Millisecond):
-			// Continue with retry
 		}
 	}
 
-	if createErr != nil {
-		logger.LogEvent("kafka", "create_topic_failed", req.Topic, "error", createErr.Error())
-		return errors.NewCustomError(
-			errors.TOPErrCreateFailed,
-			fmt.Errorf("Failed to create topic after %d attempts: %v", maxRetries, createErr),
-		)
-	}
-
-	return nil
+	logger.LogEvent("kafka", "create_topic_failed", req.Topic, "error", lastErr.Error())
+	return errors.NewCustomError(
+		errors.TOPErrCreateFailed,
+		fmt.Errorf("Failed to create topic after 3 attempts: %v", lastErr),
+	)
 }
 
-// getOrCreateProducer gets an existing producer for a topic or creates a new one
-func (s *ConfluentMessagingService) getOrCreateProducer(cfg confluent.KafkaConfig) (confluent.Producer, error) {
-	if cfg.Topic == "" {
-		return nil, fmt.Errorf("topic is required")
-	}
+// GetOrCreateProducer gets an existing producer for a topic or creates a new one
+func (s *ConfluentMessagingService) GetOrCreateProducer(cfg confluent.KafkaConfig) (confluent.Producer, error) {
 
 	// Check if we already have a producer for this topic
 	s.mu.RLock()
-	producer, exists := s.producers[cfg.Topic]
+	producer, exists := s.Producers[cfg.Topic]
 	s.mu.RUnlock()
 
 	if exists {
@@ -541,93 +464,24 @@ func (s *ConfluentMessagingService) getOrCreateProducer(cfg confluent.KafkaConfi
 	defer s.mu.Unlock()
 
 	// Double-check if another goroutine created the producer while we were waiting for the lock
-	if producer, exists = s.producers[cfg.Topic]; exists {
+	if producer, exists = s.Producers[cfg.Topic]; exists {
 		return producer, nil
 	}
 
 	// Create a new producer
-	producer, err := s.factory.CreateProducer(cfg)
+	producer, err := s.Factory.CreateProducer(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	s.producers[cfg.Topic] = producer
+	s.Producers[cfg.Topic] = producer
 	return producer, nil
 }
 
-// Close closes all resources
-func (s *ConfluentMessagingService) Close() error {
-	// Close all producers with proper locking
-	var lastErr error
-
-	// Get a copy of the producers map to avoid long lock
-	s.mu.RLock()
-	producersCopy := make(map[string]confluent.Producer)
-	for topic, producer := range s.producers {
-		producersCopy[topic] = producer
-	}
-	s.mu.RUnlock()
-
-	// Close each producer
-	for topic, producer := range producersCopy {
-		if err := producer.Close(); err != nil {
-			logger.LogErrorEvent("", "producer_close_error", topic, "error",
-				fmt.Sprintf("Failed to close producer: %v", err))
-			lastErr = err
-		}
-
-		// Remove from map
-		s.mu.Lock()
-		delete(s.producers, topic)
-		s.mu.Unlock()
-	}
-
-	// Close admin client
-	if err := s.admin.Close(); err != nil {
-		logger.LogErrorEvent("", "admin_close_error", "", "error",
-			fmt.Sprintf("Failed to close admin client: %v", err))
-		lastErr = err
-	}
-
-	return lastErr
-}
-
-// ConfluentAdmin is a no-op implementation of KafkaAdmin that logs errors but doesn't fail
-type ConfluentAdmin struct{}
-
-func (a *ConfluentAdmin) CreateTopic(ctx context.Context, topic string, numPartitions, replicationFactor int, configs map[string]string) error {
-	logger.LogWarnEvent("", "null_admin_create_topic", topic, "warn",
-		"Using null admin client, topic creation may not be performed")
-	return nil
-}
-
-func (a *ConfluentAdmin) DeleteTopic(ctx context.Context, topic string) error {
-	logger.LogWarnEvent("", "null_admin_delete_topic", topic, "warn",
-		"Using null admin client, topic deletion may not be performed")
-	return nil
-}
-
-func (a *ConfluentAdmin) ListTopics(ctx context.Context) ([]string, error) {
-	logger.LogWarnEvent("", "null_admin_list_topics", "", "warn",
-		"Using null admin client, topic listing may not be performed")
-	return nil, nil
-}
-
-func (a *ConfluentAdmin) HasActiveConsumers(ctx context.Context, topic string) (bool, error) {
-	logger.LogWarnEvent("", "null_admin_check_consumers", topic, "warn",
-		"Using null admin client, consumer check may not be performed")
-	// In null implementation, assume there are consumers (safer)
-	return true, nil
-}
-
-func (a *ConfluentAdmin) Close() error {
-	return nil
-}
-
-// topicExists checks if a topic exists in Kafka
-func (s *ConfluentMessagingService) topicExists(ctx context.Context, topic string) (bool, error) {
+// TopicExists checks if a topic exists in Kafka
+func (s *ConfluentMessagingService) TopicExists(ctx context.Context, topic string) (bool, error) {
 	// Get list of topics
-	topics, err := s.admin.ListTopics(ctx)
+	topics, err := s.Admin.ListTopics(ctx)
 	if err != nil {
 		return false, err
 	}

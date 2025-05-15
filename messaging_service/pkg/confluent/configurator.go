@@ -59,6 +59,11 @@ func (k *Configurator) CreateSubscribeConfig(topic string, groupID string, req *
 	cfg := NewDefaultKafkaConfig(k.brokers, topic)
 	cfg.ConsumerConfig.GroupID = groupID
 
+	// Set exactly-once delivery semantics by default for consumers
+	cfg.DeliverySemantics = ExactlyOnce
+	cfg.ExactlyOnceConfig.EnableDeduplication = true
+	cfg.ExactlyOnceConfig.IsolationLevel = "read_committed"
+
 	// Apply environment-based configuration if available
 	if k.config != nil {
 		// Use environment values for consumer settings
@@ -77,29 +82,32 @@ func (k *Configurator) CreateSubscribeConfig(topic string, groupID string, req *
 		cfg.ConsumerConfig.SessionTimeout = time.Duration(k.config.KafkaConsumerSessionTimeoutMs) * time.Millisecond
 		cfg.ConsumerConfig.HeartbeatInterval = time.Duration(k.config.KafkaConsumerHeartbeatMs) * time.Millisecond
 
+		// Set max poll records if configured
+		if k.config.KafkaConsumerMaxPollRecords > 0 {
+			cfg.ConsumerConfig.MaxPollRecords = k.config.KafkaConsumerMaxPollRecords
+		}
+
 		// Set auto offset reset from environment
 		cfg.ConsumerConfig.AutoOffsetReset = k.config.KafkaConsumerAutoOffsetReset
 
-		// Configure for exactly-once delivery semantics to prevent duplicates
-		if k.config.KafkaIsolationLevel == "read_committed" {
-			cfg.DeliverySemantics = ExactlyOnce
-			cfg.ExactlyOnceConfig.EnableDeduplication = true
-			cfg.ExactlyOnceConfig.IsolationLevel = "read_committed"
+		// Set auto commit from environment
+		cfg.ConsumerConfig.AutoCommit = k.config.KafkaEnableAutoCommit
+
+		// Override isolation level if specified in the config
+		if k.config.KafkaIsolationLevel != "" {
+			cfg.ExactlyOnceConfig.IsolationLevel = k.config.KafkaIsolationLevel
 		}
 	} else {
 		// Default consumer settings if environment is not available
 		cfg.ConsumerConfig.MaxWait = 100 * time.Millisecond
 		cfg.ConsumerConfig.CommitInterval = 1000 * time.Millisecond
-	}
-
-	// Default to read_committed isolation level if not set in environment
-	if cfg.ExactlyOnceConfig.IsolationLevel == "" {
-		cfg.ExactlyOnceConfig.IsolationLevel = mapIsolationLevel(pb.IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED)
+		cfg.ConsumerConfig.MaxPollRecords = 500
+		cfg.ConsumerConfig.AutoCommit = false
 	}
 
 	// Default to latest offset reset if not set in environment
 	if cfg.ConsumerConfig.AutoOffsetReset == "" {
-		cfg.ConsumerConfig.AutoOffsetReset = mapAutoOffsetReset(pb.AutoOffsetReset_AUTO_OFFSET_RESET_LATEST)
+		cfg.ConsumerConfig.AutoOffsetReset = "latest"
 	}
 
 	return cfg
@@ -117,6 +125,15 @@ func (k *Configurator) CreateTopicConfig(topic string, req *pb.CreateTopicReques
 		cfg.BatchBytes = k.config.KafkaBatchBytes
 		cfg.BatchTimeout = time.Duration(k.config.KafkaBatchTimeoutMs) * time.Millisecond
 		cfg.CompressionType = k.config.KafkaCompressionCodec
+
+		// Set reasonable minimums for partitions and replication
+		if cfg.NumPartitions < 1 {
+			cfg.NumPartitions = 1
+		}
+
+		if cfg.ReplicationFactor < 1 {
+			cfg.ReplicationFactor = 1
+		}
 	} else {
 		// Default configuration as fallback
 		cfg.NumPartitions = 3
@@ -130,40 +147,18 @@ func (k *Configurator) CreateTopicConfig(topic string, req *pb.CreateTopicReques
 	return cfg
 }
 
-// Helper functions to map protobuf enums to Kafka config values
+// CreateAdminConfig creates Confluent Kafka configuration for admin operations
+func (k *Configurator) CreateAdminConfig() KafkaConfig {
+	cfg := NewDefaultKafkaConfig(k.brokers, "")
 
-// mapIsolationLevel maps the protobuf IsolationLevel enum to Confluent Kafka config values
-func mapIsolationLevel(level pb.IsolationLevel) string {
-	switch level {
-	case pb.IsolationLevel_ISOLATION_LEVEL_READ_COMMITTED:
-		return "read_committed"
-	case pb.IsolationLevel_ISOLATION_LEVEL_READ_UNCOMMITTED:
-		return "read_uncommitted"
-	default:
-		return "read_committed" // Default to read_committed for safety
+	// Apply environment-based configuration if available
+	if k.config != nil {
+		cfg.ReadTimeout = time.Duration(k.config.KafkaReadTimeoutMs) * time.Millisecond
+		cfg.WriteTimeout = time.Duration(k.config.KafkaWriteTimeoutMs) * time.Millisecond
+	} else {
+		cfg.ReadTimeout = 30 * time.Second
+		cfg.WriteTimeout = 30 * time.Second
 	}
-}
 
-// mapAutoOffsetReset maps the protobuf AutoOffsetReset enum to Confluent Kafka config values
-func mapAutoOffsetReset(reset pb.AutoOffsetReset) string {
-	switch reset {
-	case pb.AutoOffsetReset_AUTO_OFFSET_RESET_LATEST:
-		return "latest"
-	case pb.AutoOffsetReset_AUTO_OFFSET_RESET_EARLIEST:
-		return "earliest"
-	default:
-		return "latest" // Default to latest for most common use case
-	}
-}
-
-// mapCleanupPolicy maps the protobuf CleanupPolicy enum to Confluent Kafka config values
-func mapCleanupPolicy(policy pb.CleanupPolicy) string {
-	switch policy {
-	case pb.CleanupPolicy_CLEANUP_POLICY_DELETE:
-		return "delete"
-	case pb.CleanupPolicy_CLEANUP_POLICY_COMPACT:
-		return "compact"
-	default:
-		return "delete" // Default to delete for most common use case
-	}
+	return cfg
 }
