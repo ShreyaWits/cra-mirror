@@ -69,6 +69,7 @@ message BatchFileProcessingResponse {
   bool success = 1;
   string message = 2;
   repeated ProcessedFileData processed_files = 3;
+  string created_at = 4;
 }
 
 // Document processing service definition with versioning

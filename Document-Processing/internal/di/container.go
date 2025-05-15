@@ -6,6 +6,7 @@ import (
 	"Document-Processing/internal/handlers"
 	"Document-Processing/internal/repository"
 	"Document-Processing/internal/services"
+	"Document-Processing/pkg/yugabytedb"
 	"log"
 )
 
@@ -28,8 +29,16 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		return nil, err
 	}
 
+	db, err := yugabytedb.ConnectDB()
+	if err != nil {
+		return nil, err
+	}
+
+	// DB yugabyte connection
+	yugabyteRepo := repository.NewDocumentDataRepository(db)
+
 	// Initialize Gemini service
-	geminiService, err := services.NewGeminiService(cfg.GeminiAPIKey)
+	geminiService, err := services.NewGeminiService(cfg.GeminiAPIKey, minioRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +50,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	}
 
 	// Initialize services
-	documentService := services.NewDocumentService(geminiService, llamaService, minioRepo)
+	documentService := services.NewDocumentService(geminiService, llamaService, minioRepo, yugabyteRepo)
 
 	// Initialize handlers
 	healthHandler := handlers.NewHealthHandler()

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"Document-Processing/internal/repository"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -15,9 +16,10 @@ import (
 type GeminiService struct {
 	client *genai.Client
 	model  *genai.GenerativeModel
+	minioRepo *repository.MinioRepository
 }
 
-func NewGeminiService(apiKey string) (*GeminiService, error) {
+func NewGeminiService(apiKey string, minioRepo *repository.MinioRepository) (*GeminiService, error) {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
@@ -28,10 +30,11 @@ func NewGeminiService(apiKey string) (*GeminiService, error) {
 	return &GeminiService{
 		client: client,
 		model:  model,
+		minioRepo: minioRepo,
 	}, nil
 }
 
-func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string) (map[string]string, float32, error) {
+func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string, fileUrl string) (map[string]string, float32, error) {
 	// Step 1: Clean and validate base64 string
 	base64Data, mimeType, err := cleanAndValidateBase64(base64Image)
 	if err != nil {
@@ -64,7 +67,7 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 
 	// Step 5: Call Gemini with retry logic and exponential backoff
 	var resp *genai.GenerateContentResponse
-	maxRetries := 3
+	maxRetries := 2
 	baseDelay := 1 * time.Second
 
 	for i := 0; i < maxRetries; i++ {
@@ -98,6 +101,9 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 	}
 
 	if err != nil {
+		if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
+			fmt.Printf("Failed to delete file from MinIO: %v", err)
+		}
 		return nil, 0, fmt.Errorf("gemini API failed after %d retries: %v", maxRetries, err)
 	}
 
