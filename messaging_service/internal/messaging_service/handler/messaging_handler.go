@@ -161,7 +161,11 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 
 // Helper function to get request ID from context
 func getRequestID(ctx context.Context) string {
-	// TODO: Implement proper request ID extraction from context
-	// For now, return a timestamp-based ID
+	// Check if request ID is in the context
+	if id, ok := ctx.Value("request_id").(string); ok && id != "" {
+		return id
+	}
+
+	// Fallback to timestamp-based ID if not found
 	return fmt.Sprintf("req-%d", time.Now().UnixNano())
 }

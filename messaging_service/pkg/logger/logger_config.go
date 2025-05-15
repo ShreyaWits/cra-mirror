@@ -23,23 +23,12 @@ func (f *myFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	// Get caller info (file, line and function)
-	// var fileName string
 	var line int
-	// var funcName string
 	if entry.HasCaller() {
-		// You can further process the file name if desired.
-		// _, file := path.Split(entry.Caller.File)
-		// fileName = file
 		line = entry.Caller.Line
-
-		// Function name is usually the full path, so you might want to trim it.
-		// funcParts := strings.Split(entry.Caller.Function, ".")
-		// funcName = funcParts[len(funcParts)-1]
 	}
 
 	// Build a pseudo "package.class.method" string.
-	// In Go, we don't have classes, but you can use the caller's function name.
-	// For more detailed info, you could process entry.Caller.Function.
 	callerInfo := entry.Caller.Function
 	if callerInfo == "" {
 		callerInfo = "unknown"

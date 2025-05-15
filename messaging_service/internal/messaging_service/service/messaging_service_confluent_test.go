@@ -282,17 +282,6 @@ func TestPublishMessage(t *testing.T) {
 			},
 			expectErr: true,
 		},
-		/* We'll test JSON marshaling errors in a separate test
-		{
-			name:  "json serialization fails",
-			topic: "json-error-topic",
-			value: map[string]string{"key": "value"},
-			cfg: confluent.KafkaConfig{
-				Topic: "json-error-topic",
-			},
-			expectErr: true,
-		},
-		*/
 	}
 
 	for _, tt := range tests {
@@ -451,8 +440,6 @@ func TestCreateTopic(t *testing.T) {
 			case "create topic successfully":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"any-topic"}, nil)
 				mockAdmin.EXPECT().CreateTopic(gomock.Any(), tt.topic, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				// mockAdmin.EXPECT().CreateTopic(gomock.Any(), tt.topic, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				// mockAdmin.EXPECT().CreateTopic(gomock.Any(), tt.topic, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			case "topic already exists":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 			case "topic call error":
