@@ -3,10 +3,10 @@ package di
 import (
 	"fmt"
 	"messaging_service/internal/config"
+	"messaging_service/internal/modules/message_broker/api/handler"
 	cacheclient "messaging_service/internal/modules/message_broker/client/cache_client"
 	client "messaging_service/internal/modules/message_broker/client/config_client"
 	constants "messaging_service/internal/modules/message_broker/constant"
-	"messaging_service/internal/modules/message_broker/handler"
 	"messaging_service/internal/modules/message_broker/service"
 	"messaging_service/pkg/confluent"
 	httpclient "messaging_service/pkg/http"

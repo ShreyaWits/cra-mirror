@@ -27,7 +27,7 @@
     
     WORKDIR /app/messaging_service
     RUN go mod tidy
-    RUN go build -o messaging_service ./server
+    RUN go build -o messaging_service ./cmd/server
     
     # ---- Stage 2: Runtime ----
     FROM ubuntu:22.04

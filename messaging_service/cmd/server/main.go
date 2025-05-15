@@ -11,7 +11,7 @@ import (
 
 	pb "cra-protos/messaging_service"
 	routes "messaging_service/internal/app"
-	"messaging_service/internal/di"
+	"messaging_service/internal/modules/message_broker/di"
 
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"

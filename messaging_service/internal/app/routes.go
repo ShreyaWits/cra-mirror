@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"messaging_service/internal/modules/message_broker/handler"
+	"messaging_service/internal/modules/message_broker/api/handler"
 
 	"github.com/gofiber/fiber/v2"
 )
