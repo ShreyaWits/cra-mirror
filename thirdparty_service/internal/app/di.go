@@ -1,12 +1,18 @@
 package app
 
 import (
+	"log/slog"
 	"thirdparty_service/internal/config"
 	user_repo "thirdparty_service/internal/modules/user/repository"
 	user_service "thirdparty_service/internal/modules/user/service"
 	redis_repo "thirdparty_service/internal/modules/webhooks/repository"
 	webhook_service "thirdparty_service/internal/modules/webhooks/service"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/dig"
 )
 
@@ -42,6 +48,35 @@ func InitDependencyInjection() error {
 	}); err != nil {
 		return err
 	}
+
+	// Get the global tracer provider
+	tracerProvider := otel.GetTracerProvider()
+	if tracerProvider == nil {
+		// If no tracer provider is set, use no-op provider
+		tracerProvider = noop.NewTracerProvider()
+		otel.SetTracerProvider(tracerProvider)
+	}
+
+	tracer := tracerProvider.Tracer(config.AppConfig.SERVICE_NAME)
+	logger := otelslog.NewLogger(config.AppConfig.SERVICE_NAME)
+	metricMeter := otel.Meter(config.AppConfig.SERVICE_NAME)
+
+	if err := Container.Provide(func() trace.Tracer {
+		return tracer
+	}); err != nil {
+		return err
+	}
+	if err := Container.Provide(func() *slog.Logger {
+		return logger
+	}); err != nil {
+		return err
+	}
+	if err := Container.Provide(func() metric.Meter {
+		return metricMeter
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -93,4 +128,32 @@ func GetRedisService() *redis_repo.RedisRepo {
 		panic(err)
 	}
 	return service
+}
+
+func GetTracer() trace.Tracer {
+	var tracer trace.Tracer
+	if err := Container.Invoke(func(t trace.Tracer) {
+		tracer = t
+	}); err != nil {
+		panic(err)
+	}
+	return tracer
+}
+func GetLogger() *slog.Logger {
+	var logger *slog.Logger
+	if err := Container.Invoke(func(l *slog.Logger) {
+		logger = l
+	}); err != nil {
+		panic(err)
+	}
+	return logger
+}
+func GetMeter() metric.Meter {
+	var meter metric.Meter
+	if err := Container.Invoke(func(m metric.Meter) {
+		meter = m
+	}); err != nil {
+		panic(err)
+	}
+	return meter
 }

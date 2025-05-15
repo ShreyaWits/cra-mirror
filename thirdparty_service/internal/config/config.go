@@ -51,6 +51,9 @@ type staticConfig struct {
 	ConfigServiceURL      string `validate:"required" env:"CONFIG_SERVICE_URL"`
 	ConfigServiceUsername string `validate:"required" env:"CONFIG_SERVICE_USERNAME"`
 	ConfigServicePassword string `validate:"required" env:"CONFIG_SERVICE_PASSWORD"`
+	OTEL_COLLECTOR_URL    string `validate:"required" env:"OTEL_COLLECTOR_URL"`
+	SERVICE_NAME          string `validate:"required" env:"SERVICE_NAME"`
+	DEPLOYMENT_ENV        string `validate:"required" env:"DEPLOYMENT_ENV"`
 }
 
 // Initialization
