@@ -13,6 +13,11 @@ type MockTemplateService struct {
 	mock.Mock
 }
 
+// ListTemplates implements service.TemplateServiceInterface.
+func (m *MockTemplateService) ListTemplates(ctx context.Context) ([]models.Template, error) {
+	panic("unimplemented")
+}
+
 func (m *MockTemplateService) CreateTemplate(ctx context.Context, template *models.Template) (*models.Template, error) {
 	args := m.Called(ctx, template)
 	if tmpl, ok := args.Get(0).(*models.Template); ok {

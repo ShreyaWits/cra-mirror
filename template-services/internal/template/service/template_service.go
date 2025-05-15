@@ -20,6 +20,7 @@ type TemplateServiceInterface interface {
 	GetTemplateByID(ctx context.Context, id uuid.UUID) (*models.Template, error)
 	UpdateTemplate(ctx context.Context, template *models.Template) (*models.Template, error)
 	DeleteTemplate(ctx context.Context, id string) (*models.Template, error)
+	ListTemplates(ctx context.Context) ([]models.Template, error)
 }
 
 // Struct renamed to avoid conflict
@@ -62,7 +63,7 @@ func (s *TemplateServiceImpl) GetTemplate(ctx context.Context, id, name, channel
 	if err != nil {
 		return nil, fmt.Errorf("failed to get template: %w", err)
 	}
-	if err := s.cache.Set(cacheKey, template,0); err != nil {
+	if err := s.cache.Set(cacheKey, template, 0); err != nil {
 		log.Printf("Failed to cache template: %v", err)
 	}
 	return template, nil
@@ -99,6 +100,15 @@ func (s *TemplateServiceImpl) DeleteTemplate(ctx context.Context, id string) (*m
 		return nil, fmt.Errorf("failed to delete template: %w", err)
 	}
 	return delTemplate, nil
+}
+
+// ListTemplates returns all templates from the repository.
+func (s *TemplateServiceImpl) ListTemplates(ctx context.Context) ([]models.Template, error) {
+	templates, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list templates: %w", err)
+	}
+	return templates, nil
 }
 
 // // Compile-time check

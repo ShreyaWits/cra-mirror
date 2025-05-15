@@ -64,6 +64,14 @@ func (m *MockTemplateService) DeleteTemplate(ctx context.Context, id string) (*m
 	return args.Get(0).(*models.Template), args.Error(1)
 }
 
+func (m *MockTemplateService) ListTemplates(ctx context.Context) ([]models.Template, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.Template), args.Error(1)
+}
+
 func setupTestRouter() (*fiber.App, *handler.TemplateHandler, *MockTemplateService) {
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
