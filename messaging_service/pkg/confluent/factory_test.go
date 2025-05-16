@@ -36,11 +36,7 @@ func TestFactoryMethods(t *testing.T) {
 		{
 			name: "CreateAdmin",
 			method: func(f confluent.KafkaFactory) (interface{}, error) {
-				cfg, err := config.LoadConfig()
-				if err != nil {
-					return nil, err
-				}
-				cfg.KafkaBrokers = []string{"localhost:9092"}
+				cfg := config.GetMockConfig()
 
 				return f.CreateAdmin(cfg)
 			},

@@ -16,10 +16,10 @@ type ConfigClient interface {
 
 type ConfigClientImpl struct {
 	httpClient httpclient.HTTPClient
-	cfg        *config.Config
+	cfg        *config.Env
 }
 
-func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Config) ConfigClient {
+func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Env) ConfigClient {
 	return &ConfigClientImpl{
 		httpClient: httpClient,
 		cfg:        cfg,

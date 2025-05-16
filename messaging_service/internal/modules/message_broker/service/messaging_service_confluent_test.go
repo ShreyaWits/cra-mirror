@@ -120,7 +120,7 @@ func TestConsumeMessage(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			// Create a valid configuration
-			cfg, _ := config.LoadConfig()
+			cfg := config.GetMockConfig()
 			mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 			mockFactory := mock.NewMockKafkaFactory(ctrl)
 			mockConsumer := mock.NewMockConsumer(ctrl)
@@ -286,7 +286,7 @@ func TestPublishMessage(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cfg, _ := config.LoadConfig()
+		cfg := config.GetMockConfig()
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -412,7 +412,7 @@ func TestCreateTopic(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			// Create a valid configuration
-			cfg, _ := config.LoadConfig()
+			cfg := config.GetMockConfig()
 			mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 			service := &service.ConfluentMessagingService{
 				Factory: mock.NewMockKafkaFactory(ctrl),
@@ -589,7 +589,7 @@ func TestPublishMessageJSONError(t *testing.T) {
 	mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 	mockProducer := mock.NewMockProducer(ctrl)
 
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 
 	// Create the service - don't include the producer in the map to test json marshaling
 	service := &service.ConfluentMessagingService{
@@ -653,7 +653,7 @@ func TestPublishMessageBeginTransactionFailure(t *testing.T) {
 	mockProducer := mock.NewMockProducer(ctrl)
 	mockReplacementProducer := mock.NewMockProducer(ctrl)
 
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 
 	// Create the service
 	service := &service.ConfluentMessagingService{
@@ -726,7 +726,7 @@ func TestPublishMessageBeginTransactionDoubleFailure(t *testing.T) {
 	mockProducer := mock.NewMockProducer(ctrl)
 	mockReplacementProducer := mock.NewMockProducer(ctrl)
 
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 
 	// Create the service
 	service := &service.ConfluentMessagingService{
@@ -786,7 +786,7 @@ func TestPublishMessageCircularReference(t *testing.T) {
 	mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 	mockProducer := mock.NewMockProducer(ctrl)
 
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 
 	// Create the regular service
 	service := &service.ConfluentMessagingService{
@@ -849,7 +849,7 @@ func TestPublishMessageGetOrCreateProducerError(t *testing.T) {
 	mockFactory := mock.NewMockKafkaFactory(ctrl)
 	mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 
 	// Create the service with an empty producers map to force creation
 	service := &service.ConfluentMessagingService{
@@ -897,7 +897,7 @@ func TestPublishMessageProducerRecreationAfterTxnError(t *testing.T) {
 	mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 	mockProducer := mock.NewMockProducer(ctrl)
 
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 
 	// Create the service with a producer that will fail during BeginTransaction
 	service := &service.ConfluentMessagingService{
@@ -1020,7 +1020,7 @@ func TestGetOrCreateProducer(t *testing.T) {
 			tt.setupMock(mockFactory, mockProducer)
 
 			// Create a configuration
-			cfg, _ := config.LoadConfig()
+			cfg := config.GetMockConfig()
 
 			// Create the service
 			confluentService := &service.ConfluentMessagingService{
@@ -1089,7 +1089,7 @@ func TestGetOrCreateProducerConcurrency(t *testing.T) {
 	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(mockProducer, nil).Times(1)
 
 	// Create service
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 	confluentService := &service.ConfluentMessagingService{
 		Factory:   mockFactory,
 		Admin:     mock.NewMockKafkaAdmin(ctrl),
@@ -1142,7 +1142,7 @@ func TestGetOrCreateProducerDoubleCheckLocking(t *testing.T) {
 	// simulating another goroutine that got there first.
 
 	// Create service
-	cfg, _ := config.LoadConfig()
+	cfg := config.GetMockConfig()
 	confluentService := &service.ConfluentMessagingService{
 		Factory:   mockFactory,
 		Admin:     mock.NewMockKafkaAdmin(ctrl),
@@ -1180,7 +1180,7 @@ func TestGetOrCreateProducerErrorCases(t *testing.T) {
 		mockFactory := mock.NewMockKafkaFactory(ctrl)
 
 		// Create service
-		cfg, _ := config.LoadConfig()
+		cfg := config.GetMockConfig()
 		confluentService := &service.ConfluentMessagingService{
 			Factory:   mockFactory,
 			Admin:     mock.NewMockKafkaAdmin(ctrl),

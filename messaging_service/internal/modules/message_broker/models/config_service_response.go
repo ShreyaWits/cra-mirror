@@ -8,9 +8,6 @@ type ConfigServiceResponse struct {
 
 // Config holds all configuration for the application
 type MessaggingConfigResponse struct {
-	// Server settings
-	GrpcPort string `json:"grpcPort"`
-	HttpPort string `json:"httpPort"`
 
 	// Kafka settings for client connection
 	KafkaBrokers          []string `json:"kafkaBrokers"`
@@ -43,12 +40,20 @@ type MessaggingConfigResponse struct {
 	KafkaConsumerAutoOffsetReset  string `json:"kafkaConsumerAutoOffsetReset"`
 	KafkaEnableAutoCommit         bool   `json:"kafkaEnableAutoCommit"`
 	KafkaIsolationLevel           string `json:"kafkaIsolationLevel"`
+}
 
+type EnvConfig struct {
+	// Server settings
+	GrpcPort string `json:"grpcPort"`
+	HttpPort string `json:"httpPort"`
 	// Config service
 	ConfigServiceUrl   string `json:"configServiceUrl"`
 	ConfigServiceToken string `json:"configServiceToken"`
 
+	CACHE_TTL int `json:"cacheTTL"`
+
 	// Deployment info
 	Environment string `json:"environment"`
 	ServiceName string `json:"serviceName"`
+	CacheUrl    string `json:"cacheUrl"`
 }

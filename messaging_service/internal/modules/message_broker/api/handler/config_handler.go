@@ -3,7 +3,6 @@ package handler
 import (
 	"fmt"
 	"messaging_service/internal/config"
-	constants "messaging_service/internal/modules/message_broker/constant"
 	"messaging_service/internal/modules/message_broker/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,6 +10,7 @@ import (
 
 type ConfigHandler struct {
 	configManagerService *service.ConfigManagerService
+	env                  *config.Env
 }
 
 // NewConfigHandler creates a new instance of ConfigHandler
@@ -33,8 +33,8 @@ func (h *ConfigHandler) UpdateConfigurations(ctx *fiber.Ctx) error {
 	}
 
 	config.SetConfig(configurations)
-	
-	err := h.configManagerService.SetDataToCache(ctx.Context(), constants.SERVICE_NAME, configurations)
+
+	err := h.configManagerService.SetDataToCache(ctx.Context(), h.env.ServiceName, configurations)
 	if err != nil {
 		fmt.Println("error saving data in cache service", err)
 	}

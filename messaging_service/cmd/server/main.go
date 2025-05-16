@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -21,93 +23,97 @@ import (
 const shutdownTimeout = 5 * time.Second
 
 func main() {
-	// 1. Initialize Logger
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("Failed to flush logger: %v", err)
+		}
+	}()
 	sugar := logger.Sugar()
 
-	// 2. Initialize Dependency Injection Container
 	container, err := di.NewContainer()
 	if err != nil {
 		sugar.Fatalw("Failed to initialize container", "error", err)
 	}
 
-	// 3. gRPC Server Setup
-	grpcServer := grpc.NewServer()
-	pb.RegisterMessagingServiceServer(grpcServer, container.MessagingHandler)
+	// Setup servers
+	grpcServer, grpcListener := setupGRPC(container, sugar)
+	httpServer := setupHTTP(container, sugar)
 
-	grpcListener, err := net.Listen("tcp", ":"+container.Config.GrpcPort)
-	if err != nil {
-		sugar.Fatalw("Failed to bind to port", "port", container.Config.GrpcPort, "error", err)
-	}
+	// Start servers
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	// Start gRPC server in goroutine
 	go func() {
-		sugar.Infow("Starting gRPC server", "port", container.Config.GrpcPort)
-		if err := grpcServer.Serve(grpcListener); err != nil {
-			sugar.Fatalw("gRPC server failed", "error", err)
+		defer wg.Done()
+		sugar.Infow("Starting gRPC server", "port", container.Env.GrpcPort)
+		if err := grpcServer.Serve(grpcListener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			sugar.Errorw("gRPC server failed", "error", err)
 		}
 	}()
 
-	// 4. Fiber HTTP App Setup
-	app := fiber.New()
-	routes.RegisterConfigRoutes(app, container.ConfigHandler)
-
 	go func() {
-		httpPort := container.Config.HttpPort
-		sugar.Infow("Starting Fiber HTTP server", "port", httpPort)
-		if err := app.Listen(":" + httpPort); err != nil {
-			sugar.Fatalw("Fiber HTTP server failed", "error", err)
+		defer wg.Done()
+		sugar.Infow("Starting HTTP server", "port", container.Env.HttpPort)
+		if err := httpServer.Listen(":" + container.Env.HttpPort); err != nil {
+			sugar.Errorw("HTTP server failed", "error", err)
 		}
 	}()
 
-	// 5. Graceful Shutdown Handling
-	waitForShutdown(sugar, grpcServer, app)
+	// Handle shutdown
+	handleShutdown(sugar, grpcServer, httpServer)
+	wg.Wait()
+	sugar.Info("Service shutdown complete")
 }
 
-// waitForShutdown handles graceful termination of both gRPC and Fiber servers
-func waitForShutdown(logger *zap.SugaredLogger, grpcServer *grpc.Server, app *fiber.App) {
+func setupGRPC(container *di.Container, logger *zap.SugaredLogger) (*grpc.Server, net.Listener) {
+	listener, err := net.Listen("tcp", ":"+container.Env.GrpcPort)
+	if err != nil {
+		logger.Fatalw("Failed to bind gRPC port", "port", container.Env.GrpcPort, "error", err)
+	}
+	server := grpc.NewServer()
+	pb.RegisterMessagingServiceServer(server, container.MessagingHandler)
+	return server, listener
+}
+
+func setupHTTP(container *di.Container, logger *zap.SugaredLogger) *fiber.App {
+	app := fiber.New()
+	routes.RegisterConfigRoutes(app, container.ConfigHandler) // typo? should be just RegisterConfigRoutes
+	return app
+}
+
+func handleShutdown(logger *zap.SugaredLogger, grpcServer *grpc.Server, fiberApp *fiber.App) {
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
 	logger.Infow("Shutdown signal received")
 
-	// Context with timeout for graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
-	// Graceful gRPC shutdown
-	grpcDone := make(chan struct{})
+	// gRPC shutdown
+	done := make(chan struct{})
 	go func() {
 		grpcServer.GracefulStop()
-		close(grpcDone)
-	}()
-
-	// Graceful Fiber shutdown
-	fiberDone := make(chan struct{})
-	go func() {
-		_ = app.Shutdown()
-		close(fiberDone)
+		close(done)
 	}()
 
 	select {
-	case <-grpcDone:
+	case <-done:
 		logger.Info("gRPC server shut down gracefully")
 	case <-ctx.Done():
 		logger.Warn("gRPC shutdown timed out, forcing stop")
 		grpcServer.Stop()
 	}
 
-	select {
-	case <-fiberDone:
+	// Fiber shutdown
+	if err := fiberApp.Shutdown(); err != nil {
+		logger.Warnw("Fiber shutdown failed", "error", err)
+	} else {
 		logger.Info("Fiber server shut down gracefully")
-	case <-ctx.Done():
-		logger.Warn("Fiber shutdown timed out")
 	}
-
-	logger.Info("Service shutdown complete")
 }
