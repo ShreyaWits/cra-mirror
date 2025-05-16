@@ -1,104 +1,26 @@
-version: "3.8"
-
-networks:
-  protected-link:
-
-volumes:
-  cassandra_data:
-
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: protected-link
+    container_name: cra-protected-link
     ports:
       - "${PORT:-8080}:8080"
-      - "50051:50051" 
-    depends_on:
-      - redis
-      - cassandra
-      - kafka
-    env_file:
-      - .env
-    restart: unless-stopped
-    networks:
-      - protected-link
-
- 
-  redis:
-    image: redis:latest
-    container_name: redis
-    command: redis-server --requirepass ${DB_PASSWORD}
-    ports:
-      - "6379:6379"
+      - "${GRPC_PORT:-50051}:50051" 
     environment:
-      - REDIS_PASSWORD=${DB_PASSWORD}
-    restart: unless-stopped
-    networks:
-      - protected-link
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - protected-link
-
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    container_name: kafka
-    ports:
-      - "9092:9092"
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    networks:
-      - protected-link
-
-  cassandra:
-    image: cassandra:latest
-    container_name: cassandra
-    ports:
-      - "9042:9042"
-    environment:
-      - CASSANDRA_CLUSTER_NAME=ProtectedLinkCluster
-      - CASSANDRA_DC=dc1
-      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - PORT=${PORT:-8080}
+      - GRPC_PORT=${GRPC_PORT:-50051}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - KAFKA_HOST=${KAFKA_HOST:-kafka}
+      - KAFKA_PORT=${KAFKA_PORT:-9092}
+      - CASSANDRA_HOST=${CASSANDRA_HOST:-cassandra}
+      - CASSANDRA_PORT=${CASSANDRA_PORT:-9042}
+      - APP_ENV=${APP_ENV:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - cassandra_data:/var/lib/cassandra
-    healthcheck:
-      test: ["CMD", "cqlsh", "-e", "DESCRIBE keyspaces"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    networks:
-      - protected-link
+      - ./migrations:/app/migrations
+    restart: unless-stopped
+  
 
-  cassandra-init:
-    image: cassandra:latest
-    depends_on:
-      cassandra:
-        condition: service_healthy
-    volumes:
-      - ./cassandra-init:/cassandra-init
-    command: >
-      /bin/bash -c "
-        echo 'Waiting for Cassandra to start...' &&
-        sleep 30 &&
-        echo 'Initializing Cassandra schema...' &&
-        cqlsh cassandra -f /cassandra-init/init.cql
-      "
-    restart: on-failure
-    networks:
-      - protected-link
