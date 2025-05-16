@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  messaging_service:
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      GRPC_PORT: 50051
+      # Update the Kafka brokers list to include all brokers
+      KAFKA_BROKERS: kafka1:9092,kafka2:9093,kafka3:9094
+      # Kafka configuration
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_REPLICATION_FACTOR: 3
+      KAFKA_BATCH_SIZE: 100
+      KAFKA_BATCH_BYTES: 1048576
+      KAFKA_BATCH_TIMEOUT_MS: 500
+      KAFKA_COMPRESSION_CODEC: snappy
+      KAFKA_MAX_ATTEMPTS: 3
+      KAFKA_RETRY_BACKOFF_MS: 100
+      KAFKA_READ_TIMEOUT_MS: 5000
+      KAFKA_WRITE_TIMEOUT_MS: 5000
+      KAFKA_RETENTION_MS: 3000
+      # Kafka consumer configuration
+      KAFKA_CONSUMER_MAX_WAIT_MS: 5000
+      KAFKA_CONSUMER_COMMIT_INTERVAL_MS: 5000
+      KAFKA_CONSUMER_SESSION_TIMEOUT_MS: 30000
+      KAFKA_CONSUMER_HEARTBEAT_MS: 1000
+      KAFKA_CONSUMER_MAX_POLL_RECORDS: 1000
+      KAFKA_CONSUMER_AUTO_OFFSET_RESET: latest
+      KAFKA_ENABLE_AUTO_COMMIT: "false"
+      KAFKA_ISOLATION_LEVEL: read_committed
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+      - zookeeper1 # Depend on all zookeepers
+      - zookeeper2
+      - zookeeper3 

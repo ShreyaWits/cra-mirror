@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package template;
+
+option go_package = "./proto";
+
+service TemplateService {
+  rpc GetTemplateV1(GetTemplateRequest) returns (TemplateResponse);
+}
+
+message GetTemplateRequest {
+  string name = 1;
+  string channel = 2;
+  string language = 3;
+}
+
+message TemplateResponse {
+  bool success = 1;
+  map<string,string> message = 2;
+  map <string,string> error= 3;
+  map<string, string> data = 4;
+}
