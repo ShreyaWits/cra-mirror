@@ -1,0 +1,171 @@
+package handler
+
+import (
+	"context"
+	pb "cra-protos/messaging_service"
+	"fmt"
+	"time"
+
+	appconfig "messaging_service/internal/config"
+	"messaging_service/internal/modules/message_broker/service"
+	"messaging_service/internal/utils/validation"
+	"messaging_service/pkg/confluent"
+	"messaging_service/pkg/errors"
+	"messaging_service/pkg/logger"
+)
+
+const (
+	defaultTimeout = 5 * time.Second
+)
+
+type MessagingHandler struct {
+	pb.UnimplementedMessagingServiceServer
+	config           *appconfig.Config
+	messagingService service.MessagingService
+	kafkaConfig      *confluent.Configurator
+}
+
+// NewMessagingHandler creates a new instance of MessagingHandler
+func NewMessagingHandler(config *appconfig.Config, messagingService service.MessagingService) *MessagingHandler {
+	return &MessagingHandler{
+		config:           config,
+		messagingService: messagingService,
+		kafkaConfig:      confluent.NewConfigurator(config.KafkaBrokers, config),
+	}
+}
+
+func (s *MessagingHandler) PublishMessageV1(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
+	// Create timeout context
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	// Get request ID from context or generate new one
+	requestID := getRequestID(ctx)
+
+	// Validate request
+	if customErr := validation.ValidatePublishRequest(req); customErr != nil {
+		logger.LogEvent(requestID, "validation_failed", req.Topic, "error",
+			fmt.Sprintf("Publish validation failed: %v", customErr))
+		return nil, errors.NewGRPCError(customErr)
+	}
+
+	// Create Confluent Kafka configuration with exactly-once semantics
+	cfg := s.kafkaConfig.CreatePublishConfig(req.Topic, req)
+
+	// Log the publish request
+	logger.LogEvent(requestID, "kafka_publish_start", req.Topic, "info",
+		fmt.Sprintf("Publishing to topic %s with exactly-once semantics", req.Topic))
+
+	// Publish message
+	customErr := s.messagingService.PublishMessage(ctx, cfg, req)
+	if customErr != nil {
+		logger.LogEvent(requestID, "kafka_publish_failed", req.Topic, "error",
+			fmt.Sprintf("Failed to publish message: %v", customErr))
+		return nil, errors.NewGRPCError(customErr)
+	}
+
+	logger.LogEvent(requestID, "kafka_publish_success", req.Topic, "info",
+		fmt.Sprintf("Successfully published message to topic %s", req.Topic))
+
+	return &pb.PublishResponse{
+		Status:  "success",
+		Message: fmt.Sprintf("Message published successfully to topic %s", req.Topic),
+	}, nil
+}
+
+func (s *MessagingHandler) SubscribeV1(req *pb.SubscribeRequest, stream pb.MessagingService_SubscribeV1Server) error {
+	// Get request ID from stream context or generate new one
+	requestID := getRequestID(stream.Context())
+
+	// Validate request
+	if customErr := validation.ValidateSubscribeRequest(req); customErr != nil {
+		logger.LogEvent(requestID, "validation_failed", req.Topic, "error",
+			fmt.Sprintf("Subscribe validation failed: %v", customErr))
+		return errors.NewGRPCError(customErr)
+	}
+
+	// Create Confluent Kafka configuration with read committed and latest offset
+	cfg := s.kafkaConfig.CreateSubscribeConfig(req.Topic, req.GroupId, req)
+
+	// Log the subscribe request
+	logger.LogEvent(requestID, "kafka_subscribe_start", req.Topic, "info",
+		fmt.Sprintf("Subscribing to topic %s with group %s (read committed, latest offset)",
+			req.Topic, req.GroupId))
+
+	// Start consuming messages
+	customErr := s.messagingService.ConsumeMessage(stream, cfg)
+	if customErr != nil {
+		logger.LogEvent(requestID, "kafka_subscribe_failed", req.Topic, "error",
+			fmt.Sprintf("Failed to subscribe: %v", customErr))
+		return errors.NewGRPCError(customErr)
+	}
+
+	logger.LogEvent(requestID, "kafka_subscribe_success", req.Topic, "info",
+		fmt.Sprintf("Successfully subscribed to topic %s", req.Topic))
+	return nil
+}
+
+func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopicRequest) (*pb.CreateTopicResponse, error) {
+	// Create timeout context
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	// Get request ID from context or generate new one
+	requestID := getRequestID(ctx)
+
+	// Validate request
+	if customErr := validation.ValidateCreateTopicRequest(req); customErr != nil {
+		logger.LogEvent(requestID, "validation_failed", req.Topic, "error",
+			fmt.Sprintf("Topic creation validation failed: %v", customErr))
+		return nil, errors.NewGRPCError(customErr)
+	}
+
+	// Create Confluent Kafka configuration with default values
+	cfg := s.kafkaConfig.CreateTopicConfig(req.Topic, req)
+
+	// Log the create topic request using configured values
+	logger.LogEvent(requestID, "kafka_create_topic_start", req.Topic, "info",
+		fmt.Sprintf("Creating topic %s with %d partitions and replication factor %d",
+			req.Topic, s.config.KafkaNumPartitions, s.config.KafkaReplicationFactor))
+
+	// Create topic
+	customErr := s.messagingService.CreateTopic(ctx, req, cfg)
+	if customErr != nil {
+		// Check if this is a "topic already exists" error, which is not actually an error
+		if customErr.ErrorCode == errors.TOPErrTopicExists {
+			logger.LogEvent(requestID, "kafka_topic_exists", req.Topic, "info",
+				fmt.Sprintf("Topic %s already exists", req.Topic))
+
+			// Return success response with a message indicating the topic already exists
+			return &pb.CreateTopicResponse{
+				Status:  "success",
+				Message: fmt.Sprintf("Topic %s already exists", req.Topic),
+			}, nil
+		}
+
+		// For any other error, handle as before
+		logger.LogEvent(requestID, "kafka_create_topic_failed", req.Topic, "error",
+			fmt.Sprintf("Failed to create topic: %v", customErr))
+		return nil, errors.NewGRPCError(customErr)
+	}
+
+	logger.LogEvent(requestID, "kafka_create_topic_success", req.Topic, "info",
+		fmt.Sprintf("Successfully created topic %s", req.Topic))
+
+	return &pb.CreateTopicResponse{
+		Status: "success",
+		Message: fmt.Sprintf("Topic %s created successfully with %d partitions and replication factor %d",
+			req.Topic, s.config.KafkaNumPartitions, s.config.KafkaReplicationFactor),
+	}, nil
+}
+
+// Helper function to get request ID from context
+func getRequestID(ctx context.Context) string {
+	// Check if request ID is in the context
+	if id, ok := ctx.Value("request_id").(string); ok && id != "" {
+		return id
+	}
+
+	// Fallback to timestamp-based ID if not found
+	return fmt.Sprintf("req-%d", time.Now().UnixNano())
+}

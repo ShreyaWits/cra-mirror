@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  messaging_service:
+    build:
+      context: ../
+      dockerfile: ./messaging_service/Dockerfile
+    ports:
+      - "${GRPC_PORT}:${GRPC_PORT}"
+      - "${HTTP_PORT}:${HTTP_PORT}"
+    environment:
+      GRPC_PORT: ${GRPC_PORT}
+      CONFIG_SERVICE_URL: ${CONFIG_SERVICE_URL}
+      CONFIG_SERVICE_TOKEN: ${CONFIG_SERVICE_TOKEN}
+      ENVIRONMENT: ${ENVIRONMENT}
+      HTTP_PORT: ${HTTP_PORT}
+      CACHE_TTL: ${CACHE_TTL}
+      SERVICE_NAME: ${SERVICE_NAME}
+      CACHE_URL: ${CACHE_URL}
+
+    restart: on-failure
+
+
+
+# Command to start the service:
+# docker compose -f 'messaging_service/docker-compose.yml' up --build 'messaging_service'
