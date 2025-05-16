@@ -25,7 +25,6 @@ func NewKafkaProducer(brokers []string) (*KafkaProducer, error) {
 }
 
 func (kp *KafkaProducer) SendMessage(topic string, message []byte) error {
-
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.ByteEncoder(message),
@@ -33,7 +32,6 @@ func (kp *KafkaProducer) SendMessage(topic string, message []byte) error {
 
 	if kp.Producer != nil {
 		partition, offset, err := kp.Producer.SendMessage(msg)
-
 		if err != nil {
 			return err
 		}

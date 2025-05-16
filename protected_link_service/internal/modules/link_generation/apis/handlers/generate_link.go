@@ -11,7 +11,6 @@ import (
 	"protected_link/internal/modules/link_generation/models"
 	"protected_link/internal/modules/link_generation/services"
 	pb "protected_link/pkg/grpc/proto"
-
 	"protected_link/pkg/validation"
 )
 

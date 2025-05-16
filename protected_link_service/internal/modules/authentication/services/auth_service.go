@@ -5,7 +5,6 @@ import (
 	"log"
 
 	commonDtos "protected_link/internal/common/api/dtos"
-
 	"protected_link/internal/modules/authentication/api/utils"
 	"protected_link/internal/modules/authentication/models"
 	authRepository "protected_link/internal/modules/authentication/repositories"
@@ -17,9 +16,20 @@ import (
 // AuthenticationService handles authentication-related operations
 type AuthenticationService struct {
 	otpRepo    *authRepository.OTPRepository
-	casendra   repository.ICassandraRepository
-	jwtService *jwt.JwtCreation
+///////////////////////////////////////////////////
+// Interface Definition
+///////////////////////////////////////////////////
+
+// IAuthenticationService defines the contract for authentication operations
+type IAuthenticationService interface {
+	GetAuthToken(userID, tokenID string) (*apiDtos.GenerateUrlRequest, error)
+	SendOtp(request *apiDtos.GenerateUrlRequest, dbId string) (*commonDtos.ApiResponseDto, error)
+	VerifyOTP(request *models.VerifyOTPRequest) (*commonDtos.ApiResponseDto, error)
 }
+
+///////////////////////////////////////////////////
+// Implementation Struct
+///////////////////////////////////////////////////
 
 // NewAuthenticationService creates a new instance of AuthenticationService
 func NewAuthenticationService(otpRepo *authRepository.OTPRepository, casendra repository.ICassandraRepository) *AuthenticationService {

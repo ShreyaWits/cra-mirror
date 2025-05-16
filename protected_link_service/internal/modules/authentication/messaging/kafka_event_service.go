@@ -27,7 +27,6 @@ func (ns *NotifierService) SendNotification(payload models.MessagePayload, topic
 	}
 
 	err = ns.Producer.SendMessage(topic, msgBytes)
-
 	if err != nil {
 		log.Println("Failed to send message to Kafka:", err)
 		return err
