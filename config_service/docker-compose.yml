@@ -10,19 +10,19 @@ services:
         - nps2.0
         - temporal-network
       ports:
-        - "4001:4001"
+        - "${PORT}:${PORT}"
       environment:
-        - PORT=4001
-        - IS_DOCKER=true
-        - DATABASE_HOST=host.docker.internal
-        - DATABASE_PORT=5433
-        - DATABASE_USER=yugabyte
-        - DATABASE_PASSWORD=yugabyte
-        - DATABASE_NAME=yugabyte
-        - ETCD_ENDPOINT=etcd:2379
-        - TEMPORAL_ENDPOINT=temporal:7233
-        - ADMIN_SECRET=abd5f3e65f1f1e40f5cbdac1ef0344519ab7b0b569313c97db13cb9cce4bcf7d
-        - JWT_SECRET=aklsdjflk
+        - PORT=${PORT}
+        - IS_DOCKER=${IS_DOCKER}
+        - DATABASE_HOST=${DATABASE_HOST}
+        - DATABASE_PORT=${DATABASE_PORT}
+        - DATABASE_USER=${DATABASE_USER}
+        - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+        - DATABASE_NAME=${DATABASE_NAME}
+        - ETCD_ENDPOINT=${ETCD_ENDPOINT}
+        - TEMPORAL_ENDPOINT=${TEMPORAL_ENDPOINT}
+        - ADMIN_SECRET=${ADMIN_SECRET}
+        - JWT_SECRET=${JWT_SECRET}
      
   worker:
     build:
@@ -30,8 +30,8 @@ services:
       dockerfile: worker.Dockerfile
     restart: always
     environment:
-      - IS_DOCKER=true
-      - TEMPORAL_ENDPOINT=temporal:7233
+      - IS_DOCKER=${IS_DOCKER}
+      - TEMPORAL_ENDPOINT=${TEMPORAL_ENDPOINT}
     networks:
       - nps2.0
       - temporal-network
