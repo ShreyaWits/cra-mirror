@@ -88,7 +88,7 @@ func (h *GenerateLinkHandler) SaveGeneratedLinkV1(ctx context.Context, req *pb.G
 func (h *GenerateLinkHandler) DeleteGeneratedLinkV1(ctx context.Context, req *pb.DeleteGeneratedLinkRequestV1) (*pb.DeleteGeneratedLinkResponseV1, error) {
 	log.Printf("📥 [gRPC] DeleteGeneratedLinkV1 invoked with request: %+v", req)
 
-	if req == nil || req.Link == "" {
+	if req == nil || req.Token == "" {
 		log.Println("❌ Validation failed: link cannot be empty")
 		errorMap := map[string]string{
 			"validation_errors": "Link cannot be empty",
@@ -103,8 +103,7 @@ func (h *GenerateLinkHandler) DeleteGeneratedLinkV1(ctx context.Context, req *pb
 		}, nil
 	}
 
-	log.Printf("🔍 Attempting to delete link: %s", req.Link)
-	response, err := h.services.DeleteGeneratedLink(req.Link)
+	response, err := h.service.DeleteGeneratedLink(req.Token)
 	if err != nil {
 		log.Printf("❌ Failed to delete link: %v", err)
 		return nil, fmt.Errorf("failed to delete generated link: %w", err)

@@ -443,7 +443,7 @@ func TestDeleteGeneratedLinkV1(t *testing.T) {
 		{
 			name: "successful delete",
 			req: &pb.DeleteGeneratedLinkRequestV1{
-				Link: "test-link",
+				Token: "test-link",
 			},
 			mockResponse: &commonDtos.ApiResponseDto{
 				Success: true,
@@ -478,7 +478,7 @@ func TestDeleteGeneratedLinkV1(t *testing.T) {
 		{
 			name: "empty link",
 			req: &pb.DeleteGeneratedLinkRequestV1{
-				Link: "",
+				Token: "",
 			},
 			mockResponse:  nil,
 			mockError:     nil,
@@ -493,7 +493,7 @@ func TestDeleteGeneratedLinkV1(t *testing.T) {
 		{
 			name: "service error",
 			req: &pb.DeleteGeneratedLinkRequestV1{
-				Link: "test-link",
+				Token: "test-link",
 			},
 			mockResponse:  nil,
 			mockError:     assert.AnError,
@@ -507,8 +507,8 @@ func TestDeleteGeneratedLinkV1(t *testing.T) {
 			mockService := &mockGenerateLinkService{}
 			handler := NewGenerateLinkHandler(mockService)
 
-			if tt.req != nil && tt.req.Link != "" {
-				mockService.On("DeleteGeneratedLink", tt.req.Link).Return(tt.mockResponse, tt.mockError)
+			if tt.req != nil && tt.req.Token != "" {
+				mockService.On("DeleteGeneratedLink", tt.req.Token).Return(tt.mockResponse, tt.mockError)
 			}
 
 			resp, err := handler.DeleteGeneratedLinkV1(context.Background(), tt.req)

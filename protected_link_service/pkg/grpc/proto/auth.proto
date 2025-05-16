@@ -49,7 +49,7 @@ message GetExtractDataResponseV1 {
 }
 
 message DeleteGeneratedLinkRequestV1 {
-  string link = 1;
+  string token = 1;
 }
 
 message DeleteGeneratedLinkResponseV1 {

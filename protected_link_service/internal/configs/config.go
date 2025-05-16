@@ -8,6 +8,7 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
+	// Server settings
 	ServerPort string
 
 	// Database settings

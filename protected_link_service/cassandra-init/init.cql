@@ -4,7 +4,6 @@ WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};
 USE protectedlink;
 
 
-
 CREATE TABLE IF NOT EXISTS protectedLink (
     id UUID PRIMARY KEY,
     user_id TEXT,
