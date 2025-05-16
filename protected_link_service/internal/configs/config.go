@@ -51,11 +51,11 @@ func LoadConfig() (*Config, error) {
 		Kafka_Broker_Url:   getEnv("KAFKA_BROKER_URL", "localhost:9092"),
 		JWTSecret:          getEnv("JWT_SECRET", "mySuperSecureKey1234567890@GoLan"),
 		RedirectionURL:     getEnv("REDIRECTION_URL", "http://localhost:8080"),
-		CASSANDRA_HOST:     getEnv("CASSANDRA_HOST", "cassandra"),
+		CASSANDRA_HOST:     getEnv("CASSANDRA_HOST", "localhost"),
 		CASSANDRA_KEYSPACE: getEnv("CASSANDRA_KEYSPACE", "protectedlink"),
 		CASSANDRA_USERNAME: getEnv("CASSANDRA_USERNAME", "cassandra"),
 		CASSANDRA_PASSWORD: getEnv("CASSANDRA_PASSWORD", "cassandra"),
-		CASSANDRA_PORT:     getEnv("CASSANDRA_PORT", "9042"),
+		CASSANDRA_PORT:     getEnv("CASSANDRA_PORT", "localhost"),
 	}
 
 	return config, nil

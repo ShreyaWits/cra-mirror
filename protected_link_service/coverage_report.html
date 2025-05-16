@@ -1,0 +1,1256 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>handlers: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">protected_link/internal/modules/authentication/api/handlers/auth_handler.go (94.6%)</option>
+				
+				<option value="file1">protected_link/internal/modules/authentication/messaging/kafka_event_service.go (83.3%)</option>
+				
+				<option value="file2">protected_link/internal/modules/authentication/services/auth_service.go (93.1%)</option>
+				
+				<option value="file3">protected_link/internal/modules/cassandra/infrastructure/cassandra_repository.go (32.5%)</option>
+				
+				<option value="file4">protected_link/internal/modules/link_generation/apis/handlers/generate_link.go (92.9%)</option>
+				
+				<option value="file5">protected_link/internal/modules/link_generation/repositories/genrated_link_repo.go (81.5%)</option>
+				
+				<option value="file6">protected_link/internal/modules/link_generation/services/generate_link_service.go (40.2%)</option>
+				
+				<option value="file7">protected_link/internal/modules/link_generation/utils/shortcode.go (93.8%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package handlers
+
+import (
+        "context"
+        "fmt"
+        commonDtos "protected_link/internal/common/api/dtos"
+        "protected_link/internal/modules/authentication/models"
+        authService "protected_link/internal/modules/authentication/services"
+        pb "protected_link/pkg/grpc/proto"
+        "protected_link/pkg/validation"
+        "reflect"
+
+        "github.com/go-playground/validator/v10"
+)
+
+// AuthHandler handles authentication-related gRPC requests
+type AuthHandler struct {
+        authService authService.IAuthenticationService
+        pb.UnimplementedAuthServiceServer
+        validator *validator.Validate
+}
+
+// NewAuthHandler creates a new instance of AuthHandler
+func NewAuthHandler(authService authService.IAuthenticationService) *AuthHandler <span class="cov8" title="1">{
+        return &amp;AuthHandler{
+                authService: authService,
+                validator:   validator.New(),
+        }
+}</span>
+
+// VerifyOTPV1 handles OTP verification requests
+func (h *AuthHandler) VerifyOTPV1(ctx context.Context, req *pb.VerifyOTPRequestV1) (*pb.VerifyOTPResponseV1, error) <span class="cov8" title="1">{
+        if err := h.validateRequest(req); err != nil </span><span class="cov8" title="1">{
+                return h.createErrorResponse(err), nil
+        }</span>
+
+        <span class="cov8" title="1">internalReq := h.mapToInternalRequest(req)
+        if err := h.validateInternalRequest(internalReq); err != nil </span><span class="cov8" title="1">{
+                return h.createErrorResponse(err), nil
+        }</span>
+
+        <span class="cov8" title="1">result, err := h.authService.VerifyOTP(internalReq)
+        if err != nil </span><span class="cov8" title="1">{
+                return h.createErrorResponse(err), nil
+        }</span>
+
+        <span class="cov8" title="1">return h.createSuccessResponse(result), nil</span>
+}
+
+// validateRequest checks if the request is valid
+func (h *AuthHandler) validateRequest(req *pb.VerifyOTPRequestV1) error <span class="cov8" title="1">{
+        if req == nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("request cannot be nil")
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+// mapToInternalRequest converts gRPC request to internal model
+func (h *AuthHandler) mapToInternalRequest(req *pb.VerifyOTPRequestV1) *models.VerifyOTPRequest <span class="cov8" title="1">{
+        return &amp;models.VerifyOTPRequest{
+                UserID:         req.UserId,
+                OTP:            req.Otp,
+                VerificationID: req.VerificationId,
+        }
+}</span>
+
+// validateInternalRequest validates the internal request model
+func (h *AuthHandler) validateInternalRequest(req *models.VerifyOTPRequest) error <span class="cov8" title="1">{
+        fieldErrors, err := validation.ValidateVerifyOtpRequest(*req)
+        if err != nil || len(fieldErrors) &gt; 0 </span><span class="cov8" title="1">{
+                return fmt.Errorf("validation failed: %v", fieldErrors)
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+// createErrorResponse creates an error response
+func (h *AuthHandler) createErrorResponse(err error) *pb.VerifyOTPResponseV1 <span class="cov8" title="1">{
+        return &amp;pb.VerifyOTPResponseV1{
+                Success: false,
+                Message: "Validation failed",
+                Error:   map[string]string{"error": err.Error()},
+        }
+}</span>
+
+// createSuccessResponse creates a success response
+func (h *AuthHandler) createSuccessResponse(result *commonDtos.ApiResponseDto) *pb.VerifyOTPResponseV1 <span class="cov8" title="1">{
+        response := &amp;models.VerifyOTPResponse{
+                Success: result.Success,
+                Message: result.Message,
+                Data:    result.Data,
+                Error:   result.Error,
+        }
+
+        return &amp;pb.VerifyOTPResponseV1{
+                Success: response.Success,
+                Message: response.Message,
+                Data:    h.convertToMapString(response.Data),
+                Error:   h.convertErrorToMap(response.Error),
+        }
+}</span>
+
+// convertToMapString converts interface{} to map[string]string
+func (h *AuthHandler) convertToMapString(data interface{}) map[string]string <span class="cov8" title="1">{
+        if data == nil </span><span class="cov8" title="1">{
+                return map[string]string{}
+        }</span>
+
+        <span class="cov8" title="1">switch v := data.(type) </span>{
+        case map[string]string:<span class="cov8" title="1">
+                return v</span>
+        case map[string]interface{}:<span class="cov8" title="1">
+                return h.convertMapInterfaceToString(v)</span>
+        default:<span class="cov8" title="1">
+                return h.structToMapString(data)</span>
+        }
+}
+
+// convertMapInterfaceToString converts map[string]interface{} to map[string]string
+func (h *AuthHandler) convertMapInterfaceToString(input map[string]interface{}) map[string]string <span class="cov8" title="1">{
+        output := make(map[string]string, len(input))
+        for key, value := range input </span><span class="cov8" title="1">{
+                output[key] = fmt.Sprintf("%v", value)
+        }</span>
+        <span class="cov8" title="1">return output</span>
+}
+
+// structToMapString converts a struct to map[string]string
+func (h *AuthHandler) structToMapString(data interface{}) map[string]string <span class="cov8" title="1">{
+        result := make(map[string]string)
+        val := reflect.ValueOf(data)
+
+        if val.Kind() == reflect.Ptr </span><span class="cov8" title="1">{
+                val = val.Elem()
+        }</span>
+
+        <span class="cov8" title="1">if val.Kind() != reflect.Struct </span><span class="cov8" title="1">{
+                return result
+        }</span>
+
+        <span class="cov8" title="1">typ := val.Type()
+        for i := 0; i &lt; val.NumField(); i++ </span><span class="cov8" title="1">{
+                field := typ.Field(i)
+                // Skip unexported fields
+                if !field.IsExported() </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">if !val.Field(i).CanInterface() </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">key := field.Tag.Get("json")
+                if key == "" || key == "-" </span><span class="cov0" title="0">{
+                        key = field.Name
+                }</span>
+
+                <span class="cov8" title="1">value := val.Field(i).Interface()
+                result[key] = fmt.Sprintf("%v", value)</span>
+        }
+        <span class="cov8" title="1">return result</span>
+}
+
+// convertErrorToMap converts error interface to map[string]string
+func (h *AuthHandler) convertErrorToMap(err interface{}) map[string]string <span class="cov8" title="1">{
+        if err == nil </span><span class="cov8" title="1">{
+                return map[string]string{}
+        }</span>
+
+        <span class="cov8" title="1">switch v := err.(type) </span>{
+        case map[string]string:<span class="cov8" title="1">
+                return v</span>
+        case error:<span class="cov8" title="1">
+                return h.structToMapString(v)</span>
+        default:<span class="cov0" title="0">
+                return map[string]string{}</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package kafkaService
+
+import (
+        "encoding/json"
+        "fmt"
+        "log"
+
+        "protected_link/internal/modules/authentication/models"
+        kafka "protected_link/pkg/kafka"
+)
+
+type INotifierService interface {
+        SendNotification(payload models.MessagePayload, topic string) error
+}
+
+var _ INotifierService = (*NotifierService)(nil) // ensure it implements the interface
+
+type NotifierService struct {
+        Producer kafka.MessageProducer // use the interface, not *KafkaProducer
+}
+
+func NewNotifierService(producer kafka.MessageProducer) *NotifierService <span class="cov8" title="1">{
+        return &amp;NotifierService{Producer: producer}
+}</span>
+
+func (ns *NotifierService) SendNotification(payload models.MessagePayload, topic string) error <span class="cov8" title="1">{
+        fmt.Println("Sending message to Kafka topic:", topic)
+
+        msgBytes, err := json.Marshal(payload)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println("Failed to marshal message payload:", err)
+                return err
+        }</span>
+
+        <span class="cov8" title="1">err = ns.Producer.SendMessage(topic, msgBytes)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Println("Failed to send message to Kafka:", err)
+                return err
+        }</span>
+
+        <span class="cov8" title="1">log.Println("Notification sent successfully to topic:", topic)
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package services
+
+import (
+        "fmt"
+        "log"
+
+        commonDtos "protected_link/internal/common/api/dtos"
+        "protected_link/internal/modules/authentication/api/utils"
+        "protected_link/internal/modules/authentication/models"
+        authRepository "protected_link/internal/modules/authentication/repositories"
+        repository "protected_link/internal/modules/cassandra/repository"
+        apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+        "protected_link/pkg/jwt"
+)
+
+///////////////////////////////////////////////////
+// Interface Definition
+///////////////////////////////////////////////////
+
+// IAuthenticationService defines the contract for authentication operations
+type IAuthenticationService interface {
+        GetAuthToken(userID, tokenID string) (*apiDtos.GenerateUrlRequest, error)
+        SendOtp(request *apiDtos.GenerateUrlRequest, dbId string) (*commonDtos.ApiResponseDto, error)
+        VerifyOTP(request *models.VerifyOTPRequest) (*commonDtos.ApiResponseDto, error)
+}
+
+///////////////////////////////////////////////////
+// Implementation Struct
+///////////////////////////////////////////////////
+
+type authenticationServiceImpl struct {
+        otpRepo    authRepository.IOTPRepository
+        casendra   repository.ICassandraRepository
+        jwtService *jwt.JwtCreation
+}
+
+///////////////////////////////////////////////////
+// Constructor
+///////////////////////////////////////////////////
+
+// NewAuthenticationService creates a new instance of IAuthenticationService
+func NewAuthenticationService(
+        otpRepo authRepository.IOTPRepository,
+        casendra repository.ICassandraRepository,
+) IAuthenticationService <span class="cov8" title="1">{
+        jwtService, err := jwt.NewJwtCreation()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to initialize JWT service: %v", err)
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">return &amp;authenticationServiceImpl{
+                otpRepo:    otpRepo,
+                casendra:   casendra,
+                jwtService: jwtService,
+        }</span>
+}
+
+///////////////////////////////////////////////////
+// Interface Method Implementations
+///////////////////////////////////////////////////
+
+// GetAuthToken retrieves an authentication token for a user
+func (s *authenticationServiceImpl) GetAuthToken(userID, tokenID string) (*apiDtos.GenerateUrlRequest, error) <span class="cov8" title="1">{
+        if s.casendra == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("cassandra repository not initialized")
+        }</span>
+
+        <span class="cov8" title="1">data, err := s.casendra.GetDataByID(tokenID)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to get auth token: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return data, nil</span>
+}
+
+// SendOtp sends an OTP to the user
+func (s *authenticationServiceImpl) SendOtp(request *apiDtos.GenerateUrlRequest, dbId string) (*commonDtos.ApiResponseDto, error) <span class="cov8" title="1">{
+        if s.otpRepo == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("OTP repository not initialized")
+        }</span>
+
+        <span class="cov8" title="1">if request == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("request cannot be nil")
+        }</span>
+
+        <span class="cov8" title="1">otp := utils.GenerateOTP()
+        log.Printf("Generated OTP :[%s]", otp)
+
+        res, err := s.otpRepo.SendOtp(*request, otp, dbId)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to send OTP: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return res, nil</span>
+}
+
+// VerifyOTP verifies an OTP for a user
+func (s *authenticationServiceImpl) VerifyOTP(request *models.VerifyOTPRequest) (*commonDtos.ApiResponseDto, error) <span class="cov8" title="1">{
+        if s.otpRepo == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("OTP repository not initialized")
+        }</span>
+
+        <span class="cov8" title="1">if request == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("request cannot be nil")
+        }</span>
+
+        <span class="cov8" title="1">result, err := s.otpRepo.VerifyOtp(request)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to verify OTP: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return result, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package infrastructure
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        authUtils "protected_link/internal/modules/authentication/utils"
+        repository "protected_link/internal/modules/cassandra/repository"
+
+        apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+        "protected_link/pkg/cassandra"
+
+        "github.com/gocql/gocql"
+)
+
+// CassandraClient is a placeholder for an actual Cassandra client connection.
+type CassandraClient struct {
+        casendra *cassandra.CassandraConfig
+        // Add real client fields here, e.g. session, cluster config etc.
+}
+
+// NewCassandraClient initializes a new Cassandra client.
+// Replace with real initialization logic.
+func NewCassandraClient(casendra *cassandra.CassandraConfig) *CassandraClient <span class="cov8" title="1">{
+        return &amp;CassandraClient{casendra: casendra}
+}</span>
+
+// CassandraRepository implements the ICassandraRepository interface.
+type CassandraRepository struct {
+        client *CassandraClient
+}
+
+// NewCassandraRepository creates a new CassandraRepository with the given client.
+func NewCassandraRepository(client *CassandraClient) repository.ICassandraRepository <span class="cov8" title="1">{
+        return &amp;CassandraRepository{client: client}
+}</span>
+
+// GetData fetches data by key from Cassandra.
+
+func (r *CassandraRepository) GetDataByID(idStr string) (*apiDtos.GenerateUrlRequest, error) <span class="cov8" title="1">{
+        // Validate UUID
+        id, err := authUtils.ParseUUID(idStr)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, errors.New("invalid UUID format")
+        }</span>
+        // id is now a gocql.UUID
+
+        // Check Cassandra session
+        <span class="cov8" title="1">if r.client == nil || r.client.casendra == nil || r.client.casendra.Session == nil </span><span class="cov8" title="1">{
+                return nil, errors.New("cassandra session is not properly initialized")
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("CassandraRepository: Getting data for ID %s\n", id.String())
+
+        // Prepare variables to hold the result
+        var (
+                userID, name, requestType, modelType, email, phone, channelType string
+                expireIn                                                        string
+                otpRequired                                                     bool
+                dataStr                                                         string
+        )
+
+        // Execute the query
+        err = r.client.casendra.Session.Query(
+                `SELECT user_id, name, request_type, model_type, email,
+                        expire_in, otp_required, phone, channel_type, data
+                FROM protectedLink WHERE id = ? LIMIT 1`, id).Consistency(gocql.One).Scan(
+                &amp;userID, &amp;name, &amp;requestType, &amp;modelType, &amp;email,
+                &amp;expireIn, &amp;otpRequired, &amp;phone, &amp;channelType, &amp;dataStr,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                if err == gocql.ErrNotFound </span><span class="cov0" title="0">{
+                        return nil, nil // Not found
+                }</span>
+                <span class="cov0" title="0">return nil, fmt.Errorf("failed to fetch data: %w", err)</span>
+        }
+
+        // Deserialize JSON data field
+        <span class="cov0" title="0">var data map[string]interface{}
+        if err := json.Unmarshal([]byte(dataStr), &amp;data); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to deserialize data field: %w", err)
+        }</span>
+
+        // Construct and return the DTO
+        <span class="cov0" title="0">dto := &amp;apiDtos.GenerateUrlRequest{
+                UserID:      userID,
+                Name:        name,
+                RequestType: requestType,
+                ModelType:   modelType,
+                Email:       email,
+                ExpireIn:    expireIn,
+                OtpRequired: otpRequired,
+                Phone:       phone,
+                ChannelType: channelType,
+                Data:        data,
+        }
+
+        return dto, nil</span>
+}
+
+// SaveData saves data by key into Cassandra.
+// SaveData saves the given GenerateUrlRequest DTO into Cassandra.
+func (r *CassandraRepository) SaveData(dto *apiDtos.GenerateUrlRequest) (gocql.UUID, error) <span class="cov8" title="1">{
+        // Validate required fields
+        if dto.UserID == "" || dto.Name == "" || dto.RequestType == "" || dto.Email == "" </span><span class="cov8" title="1">{
+                return gocql.UUID{}, errors.New("missing required fields")
+        }</span>
+
+        // Check Cassandra client and session
+        <span class="cov8" title="1">if r.client == nil || r.client.casendra == nil || r.client.casendra.Session == nil </span><span class="cov8" title="1">{
+                return gocql.UUID{}, errors.New("Cassandra session is not properly initialized")
+        }</span>
+
+        // Generate a new UUID for the record
+        <span class="cov0" title="0">id := gocql.TimeUUID()
+
+        // Serialize the `data` field to JSON
+        dataBytes, err := json.Marshal(dto.Data)
+        if err != nil </span><span class="cov0" title="0">{
+                return gocql.UUID{}, fmt.Errorf("failed to serialize data: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("CassandraRepository: Saving data for user_id %s with id %s\n", dto.UserID, id.String())
+
+        // Insert the record into Cassandra
+        err = r.client.casendra.Session.Query(
+                `INSERT INTO protectedLink (
+                        id, user_id, name, request_type, model_type, email,
+                        expire_in, otp_required, phone, channel_type, data
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                id, dto.UserID, dto.Name, dto.RequestType, dto.ModelType, dto.Email,
+                dto.ExpireIn, dto.OtpRequired, dto.Phone, dto.ChannelType, string(dataBytes),
+        ).Exec()
+
+        if err != nil </span><span class="cov0" title="0">{
+                return gocql.UUID{}, fmt.Errorf("failed to save data to Cassandra: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("CassandraRepository: Successfully saved data for user_id %s with id %s\n", dto.UserID, id.String())
+        return id, nil</span>
+}
+
+func (r *CassandraRepository) DeleteById(id string) error <span class="cov8" title="1">{
+        // Check Cassandra client and session
+        if r.client == nil || r.client.casendra == nil || r.client.casendra.Session == nil </span><span class="cov8" title="1">{
+                return errors.New("cassandra session is not properly initialized")
+        }</span>
+
+        // Delete the record from Cassandra
+        <span class="cov0" title="0">err := r.client.casendra.Session.Query(
+                `DELETE FROM protectedLink WHERE id = ?`,
+                id,
+        ).Exec()
+
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to delete data from Cassandra: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("CassandraRepository: Successfully deleted data for id %s\n", id)
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package handlers
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "log"
+        "protected_link/internal/common/constants"
+        messageUtility "protected_link/internal/common/utils"
+        apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+        "protected_link/internal/modules/link_generation/models"
+        "protected_link/internal/modules/link_generation/services"
+        pb "protected_link/pkg/grpc/proto"
+        "protected_link/pkg/validation"
+)
+
+// GenerateLinkHandler handles link generation related gRPC requests
+type GenerateLinkHandler struct {
+        service services.GenerateLinkServiceInterface
+        pb.UnimplementedLinkServiceServer
+}
+
+// NewGenerateLinkHandler creates a new instance of GenerateLinkHandler
+func NewGenerateLinkHandler(service services.GenerateLinkServiceInterface) *GenerateLinkHandler <span class="cov8" title="1">{
+        return &amp;GenerateLinkHandler{
+                service: service,
+        }
+}</span>
+
+func (h *GenerateLinkHandler) SaveGeneratedLinkV1(ctx context.Context, req *pb.GenerateUrlRequestV1) (*pb.GenerateUrlResponseV1, error) <span class="cov8" title="1">{
+        log.Printf("📥 [gRPC] SaveGeneratedLinkV1 invoked with request: %+v", req)
+
+        if req == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("request cannot be nil")
+        }</span>
+
+        <span class="cov8" title="1">dataInterfaceMap := make(map[string]interface{}, len(req.Data))
+        for k, v := range req.Data </span><span class="cov8" title="1">{
+                dataInterfaceMap[k] = v
+        }</span>
+
+        <span class="cov8" title="1">internalReq := &amp;apiDtos.GenerateUrlRequest{
+                UserID:      req.UserId,
+                Name:        req.Name,
+                RequestType: req.RequestType,
+                ModelType:   req.ModelType,
+                OtpRequired: req.OtpRequired,
+                ExpireIn:    req.ExpireIn,
+                Email:       req.Email,
+                Phone:       req.Phone,
+                ChannelType: req.ChannelType,
+                Data:        apiDtos.JSONB(dataInterfaceMap),
+        }
+
+        fieldErrors, err := validation.ValidateGenerateUrlRequest(*internalReq)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("❌ Validation failed: %v", err)
+                return &amp;pb.GenerateUrlResponseV1{
+                        Success: false,
+                        Message: "Validation failed",
+                        Data:    nil,
+                        Error:   fieldErrors,
+                }, nil
+        }</span>
+
+        <span class="cov8" title="1">response, err := h.service.SaveGeneratedLink(internalReq)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("❌ Failed to save generated link: %v", err)
+                return nil, fmt.Errorf("failed to save generated link: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">log.Printf("✅ Link generated successfully: %s", response.Data.(*models.ProtectedLinkResponse).URL)
+        return &amp;pb.GenerateUrlResponseV1{
+                Success: response.Success,
+                Message: messageUtility.GetMessage(string(constants.LinkGeneratedSuccessfully)),
+                Data: &amp;pb.ProtectedLinkResponse{
+                        Url: response.Data.(*models.ProtectedLinkResponse).URL,
+                },
+                Error: nil,
+        }, nil</span>
+}
+
+func (h *GenerateLinkHandler) DeleteGeneratedLinkV1(ctx context.Context, req *pb.DeleteGeneratedLinkRequestV1) (*pb.DeleteGeneratedLinkResponseV1, error) <span class="cov8" title="1">{
+        log.Printf("📥 [gRPC] DeleteGeneratedLinkV1 invoked with request: %+v", req)
+
+        if req == nil || req.Link == "" </span><span class="cov8" title="1">{
+                log.Println("❌ Validation failed: link cannot be empty")
+                errorMap := map[string]string{
+                        "validation_errors": "Link cannot be empty",
+                }
+                jsonErrors, _ := json.Marshal(errorMap)
+
+                return &amp;pb.DeleteGeneratedLinkResponseV1{
+                        Success: false,
+                        Message: "Validation failed",
+                        Data:    nil,
+                        Error:   string(jsonErrors),
+                }, nil
+        }</span>
+
+        <span class="cov8" title="1">response, err := h.service.DeleteGeneratedLink(req.Link)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("❌ Failed to delete link: %v", err)
+                return nil, fmt.Errorf("failed to delete generated link: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">log.Printf("✅ Link deleted successfully: %s", response.Data.(*models.ProtectedLinkResponse).URL)
+        return &amp;pb.DeleteGeneratedLinkResponseV1{
+                Success: response.Success,
+                Message: messageUtility.GetMessage(string(constants.ProtectedLinkDeletedSuccessfully)),
+                Data: &amp;pb.ProtectedLinkResponse{
+                        Url: response.Data.(*models.ProtectedLinkResponse).URL,
+                },
+                Error: "",
+        }, nil</span>
+}
+
+func (h *GenerateLinkHandler) GetExtractDataV1(ctx context.Context, req *pb.GetExtractDataRequestV1) (*pb.GetExtractDataResponseV1, error) <span class="cov8" title="1">{
+        log.Printf("📥 [gRPC] GetExtractDataV1 invoked with request: %+v", req)
+
+        if req == nil || req.Token == "" </span><span class="cov8" title="1">{
+                log.Println("❌ Validation failed: token cannot be empty")
+                errorMap := map[string]string{
+                        "validation_errors": "Token cannot be empty",
+                }
+                jsonErrors, _ := json.Marshal(errorMap)
+
+                return &amp;pb.GetExtractDataResponseV1{
+                        Success: false,
+                        Message: "Validation failed",
+                        Data:    nil,
+                        Error:   string(jsonErrors),
+                }, nil
+        }</span>
+
+        <span class="cov8" title="1">result, err := h.service.GetExtractData(&amp;req.Token)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("❌ Failed to retrieve token data: %v", err)
+                return nil, fmt.Errorf("failed to retrieve token data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">dataInterfaceMap := make(map[string]string)
+        switch data := result.Data.(type) </span>{
+        case map[string]interface{}:<span class="cov8" title="1">
+                for k, v := range data </span><span class="cov8" title="1">{
+                        dataInterfaceMap[k] = fmt.Sprintf("%v", v)
+                }</span>
+        default:<span class="cov8" title="1">
+                jsonBytes, err := json.Marshal(result.Data)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("❌ Failed to marshal result.Data: %v", err)
+                        dataInterfaceMap["message"] = result.Message
+                }</span> else<span class="cov8" title="1"> {
+                        var intermediateMap map[string]interface{}
+                        if err := json.Unmarshal(jsonBytes, &amp;intermediateMap); err != nil </span><span class="cov8" title="1">{
+                                log.Printf("❌ Failed to unmarshal into map: %v", err)
+                                dataInterfaceMap["message"] = result.Message
+                        }</span> else<span class="cov0" title="0"> {
+                                for k, v := range intermediateMap </span><span class="cov0" title="0">{
+                                        dataInterfaceMap[k] = fmt.Sprintf("%v", v)
+                                }</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">log.Printf("✅ Data processed successfully: %+v", dataInterfaceMap)
+        return &amp;pb.GetExtractDataResponseV1{
+                Success: result.Success,
+                Message: messageUtility.GetMessage(string(constants.DataFetchedSuccessfully)),
+                Data:    dataInterfaceMap,
+                Error:   "",
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package repositories
+
+import (
+        "encoding/json"
+        "fmt"
+        "time"
+
+        commonDtos "protected_link/internal/common/api/dtos"
+        "protected_link/internal/common/constants"
+        messageUtility "protected_link/internal/common/utils"
+        configEnv "protected_link/internal/configs"
+        repository "protected_link/internal/modules/cassandra/repository"
+        apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+        "protected_link/internal/modules/link_generation/models"
+        link_utils "protected_link/internal/modules/link_generation/utils"
+        "protected_link/pkg/jwt"
+        database "protected_link/pkg/redis"
+
+        "github.com/redis/go-redis/v9"
+)
+
+const (
+        operationPrefix = "🔒"
+)
+
+type GeneratedRepository struct {
+        redis      *database.RedisConfig
+        config     *configEnv.Config
+        jwtService *jwt.JwtCreation
+        cassandra  repository.ICassandraRepository
+}
+
+// NewGeneratedRepository creates a new instance of GeneratedRepository
+func NewGeneratedRepository(redis *database.RedisConfig, cassandra repository.ICassandraRepository) (*GeneratedRepository, error) <span class="cov8" title="1">{
+        jwtService, err := jwt.NewJwtCreation()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create JWT service: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">cfg, err := configEnv.LoadConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to load config: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;GeneratedRepository{
+                redis:      redis,
+                jwtService: jwtService,
+                config:     cfg,
+                cassandra:  cassandra,
+        }, nil</span>
+}
+
+// newGeneratedRepositoryWithDependencies creates a new instance with the given dependencies (for testing)
+func newGeneratedRepositoryWithDependencies(redis *database.RedisConfig, cassandra repository.ICassandraRepository, jwtService *jwt.JwtCreation, config *configEnv.Config) *GeneratedRepository <span class="cov0" title="0">{
+        return &amp;GeneratedRepository{
+                redis:      redis,
+                jwtService: jwtService,
+                config:     config,
+                cassandra:  cassandra,
+        }
+}</span>
+
+// SaveGeneratedLink saves a generated link with the provided data
+func (g *GeneratedRepository) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest) (*commonDtos.ApiResponseDto, error) <span class="cov8" title="1">{
+        const operation = "SaveGeneratedLink"
+        var data string
+
+        // Handle hybrid model type
+        if dto.ModelType == "hybrid" </span><span class="cov8" title="1">{
+                id, err := g.cassandra.SaveData(dto)
+                if err != nil </span><span class="cov8" title="1">{
+                        fmt.Printf("%s %s: failed to save token in Cassandra: %v\n", operationPrefix, operation, err)
+                        return nil, fmt.Errorf("failed to save token in Cassandra: %w", err)
+                }</span>
+                <span class="cov8" title="1">data = id.String()
+                fmt.Printf("%s %s: saved token in Cassandra: %s\n", operationPrefix, operation, id)</span>
+        }
+
+        // Parse expiration time
+        <span class="cov8" title="1">expiresAt, err := link_utils.ParseExpiration(dto.ExpireIn)
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("%s %s: failed to parse expiration: %v\n", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to parse expiration: %w", err)
+        }</span>
+
+        // Prepare payload data
+        <span class="cov8" title="1">var payloadData interface{}
+        if data == "" </span><span class="cov8" title="1">{
+                payloadData = dto
+        }</span> else<span class="cov8" title="1"> {
+                payloadData = data
+        }</span>
+
+        // Create secure payload
+        <span class="cov8" title="1">payload := apiDtos.SecurePayload{
+                Data:      payloadData,
+                ExpiresAt: expiresAt,
+                ModelType: dto.ModelType,
+        }
+
+        // Encrypt payload
+        token, err := g.jwtService.Encrypt(payload)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Printf("%s %s: failed to encrypt DTO: %v\n", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to encrypt DTO: %w", err)
+        }</span>
+
+        // Generate shortcode and parse duration
+        <span class="cov8" title="1">shortCode := link_utils.GenerateShortCode(8)
+        duration, err := time.ParseDuration(dto.ExpireIn)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid expire_in format: %w", err)
+        }</span>
+
+        // Save to Redis with TTL
+        <span class="cov8" title="1">if err := g.redis.Client.Set(g.redis.Ctx, shortCode, token, duration).Err(); err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("%s %s: failed to save token in Redis: %v\n", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to save token in Redis: %w", err)
+        }</span>
+
+        // Construct response
+        <span class="cov8" title="1">shortURL := fmt.Sprintf("%s?token=%s", g.config.RedirectionURL, shortCode)
+        return &amp;commonDtos.ApiResponseDto{
+                Success: true,
+                Message: messageUtility.GetMessage(string(constants.ProtectedLinkGeneratedSuccessfully)),
+                Data: &amp;models.ProtectedLinkResponse{
+                        URL: shortURL,
+                },
+        }, nil</span>
+}
+
+// GetOriginalToken retrieves the original token from Redis using the shortcode
+func (g *GeneratedRepository) GetOriginalToken(shortCode string) (string, error) <span class="cov8" title="1">{
+        const operation = "GetOriginalToken"
+        token, err := g.redis.Client.Get(g.redis.Ctx, shortCode).Result()
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("%s %s: failed to fetch token from Redis for shortCode %s: %v\n",
+                        operationPrefix, operation, shortCode, err)
+
+                if err == redis.Nil </span><span class="cov8" title="1">{
+                        return "", fmt.Errorf("%s", messageUtility.GetMessage(string(constants.RequestLinkExpiredTitle)))
+                }</span>
+                <span class="cov8" title="1">return "", fmt.Errorf("failed to get token: %w", err)</span>
+        }
+        <span class="cov8" title="1">return token, nil</span>
+}
+
+// GetTokenData retrieves and decrypts token data for a given link
+func (g *GeneratedRepository) GetTokenData(link *string) (*apiDtos.SecurePayload, error) <span class="cov8" title="1">{
+        const operation = "GetTokenData"
+
+        // Get encrypted token
+        encryptedToken, err := g.GetOriginalToken(*link)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("%s: error retrieving token: %w", operation, err)
+        }</span>
+
+        // Decrypt token
+        <span class="cov8" title="1">decrypted, err := g.jwtService.Decrypt(encryptedToken)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("%s: failed to decrypt token: %w", operation, err)
+        }</span>
+
+        // Unmarshal payload
+        <span class="cov0" title="0">var dto apiDtos.SecurePayload
+        if err := json.Unmarshal(decrypted, &amp;dto); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("%s: failed to unmarshal decrypted payload: %w", operation, err)
+        }</span>
+
+        // Delete key after use
+        <span class="cov0" title="0">if err := g.redis.Client.Del(g.redis.Ctx, *link).Err(); err != nil </span><span class="cov0" title="0">{
+                fmt.Printf("%s %s: failed to delete key after use: %v\n", operationPrefix, operation, err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;dto, nil</span>
+}
+
+// DeleteShortCode deletes a shortcode from Redis
+func (g *GeneratedRepository) DeleteShortCode(shortCode string) (*commonDtos.ApiResponseDto, error) <span class="cov8" title="1">{
+        const operation = "DeleteShortCode"
+
+        if err := g.redis.Client.Del(g.redis.Ctx, shortCode).Err(); err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("%s %s: failed to delete shortcode from Redis: %v\n", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to delete shortcode from Redis: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;commonDtos.ApiResponseDto{
+                Success: true,
+                Message: messageUtility.GetMessage(string(constants.ProtectedLinkDeletedSuccessfully)),
+                Data: &amp;models.ProtectedLinkResponse{
+                        URL: shortCode,
+                },
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package services
+
+import (
+        "fmt"
+        "log"
+
+        commonDtos "protected_link/internal/common/api/dtos"
+
+        "protected_link/internal/common/constants"
+        messageUtility "protected_link/internal/common/utils"
+        authRepository "protected_link/internal/modules/authentication/repositories"
+        srv "protected_link/internal/modules/authentication/services"
+        repository "protected_link/internal/modules/cassandra/repository"
+        apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+        "protected_link/internal/modules/link_generation/repositories"
+        link_utils "protected_link/internal/modules/link_generation/utils"
+
+        database "protected_link/pkg/redis"
+)
+
+const (
+        operationPrefix = "🔒"
+)
+
+type GenerateLinkService struct {
+        repo      *repositories.GeneratedRepository
+        redis     *database.RedisConfig
+        cassandra repository.ICassandraRepository
+}
+
+// NewGenerateLinkService creates a new instance of GenerateLinkService
+func NewGenerateLinkService(repo *repositories.GeneratedRepository, redis *database.RedisConfig, cassandra repository.ICassandraRepository) *GenerateLinkService <span class="cov0" title="0">{
+        return &amp;GenerateLinkService{
+                repo:      repo,
+                redis:     redis,
+                cassandra: cassandra,
+        }
+}</span>
+
+// For testing purposes only
+type GenerateUrlRepositoryInterface interface {
+        SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest) (*commonDtos.ApiResponseDto, error)
+        GetTokenData(link *string) (*apiDtos.SecurePayload, error)
+        DeleteShortCode(link string) (*commonDtos.ApiResponseDto, error)
+}
+
+// GenerateLinkServiceForTest is a test-friendly version of GenerateLinkService
+type GenerateLinkServiceForTest struct {
+        Repository GenerateUrlRepositoryInterface
+        Redis      *database.RedisConfig
+        Cassandra  repository.ICassandraRepository
+}
+
+// SaveGeneratedLink handles the generation and saving of protected links (for tests)
+func (s *GenerateLinkServiceForTest) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest) (*commonDtos.ApiResponseDto, error) <span class="cov8" title="1">{
+        const operation = "SaveGeneratedLink"
+        log.Printf("%s %s: processing request for user %s", operationPrefix, operation, dto.UserID)
+        return s.Repository.SaveGeneratedLink(dto)
+}</span>
+
+// DeleteGeneratedLink handles the deletion of protected links (for tests)
+func (s *GenerateLinkServiceForTest) DeleteGeneratedLink(link string) (*commonDtos.ApiResponseDto, error) <span class="cov8" title="1">{
+        const operation = "DeleteGeneratedLink"
+        log.Printf("%s %s: processing request for link %s", operationPrefix, operation, link)
+
+        result, err := s.Repository.GetTokenData(&amp;link)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("%s %s: failed to retrieve token data: %v", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to retrieve token data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if result.ModelType == "hybrid" </span><span class="cov8" title="1">{
+                if err := s.Cassandra.DeleteById(result.Data.(string)); err != nil </span><span class="cov8" title="1">{
+                        log.Printf("%s %s: failed to delete from Cassandra: %v", operationPrefix, operation, err)
+                        return nil, fmt.Errorf("failed to delete from Cassandra: %w", err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return s.Repository.DeleteShortCode(link)</span>
+}
+
+// GetExtractData handles the retrieval of data from protected links (for tests)
+func (s *GenerateLinkServiceForTest) GetExtractData(link *string) (*commonDtos.ApiResponseDto, error) <span class="cov8" title="1">{
+        const operation = "GetExtractData"
+        log.Printf("%s %s: processing request for link %s", operationPrefix, operation, *link)
+
+        result, err := s.Repository.GetTokenData(link)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("%s %s: failed to retrieve token data: %v", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to retrieve token data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if result.ModelType == "hybrid" </span><span class="cov8" title="1">{
+                dbId := result.Data.(string)
+                res, err := s.Cassandra.GetDataByID(dbId)
+                if err != nil </span><span class="cov8" title="1">{
+                        log.Printf("%s %s: failed to retrieve data from Cassandra: %v", operationPrefix, operation, err)
+                        return nil, fmt.Errorf("failed to retrieve data from Cassandra: %w", err)
+                }</span>
+
+                <span class="cov8" title="1">if res == nil </span><span class="cov8" title="1">{
+                        log.Printf("%s %s: no data found in Cassandra for ID %s", operationPrefix, operation, dbId)
+                        return nil, fmt.Errorf("no data found for ID %s", dbId)
+                }</span>
+
+                <span class="cov0" title="0">if res.OtpRequired </span><span class="cov0" title="0">{
+                        repo := authRepository.NewOTPRepository(s.Redis, s.Cassandra)
+                        services := srv.NewAuthenticationService(repo, s.Cassandra)
+                        return services.SendOtp(res, dbId)
+                }</span>
+
+                <span class="cov0" title="0">return &amp;commonDtos.ApiResponseDto{
+                        Success: true,
+                        Message: messageUtility.GetMessage(string(constants.DataFetchedSuccessfully)),
+                        Data:    res,
+                }, nil</span>
+        }
+
+        <span class="cov8" title="1">dto, err := link_utils.ConvertToGenerateUrlRequest(result.Data)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("%s %s: failed to convert data: %v", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to convert data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if dto.OtpRequired </span><span class="cov0" title="0">{
+                repo := authRepository.NewOTPRepository(s.Redis, s.Cassandra)
+                services := srv.NewAuthenticationService(repo, s.Cassandra)
+                return services.SendOtp(dto, "")
+        }</span>
+
+        <span class="cov8" title="1">return &amp;commonDtos.ApiResponseDto{
+                Success: true,
+                Message: messageUtility.GetMessage(string(constants.DataFetchedSuccessfully)),
+                Data:    result.Data,
+        }, nil</span>
+}
+
+// SaveGeneratedLink handles the generation and saving of protected links
+func (s *GenerateLinkService) SaveGeneratedLink(dto *apiDtos.GenerateUrlRequest) (*commonDtos.ApiResponseDto, error) <span class="cov0" title="0">{
+        const operation = "SaveGeneratedLink"
+        log.Printf("%s %s: processing request for user %s", operationPrefix, operation, dto.UserID)
+        return s.repo.SaveGeneratedLink(dto)
+}</span>
+
+// DeleteGeneratedLink handles the deletion of protected links
+func (s *GenerateLinkService) DeleteGeneratedLink(link string) (*commonDtos.ApiResponseDto, error) <span class="cov0" title="0">{
+        const operation = "DeleteGeneratedLink"
+        log.Printf("%s %s: processing request for link %s", operationPrefix, operation, link)
+
+        result, err := s.repo.GetTokenData(&amp;link)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("%s %s: failed to retrieve token data: %v", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to retrieve token data: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if result.ModelType == "hybrid" </span><span class="cov0" title="0">{
+                if err := s.cassandra.DeleteById(result.Data.(string)); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("%s %s: failed to delete from Cassandra: %v", operationPrefix, operation, err)
+                        return nil, fmt.Errorf("failed to delete from Cassandra: %w", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return s.repo.DeleteShortCode(link)</span>
+}
+
+// GetExtractData handles the retrieval of data from protected links
+func (s *GenerateLinkService) GetExtractData(link *string) (*commonDtos.ApiResponseDto, error) <span class="cov0" title="0">{
+        const operation = "GetExtractData"
+        log.Printf("%s %s: processing request for link %s", operationPrefix, operation, *link)
+
+        result, err := s.repo.GetTokenData(link)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("%s %s: failed to retrieve token data: %v", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to retrieve token data: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if result.ModelType == "hybrid" </span><span class="cov0" title="0">{
+                dbId := result.Data.(string)
+                res, err := s.cassandra.GetDataByID(dbId)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("%s %s: failed to retrieve data from Cassandra: %v", operationPrefix, operation, err)
+                        return nil, fmt.Errorf("failed to retrieve data from Cassandra: %w", err)
+                }</span>
+
+                <span class="cov0" title="0">if res == nil </span><span class="cov0" title="0">{
+                        log.Printf("%s %s: no data found in Cassandra for ID %s", operationPrefix, operation, dbId)
+                        return nil, fmt.Errorf("no data found for ID %s", dbId)
+                }</span>
+
+                <span class="cov0" title="0">if res.OtpRequired </span><span class="cov0" title="0">{
+                        repo := authRepository.NewOTPRepository(s.redis, s.cassandra)
+                        services := srv.NewAuthenticationService(repo, s.cassandra)
+                        return services.SendOtp(res, dbId)
+                }</span>
+
+                <span class="cov0" title="0">return &amp;commonDtos.ApiResponseDto{
+                        Success: true,
+                        Message: messageUtility.GetMessage(string(constants.DataFetchedSuccessfully)),
+                        Data:    res,
+                }, nil</span>
+        }
+
+        <span class="cov0" title="0">dto, err := link_utils.ConvertToGenerateUrlRequest(result.Data)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("%s %s: failed to convert data: %v", operationPrefix, operation, err)
+                return nil, fmt.Errorf("failed to convert data: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if dto.OtpRequired </span><span class="cov0" title="0">{
+                repo := authRepository.NewOTPRepository(s.redis, s.cassandra)
+                services := srv.NewAuthenticationService(repo, s.cassandra)
+                return services.SendOtp(dto, "")
+        }</span>
+
+        <span class="cov0" title="0">return &amp;commonDtos.ApiResponseDto{
+                Success: true,
+                Message: messageUtility.GetMessage(string(constants.DataFetchedSuccessfully)),
+                Data:    result.Data,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package link_utils
+
+import (
+        "encoding/json"
+        "fmt"
+        "math/rand"
+        apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+        "time"
+)
+
+const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func GenerateShortCode(length int) string <span class="cov8" title="1">{
+        rand.Seed(time.Now().UnixNano())
+        code := make([]byte, length)
+        for i := range code </span><span class="cov8" title="1">{
+                code[i] = charset[rand.Intn(len(charset))]
+        }</span>
+        <span class="cov8" title="1">return string(code)</span>
+}
+
+func ConvertToGenerateUrlRequest(data interface{}) (*apiDtos.GenerateUrlRequest, error) <span class="cov8" title="1">{
+        // Step 1: Marshal interface{} into JSON
+        bytes, err := json.Marshal(data)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to marshal interface{}: %w", err)
+        }</span>
+
+        // Step 2: Unmarshal into specific DTO
+        <span class="cov8" title="1">var request apiDtos.GenerateUrlRequest
+        if err := json.Unmarshal(bytes, &amp;request); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to unmarshal to GenerateUrlRequest: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;request, nil</span>
+}
+
+func ParseExpiration(expireIn string) (int64, error) <span class="cov8" title="1">{
+        duration, err := time.ParseDuration(expireIn)
+        if err != nil </span><span class="cov8" title="1">{
+                return 0, fmt.Errorf("invalid expire_in format: %w", err)
+        }</span>
+        <span class="cov8" title="1">return time.Now().Add(duration).Unix(), nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
