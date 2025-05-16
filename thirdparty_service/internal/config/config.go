@@ -43,6 +43,10 @@ type dynamicConfig struct {
 	SendGridApiKey    string `validate:"required" json:"SENDGRID_API_KEY"`
 	SendGridFromEmail string `validate:"required" json:"SENDGRID_FROM_EMAIL"`
 	SendGridFromName  string `validate:"required" json:"SENDGRID_FROM_NAME"`
+
+	SendWhatsAppMessageSID 	string `validate:"required" json:"WHATSAPP_TWILIO_ACCOUNT_SID"`
+	SendWhatsAppMessageToken  string `validate:"required" json:"WHATSAPP_TWILIO_AUTH_TOKEN"`
+	SendWhatsAppMessageFromNumber  string `validate:"required" json:"WHATSAPP_FROM_NUMBER"`
 }
 
 type staticConfig struct {

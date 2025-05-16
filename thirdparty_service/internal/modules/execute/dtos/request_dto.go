@@ -13,6 +13,12 @@ type SendGridEmailRequest struct {
 	Type    string `json:"type" validate:"required,oneof=TEXT HTML" error_code:"TS1007"`
 }
 
+type SendWhatsAppMessageRequest struct {
+	Phone       string `json:"phone" validate:"required,e164"`          // e.g., +919876543210
+	Message     string `json:"message" validate:"required"`             // message body
+	CountryCode string `json:"country_code" validate:"required,len=2"`  // e.g., "IN"
+}
+
 type VerifyAadharRequest struct {
 	AadharNumber string `json:"number" validate:"required,min=12,max=12" error_code:"TS1010"`
 }
