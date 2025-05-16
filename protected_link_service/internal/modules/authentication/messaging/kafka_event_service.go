@@ -9,17 +9,23 @@ import (
 	kafka "protected_link/pkg/kafka"
 )
 
-type NotifierService struct {
-	Producer *kafka.KafkaProducer
+type INotifierService interface {
+	SendNotification(payload models.MessagePayload, topic string) error
 }
 
-func NewNotifierService(producer *kafka.KafkaProducer) *NotifierService {
+var _ INotifierService = (*NotifierService)(nil) // ensure it implements the interface
+
+type NotifierService struct {
+	Producer kafka.MessageProducer // use the interface, not *KafkaProducer
+}
+
+func NewNotifierService(producer kafka.MessageProducer) *NotifierService {
 	return &NotifierService{Producer: producer}
 }
 
 func (ns *NotifierService) SendNotification(payload models.MessagePayload, topic string) error {
-
 	fmt.Println("Sending message to Kafka topic:", topic)
+
 	msgBytes, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Println("Failed to marshal message payload:", err)

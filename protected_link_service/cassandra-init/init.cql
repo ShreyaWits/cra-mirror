@@ -1,5 +1,5 @@
 CREATE KEYSPACE IF NOT EXISTS protectedlink
-WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};
+WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
 USE protectedlink;
 
@@ -16,10 +16,4 @@ CREATE TABLE IF NOT EXISTS protectedLink (
     phone TEXT,
     channel_type TEXT,
     data TEXT -- Storing JSON as text
-);
-
-
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    version TEXT PRIMARY KEY,
-    applied_at TIMESTAMP
 );

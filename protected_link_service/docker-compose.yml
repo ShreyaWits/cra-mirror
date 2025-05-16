@@ -5,10 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cra-protected-link
+    container_name: protected-link
     ports:
-      - "${PORT:-8080}:8080"
-      - "${GRPC_PORT:-50051}:50051" 
+      - "${PORT}:8080"
+      - "${GRPC_PORT}:50051" 
+    depends_on:
+      - redis
+      - cassandra
+      - kafka
     environment:
       - PORT=${PORT}
       - GRPC_PORT=${GRPC_PORT}
