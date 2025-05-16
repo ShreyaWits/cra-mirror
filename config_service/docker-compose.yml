@@ -6,9 +6,7 @@ services:
       container_name: cra-config-service
 
       restart: always
-      networks:
-        - nps2.0
-        - temporal-network
+     
       ports:
         - "${PORT}:${PORT}"
       environment:
@@ -32,12 +30,5 @@ services:
     environment:
       - IS_DOCKER=${IS_DOCKER}
       - TEMPORAL_ENDPOINT=${TEMPORAL_ENDPOINT}
-    networks:
-      - nps2.0
-      - temporal-network
+  
 
-networks:
-  nps2.0:
-    external: true
-  temporal-network:
-    external: true
