@@ -8,7 +8,7 @@ import (
 
 	appconfig "messaging_service/internal/config"
 	"messaging_service/internal/modules/message_broker/service"
-	"messaging_service/internal/validation"
+	"messaging_service/internal/utils/validation"
 	"messaging_service/pkg/confluent"
 	"messaging_service/pkg/errors"
 	"messaging_service/pkg/logger"

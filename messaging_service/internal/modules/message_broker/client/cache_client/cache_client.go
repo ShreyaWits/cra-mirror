@@ -52,11 +52,10 @@ func (c *RedisClientStruct) Close() error {
 // SetCache sets a value in the cache
 func (c *RedisClientStruct) SetCache(ctx context.Context, namespace, key, value string, ttl time.Duration, trackingID string) error {
 	req := &pb.SetCacheRequest{
-		Namespace:  namespace,
-		Key:        key,
-		Value:      value,
-		Ttl:        int64(ttl.Seconds()),
-		TrackingId: trackingID,
+		Namespace: namespace,
+		Key:       key,
+		Value:     value,
+		Ttl:       int64(ttl.Seconds()),
 	}
 
 	resp, err := c.client.SetCache(ctx, req)
@@ -74,9 +73,8 @@ func (c *RedisClientStruct) SetCache(ctx context.Context, namespace, key, value 
 // GetCache retrieves a value from the cache
 func (c *RedisClientStruct) GetCache(ctx context.Context, namespace, key, trackingID string) (string, bool, error) {
 	req := &pb.GetCacheRequest{
-		Namespace:  namespace,
-		Key:        key,
-		TrackingId: trackingID,
+		Namespace: namespace,
+		Key:       key,
 	}
 
 	resp, err := c.client.GetCache(ctx, req)
@@ -94,9 +92,8 @@ func (c *RedisClientStruct) GetCache(ctx context.Context, namespace, key, tracki
 // InvalidateCache invalidates a cache entry
 func (c *RedisClientStruct) InvalidateCache(ctx context.Context, namespace, key, trackingID string) error {
 	req := &pb.InvalidateCacheRequest{
-		Namespace:  namespace,
-		Key:        key,
-		TrackingId: trackingID,
+		Namespace: namespace,
+		Key:       key,
 	}
 
 	resp, err := c.client.InvalidateCache(ctx, req)

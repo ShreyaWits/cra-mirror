@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: redis_service/redis_service.proto
 
-package redis_service
+package proto
 
 import (
 	context "context"
@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CacheService_SetCache_FullMethodName        = "/redis_proto.CacheService/SetCache"
-	CacheService_GetCache_FullMethodName        = "/redis_proto.CacheService/GetCache"
-	CacheService_InvalidateCache_FullMethodName = "/redis_proto.CacheService/InvalidateCache"
+	CacheService_SetCache_FullMethodName        = "/redis.cache.v1.CacheService/SetCache"
+	CacheService_GetCache_FullMethodName        = "/redis.cache.v1.CacheService/GetCache"
+	CacheService_InvalidateCache_FullMethodName = "/redis.cache.v1.CacheService/InvalidateCache"
 )
 
 // CacheServiceClient is the client API for CacheService service.
@@ -184,7 +184,7 @@ func _CacheService_InvalidateCache_Handler(srv interface{}, ctx context.Context,
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var CacheService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "redis_proto.CacheService",
+	ServiceName: "redis.cache.v1.CacheService",
 	HandlerType: (*CacheServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

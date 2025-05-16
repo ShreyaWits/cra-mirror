@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	"messaging_service/internal/config"
-	"messaging_service/internal/modules/message_broker/handler"
+	"messaging_service/internal/modules/message_broker/api/handler"
 	mock_service "messaging_service/internal/modules/message_broker/mock"
 	"messaging_service/pkg/errors"
 	"messaging_service/pkg/logger"

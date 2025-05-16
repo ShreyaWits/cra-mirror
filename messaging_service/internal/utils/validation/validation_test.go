@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	pb "cra-protos/messaging_service"
-	"messaging_service/internal/validation"
+	"messaging_service/internal/utils/validation"
 	"messaging_service/pkg/errors"
 
 	"github.com/stretchr/testify/assert"

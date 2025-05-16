@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package redis_proto;
+package redis.cache.v1;
 
-option go_package = "redis-service/proto/redis-service";
+option go_package = "redis-service/proto";
 
 // ----------------------
 // Request/Response Types
@@ -13,8 +13,7 @@ message SetCacheRequest {
   string namespace = 1;     // Service namespace (e.g., serviceA)
   string key = 2;           // Redis key
   string value = 3;         // Serialized value (JSON/String)
-  int64 ttl = 4;   
-  string trackingId =5;         // Time-to-live in seconds
+  int64 ttl = 4;            // Time-to-live in seconds
 }
 
 // Response for SetCache
@@ -27,7 +26,6 @@ message SetCacheResponse {
 message GetCacheRequest {
   string namespace = 1;
   string key = 2;
-  string trackingId =3;
 }
 
 // Response for GetCache
@@ -42,7 +40,6 @@ message GetCacheResponse {
 message InvalidateCacheRequest {
   string namespace = 1;
   string key = 2;
-  string trackingId =3;
 }
 
 // Response for InvalidateCache
