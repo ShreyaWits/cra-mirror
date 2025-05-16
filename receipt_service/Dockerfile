@@ -31,4 +31,4 @@ COPY --from=builder /build/main /main
 EXPOSE 3006
 
 # Command to run the executable
-ENTRYPOINT ["app/main"]
+ENTRYPOINT ["/main"]
