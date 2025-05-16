@@ -9,7 +9,8 @@ import (
 	"errors"
 	"fmt"
 	configEnv "protected_link/internal/configs"
-	apiDtos "protected_link/internal/module/apis/dtos"
+	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+
 	"strings"
 	"time"
 )
@@ -35,31 +36,13 @@ func NewJwtCreation() (*JwtCreation, error) {
 	}, nil
 }
 
+
+
 // Encrypt encodes any struct into an encrypted URL-safe string
-func parseExpiration(expireIn string) (int64, error) {
-	duration, err := time.ParseDuration(expireIn)
-	if err != nil {
-		return 0, fmt.Errorf("invalid expire_in format: %w", err)
-	}
-	return time.Now().Add(duration).Unix(), nil
-}
 
-func (j *JwtCreation) Encrypt(data *apiDtos.GenerateUrlRequest) (string, error) {
+func (j *JwtCreation) Encrypt(data apiDtos.SecurePayload) (string, error) {
 
-	expireStr := data.ExpireIn
-
-	expiresAt, err := parseExpiration(expireStr)
-	if err != nil {
-		return "", err
-	}
-
-	// Wrap the data with expiration
-	payload := apiDtos.SecurePayload{
-		Data:      data,
-		ExpiresAt: expiresAt,
-	}
-
-	jsonData, err := json.Marshal(payload)
+	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal data: %w", err)
 	}
@@ -109,24 +92,20 @@ func (j *JwtCreation) Decrypt(token string) ([]byte, error) {
 
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 
-	// ✅ Decrypt the actual payload
 	plainText, err := aesGCM.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt data: %w", err)
 	}
 
 	var payload apiDtos.SecurePayload
-	// ✅ Unmarshal into temporary struct to validate time
 	if err := json.Unmarshal(plainText, &payload); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal decrypted payload: %w", err)
 	}
 
-	// ✅ Convert ExpiresAt to time.Time and check expiration
-	expirationTime := time.Unix(payload.ExpiresAt, 0)
-	if time.Now().After(expirationTime) {
-		return nil, fmt.Errorf("⏰ link has expired")
+	// ✅ Expiration check with clean error
+	if time.Now().After(time.Unix(payload.ExpiresAt, 0)) {
+		return nil, errors.New("⏰ link is expired")
 	}
 
-	// Return decrypted plain JSON bytes
 	return plainText, nil
 }

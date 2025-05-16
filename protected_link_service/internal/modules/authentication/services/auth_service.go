@@ -1,0 +1,114 @@
+package services
+
+import (
+	"fmt"
+	"log"
+
+	commonDtos "protected_link/internal/common/api/dtos"
+	"protected_link/internal/modules/authentication/api/utils"
+	"protected_link/internal/modules/authentication/models"
+	authRepository "protected_link/internal/modules/authentication/repositories"
+	repository "protected_link/internal/modules/cassandra/repository"
+	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+	"protected_link/pkg/jwt"
+)
+
+///////////////////////////////////////////////////
+// Interface Definition
+///////////////////////////////////////////////////
+
+// IAuthenticationService defines the contract for authentication operations
+type IAuthenticationService interface {
+	GetAuthToken(userID, tokenID string) (*apiDtos.GenerateUrlRequest, error)
+	SendOtp(request *apiDtos.GenerateUrlRequest, dbId string) (*commonDtos.ApiResponseDto, error)
+	VerifyOTP(request *models.VerifyOTPRequest) (*commonDtos.ApiResponseDto, error)
+}
+
+///////////////////////////////////////////////////
+// Implementation Struct
+///////////////////////////////////////////////////
+
+type authenticationServiceImpl struct {
+	otpRepo    authRepository.IOTPRepository
+	casendra   repository.ICassandraRepository
+	jwtService *jwt.JwtCreation
+}
+
+///////////////////////////////////////////////////
+// Constructor
+///////////////////////////////////////////////////
+
+// NewAuthenticationService creates a new instance of IAuthenticationService
+func NewAuthenticationService(
+	otpRepo authRepository.IOTPRepository,
+	casendra repository.ICassandraRepository,
+) IAuthenticationService {
+	jwtService, err := jwt.NewJwtCreation()
+	if err != nil {
+		log.Printf("Failed to initialize JWT service: %v", err)
+		return nil
+	}
+
+	return &authenticationServiceImpl{
+		otpRepo:    otpRepo,
+		casendra:   casendra,
+		jwtService: jwtService,
+	}
+}
+
+///////////////////////////////////////////////////
+// Interface Method Implementations
+///////////////////////////////////////////////////
+
+// GetAuthToken retrieves an authentication token for a user
+func (s *authenticationServiceImpl) GetAuthToken(userID, tokenID string) (*apiDtos.GenerateUrlRequest, error) {
+	if s.casendra == nil {
+		return nil, fmt.Errorf("cassandra repository not initialized")
+	}
+
+	data, err := s.casendra.GetDataByID(tokenID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get auth token: %w", err)
+	}
+
+	return data, nil
+}
+
+// SendOtp sends an OTP to the user
+func (s *authenticationServiceImpl) SendOtp(request *apiDtos.GenerateUrlRequest, dbId string) (*commonDtos.ApiResponseDto, error) {
+	if s.otpRepo == nil {
+		return nil, fmt.Errorf("OTP repository not initialized")
+	}
+
+	if request == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+
+	otp := utils.GenerateOTP()
+	log.Printf("Generated OTP :[%s]", otp)
+
+	res, err := s.otpRepo.SendOtp(*request, otp, dbId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send OTP: %w", err)
+	}
+
+	return res, nil
+}
+
+// VerifyOTP verifies an OTP for a user
+func (s *authenticationServiceImpl) VerifyOTP(request *models.VerifyOTPRequest) (*commonDtos.ApiResponseDto, error) {
+	if s.otpRepo == nil {
+		return nil, fmt.Errorf("OTP repository not initialized")
+	}
+
+	if request == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+
+	result, err := s.otpRepo.VerifyOtp(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify OTP: %w", err)
+	}
+
+	return result, nil
+}
