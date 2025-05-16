@@ -1,0 +1,34 @@
+services:
+  cra-config-service:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: cra-config-service
+
+      restart: always
+     
+      ports:
+        - "${PORT}:${PORT}"
+      environment:
+        - PORT=${PORT}
+        - IS_DOCKER=${IS_DOCKER}
+        - DATABASE_HOST=${DATABASE_HOST}
+        - DATABASE_PORT=${DATABASE_PORT}
+        - DATABASE_USER=${DATABASE_USER}
+        - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+        - DATABASE_NAME=${DATABASE_NAME}
+        - ETCD_ENDPOINT=${ETCD_ENDPOINT}
+        - TEMPORAL_ENDPOINT=${TEMPORAL_ENDPOINT}
+        - ADMIN_SECRET=${ADMIN_SECRET}
+        - JWT_SECRET=${JWT_SECRET}
+     
+  worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    restart: always
+    environment:
+      - IS_DOCKER=${IS_DOCKER}
+      - TEMPORAL_ENDPOINT=${TEMPORAL_ENDPOINT}
+  
+
