@@ -6,12 +6,12 @@ services:
       context: ../
       dockerfile: ./messaging_service/Dockerfile
     ports:
-      - "50051:50051"
+      - "50054:50054"
       - "5055:5055"
     networks:
       - messaging-service-network
     environment:
-      GRPC_PORT: 50051
+      GRPC_PORT: 50054
       # Kafka connection settings
       KAFKA_BROKERS: kafka1:9092,kafka2:9093,kafka3:9094
       # Kafka topic configuration
@@ -37,7 +37,7 @@ services:
       # Exactly-once configuration
       KAFKA_ISOLATION_LEVEL: read_committed
       CONFIG_SERVICE_URL: http://host.docker.internal:4001/api/v1
-      CONFIG_SERVICE_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNzQ3MzExOTcwfQ.JO1vuvRQSlyeYPhyh6OA-8AR3g7YvzDlKmJSYfvpZqU
+      CONFIG_SERVICE_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNzQ3MzE3NDI1fQ.vf4v4ZG6Wm6cIhy5l4G5L3MrabOtxNRnj7Bi97KgQl4
       ENVIRONMENT: dev
       HttpPort: 5055
 

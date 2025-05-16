@@ -4,7 +4,7 @@
 // 	protoc        v5.29.3
 // source: redis_service/redis_service.proto
 
-package redis_service
+package proto
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -27,8 +27,7 @@ type SetCacheRequest struct {
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"` // Service namespace (e.g., serviceA)
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`             // Redis key
 	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`         // Serialized value (JSON/String)
-	Ttl           int64                  `protobuf:"varint,4,opt,name=ttl,proto3" json:"ttl,omitempty"`
-	TrackingId    string                 `protobuf:"bytes,5,opt,name=trackingId,proto3" json:"trackingId,omitempty"` // Time-to-live in seconds
+	Ttl           int64                  `protobuf:"varint,4,opt,name=ttl,proto3" json:"ttl,omitempty"`            // Time-to-live in seconds
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -91,13 +90,6 @@ func (x *SetCacheRequest) GetTtl() int64 {
 	return 0
 }
 
-func (x *SetCacheRequest) GetTrackingId() string {
-	if x != nil {
-		return x.TrackingId
-	}
-	return ""
-}
-
 // Response for SetCache
 type SetCacheResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -156,7 +148,6 @@ type GetCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	TrackingId    string                 `protobuf:"bytes,3,opt,name=trackingId,proto3" json:"trackingId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -201,13 +192,6 @@ func (x *GetCacheRequest) GetNamespace() string {
 func (x *GetCacheRequest) GetKey() string {
 	if x != nil {
 		return x.Key
-	}
-	return ""
-}
-
-func (x *GetCacheRequest) GetTrackingId() string {
-	if x != nil {
-		return x.TrackingId
 	}
 	return ""
 }
@@ -286,7 +270,6 @@ type InvalidateCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	TrackingId    string                 `protobuf:"bytes,3,opt,name=trackingId,proto3" json:"trackingId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -331,13 +314,6 @@ func (x *InvalidateCacheRequest) GetNamespace() string {
 func (x *InvalidateCacheRequest) GetKey() string {
 	if x != nil {
 		return x.Key
-	}
-	return ""
-}
-
-func (x *InvalidateCacheRequest) GetTrackingId() string {
-	if x != nil {
-		return x.TrackingId
 	}
 	return ""
 }
@@ -399,42 +375,33 @@ var File_redis_service_redis_service_proto protoreflect.FileDescriptor
 
 const file_redis_service_redis_service_proto_rawDesc = "" +
 	"\n" +
-	"!redis_service/redis_service.proto\x12\vredis_proto\"\x89\x01\n" +
+	"!redis_service/redis_service.proto\x12\x0eredis.cache.v1\"i\n" +
 	"\x0fSetCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\tR\x05value\x12\x10\n" +
-	"\x03ttl\x18\x04 \x01(\x03R\x03ttl\x12\x1e\n" +
-	"\n" +
-	"trackingId\x18\x05 \x01(\tR\n" +
-	"trackingId\"F\n" +
+	"\x03ttl\x18\x04 \x01(\x03R\x03ttl\"F\n" +
 	"\x10SetCacheResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"a\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"A\n" +
 	"\x0fGetCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1e\n" +
-	"\n" +
-	"trackingId\x18\x03 \x01(\tR\n" +
-	"trackingId\"n\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"n\n" +
 	"\x10GetCacheResponse\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x14\n" +
 	"\x05found\x18\x02 \x01(\bR\x05found\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x12\x14\n" +
-	"\x05error\x18\x04 \x01(\tR\x05error\"h\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"H\n" +
 	"\x16InvalidateCacheRequest\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1e\n" +
-	"\n" +
-	"trackingId\x18\x03 \x01(\tR\n" +
-	"trackingId\"M\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"M\n" +
 	"\x17InvalidateCacheResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xfe\x01\n" +
-	"\fCacheService\x12G\n" +
-	"\bSetCache\x12\x1c.redis_proto.SetCacheRequest\x1a\x1d.redis_proto.SetCacheResponse\x12G\n" +
-	"\bGetCache\x12\x1c.redis_proto.GetCacheRequest\x1a\x1d.redis_proto.GetCacheResponse\x12\\\n" +
-	"\x0fInvalidateCache\x12#.redis_proto.InvalidateCacheRequest\x1a$.redis_proto.InvalidateCacheResponseB#Z!redis-service/proto/redis-serviceb\x06proto3"
+	"\amessage\x18\x02 \x01(\tR\amessage2\x90\x02\n" +
+	"\fCacheService\x12M\n" +
+	"\bSetCache\x12\x1f.redis.cache.v1.SetCacheRequest\x1a .redis.cache.v1.SetCacheResponse\x12M\n" +
+	"\bGetCache\x12\x1f.redis.cache.v1.GetCacheRequest\x1a .redis.cache.v1.GetCacheResponse\x12b\n" +
+	"\x0fInvalidateCache\x12&.redis.cache.v1.InvalidateCacheRequest\x1a'.redis.cache.v1.InvalidateCacheResponseB\x15Z\x13redis-service/protob\x06proto3"
 
 var (
 	file_redis_service_redis_service_proto_rawDescOnce sync.Once
@@ -450,20 +417,20 @@ func file_redis_service_redis_service_proto_rawDescGZIP() []byte {
 
 var file_redis_service_redis_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_redis_service_redis_service_proto_goTypes = []any{
-	(*SetCacheRequest)(nil),         // 0: redis_proto.SetCacheRequest
-	(*SetCacheResponse)(nil),        // 1: redis_proto.SetCacheResponse
-	(*GetCacheRequest)(nil),         // 2: redis_proto.GetCacheRequest
-	(*GetCacheResponse)(nil),        // 3: redis_proto.GetCacheResponse
-	(*InvalidateCacheRequest)(nil),  // 4: redis_proto.InvalidateCacheRequest
-	(*InvalidateCacheResponse)(nil), // 5: redis_proto.InvalidateCacheResponse
+	(*SetCacheRequest)(nil),         // 0: redis.cache.v1.SetCacheRequest
+	(*SetCacheResponse)(nil),        // 1: redis.cache.v1.SetCacheResponse
+	(*GetCacheRequest)(nil),         // 2: redis.cache.v1.GetCacheRequest
+	(*GetCacheResponse)(nil),        // 3: redis.cache.v1.GetCacheResponse
+	(*InvalidateCacheRequest)(nil),  // 4: redis.cache.v1.InvalidateCacheRequest
+	(*InvalidateCacheResponse)(nil), // 5: redis.cache.v1.InvalidateCacheResponse
 }
 var file_redis_service_redis_service_proto_depIdxs = []int32{
-	0, // 0: redis_proto.CacheService.SetCache:input_type -> redis_proto.SetCacheRequest
-	2, // 1: redis_proto.CacheService.GetCache:input_type -> redis_proto.GetCacheRequest
-	4, // 2: redis_proto.CacheService.InvalidateCache:input_type -> redis_proto.InvalidateCacheRequest
-	1, // 3: redis_proto.CacheService.SetCache:output_type -> redis_proto.SetCacheResponse
-	3, // 4: redis_proto.CacheService.GetCache:output_type -> redis_proto.GetCacheResponse
-	5, // 5: redis_proto.CacheService.InvalidateCache:output_type -> redis_proto.InvalidateCacheResponse
+	0, // 0: redis.cache.v1.CacheService.SetCache:input_type -> redis.cache.v1.SetCacheRequest
+	2, // 1: redis.cache.v1.CacheService.GetCache:input_type -> redis.cache.v1.GetCacheRequest
+	4, // 2: redis.cache.v1.CacheService.InvalidateCache:input_type -> redis.cache.v1.InvalidateCacheRequest
+	1, // 3: redis.cache.v1.CacheService.SetCache:output_type -> redis.cache.v1.SetCacheResponse
+	3, // 4: redis.cache.v1.CacheService.GetCache:output_type -> redis.cache.v1.GetCacheResponse
+	5, // 5: redis.cache.v1.CacheService.InvalidateCache:output_type -> redis.cache.v1.InvalidateCacheResponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
