@@ -14,8 +14,12 @@ import (
 // Bootstrap initializes env, Redis and returns the gRPC server
 func BootstrapServices() *grpcServer.GrpcServer {
 	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	if os.Getenv("IS_DOCKER") != "true" {
+		if err := godotenv.Load(); err != nil {
+			log.Printf("Warning: No .env file found. Proceeding without it. Error: %v", err)
+		} else {
+			log.Println("Loaded .env file")
+		}
 	}
 
 	// Redis setup
