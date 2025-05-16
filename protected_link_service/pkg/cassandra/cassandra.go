@@ -62,7 +62,13 @@ func NewCassandraConfig(cfg *configEnv.Config) (*CassandraConfig, error) {
 	maxRetries := 3
 	retryDelay := 2 * time.Second
 
-	cluster := gocql.NewCluster(cfg.CASSANDRA_HOST)
+	cassandraAddress := fmt.Sprintf("%s:%s", cfg.CASSANDRA_HOST, cfg.CASSANDRA_PORT)
+	log.Println("🔧 Cassandra Config:")
+	log.Println("   Host:", cassandraAddress)
+	log.Println("   Keyspace:", cfg.CASSANDRA_KEYSPACE)
+	log.Println("   Username:", cfg.CASSANDRA_USERNAME)
+
+	cluster := gocql.NewCluster("cassandra")
 	cluster.Keyspace = cfg.CASSANDRA_KEYSPACE
 	cluster.Consistency = gocql.Quorum
 	cluster.Authenticator = gocql.PasswordAuthenticator{
@@ -88,6 +94,43 @@ func NewCassandraConfig(cfg *configEnv.Config) (*CassandraConfig, error) {
 	}
 
 	return nil, fmt.Errorf("failed to connect to Cassandra after %d retries: %w", maxRetries, err)
+}
+
+func (c *CassandraConfig) CreateTables() error {
+	// Create keyspace (optional if already set from config)
+	keyspaceStmt := `
+	CREATE KEYSPACE IF NOT EXISTS protectedlink 
+	WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}`
+	err := c.Session.Query(keyspaceStmt).Exec()
+	if err != nil {
+		log.Printf("❌ Failed to create keyspace: %v", err)
+		return err
+	}
+	log.Println("✅ Keyspace 'protectedlink' created or already exists")
+
+	// Create table
+	tableStmt := `
+	CREATE TABLE IF NOT EXISTS protectedLink (
+		id UUID PRIMARY KEY,
+		user_id TEXT,
+		name TEXT,
+		request_type TEXT,
+		model_type TEXT,
+		email TEXT,
+		expire_in TEXT,
+		otp_required BOOLEAN,
+		phone TEXT,
+		channel_type TEXT,
+		data TEXT
+	)`
+	err = c.Session.Query(tableStmt).Exec()
+	if err != nil {
+		log.Printf("❌ Failed to create table: %v", err)
+		return err
+	}
+	log.Println("✅ Table 'protectedLink' created or already exists")
+
+	return nil
 }
 
 func NewMockCassandraConfig(session SessionInterface) *CassandraConfig {

@@ -8,7 +8,10 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
+	// Server settings
 	ServerPort string
+
+	// Database settings
 	DBHost           string
 	DBPort           string
 	DBUser           string
@@ -20,6 +23,8 @@ type Config struct {
 	Kafka_Broker_Url string
 	KafkaProducer    string
 	AppEnv           string
+
+	// Cassandra settings
 	CASSANDRA_HOST     string
 	CASSANDRA_KEYSPACE string
 	CASSANDRA_USERNAME string
