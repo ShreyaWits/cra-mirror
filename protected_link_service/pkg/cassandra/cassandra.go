@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	configEnv "protected_link/internal/configs"
+	cassandra "protected_link/migrations"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -16,7 +17,7 @@ type CassandraConfig struct {
 func NewCassandraConfig(cfg *configEnv.Config) (*CassandraConfig, error) {
 	maxRetries := 3
 	retryDelay := 2 * time.Second
-	//var session *gocql.Session
+	var session *gocql.Session
 	var err error
 
 	cassandraAddress := fmt.Sprintf("%s:%s", cfg.CASSANDRA_HOST, cfg.CASSANDRA_PORT)
@@ -38,19 +39,19 @@ func NewCassandraConfig(cfg *configEnv.Config) (*CassandraConfig, error) {
 
 	for i := 1; i <= maxRetries; i++ {
 		log.Printf("🔄 Attempting to connect to Cassandra (Attempt %d/%d)...", i, maxRetries)
-		//session, err = cluster.CreateSession()
+		session, err = cluster.CreateSession()
 		if err == nil {
 			log.Println("✅ Successfully connected to Cassandra")
 
-			// // Apply migrations after successful connection
-			// if err := cassandra.ApplyMigrations(session, "./migrations"); err != nil {
-			// 	log.Printf("❌ Failed to apply migrations: %v", err)
-			// 	return nil, err
-			// }
+			// Apply migrations after successful connection
+			if err := cassandra.ApplyMigrations(session, "./migrations"); err != nil {
+				log.Printf("❌ Failed to apply migrations: %v", err)
+				return nil, err
+			}
 
-			// return &CassandraConfig{
-			// 	Session: session,
-			// }, nil
+			return &CassandraConfig{
+				Session: session,
+			}, nil
 		}
 
 		log.Printf("❌ Cassandra connection failed (Attempt %d/%d): %v", i, maxRetries, err)
