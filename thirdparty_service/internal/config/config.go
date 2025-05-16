@@ -47,6 +47,9 @@ type dynamicConfig struct {
 	SendWhatsAppMessageSID 	string `validate:"required" json:"WHATSAPP_TWILIO_ACCOUNT_SID"`
 	SendWhatsAppMessageToken  string `validate:"required" json:"WHATSAPP_TWILIO_AUTH_TOKEN"`
 	SendWhatsAppMessageFromNumber  string `validate:"required" json:"WHATSAPP_FROM_NUMBER"`
+
+	PushNotificationAccountCreds string `validate:"required" json:"PUSH_NOTIFICATION_CRED"`
+	PushNotificationProjectID string `validate:"required" json:"PUSH_NOTIFICATION_PROJECT_ID"`
 }
 
 type staticConfig struct {

@@ -247,6 +247,119 @@ func (x *InvokeWhatsAppResponse) GetMessage() string {
 	return ""
 }
 
+// --- Push Notification ---
+type PushNotificationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ToToken       string                 `protobuf:"bytes,1,opt,name=to_token,json=toToken,proto3" json:"to_token,omitempty"` // Firebase device token
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                    // Notification title
+	Body          string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`                      // Notification body
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PushNotificationRequest) Reset() {
+	*x = PushNotificationRequest{}
+	mi := &file_thirdparty_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PushNotificationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PushNotificationRequest) ProtoMessage() {}
+
+func (x *PushNotificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_thirdparty_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PushNotificationRequest.ProtoReflect.Descriptor instead.
+func (*PushNotificationRequest) Descriptor() ([]byte, []int) {
+	return file_thirdparty_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PushNotificationRequest) GetToToken() string {
+	if x != nil {
+		return x.ToToken
+	}
+	return ""
+}
+
+func (x *PushNotificationRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *PushNotificationRequest) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+type PushNotificationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`   // "success" or "error"
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"` // error details or confirmation
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PushNotificationResponse) Reset() {
+	*x = PushNotificationResponse{}
+	mi := &file_thirdparty_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PushNotificationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PushNotificationResponse) ProtoMessage() {}
+
+func (x *PushNotificationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_thirdparty_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PushNotificationResponse.ProtoReflect.Descriptor instead.
+func (*PushNotificationResponse) Descriptor() ([]byte, []int) {
+	return file_thirdparty_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PushNotificationResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *PushNotificationResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 // --- SendGrid Email ---
 type InvokeSendGridRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -260,7 +373,7 @@ type InvokeSendGridRequest struct {
 
 func (x *InvokeSendGridRequest) Reset() {
 	*x = InvokeSendGridRequest{}
-	mi := &file_thirdparty_proto_msgTypes[4]
+	mi := &file_thirdparty_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -272,7 +385,7 @@ func (x *InvokeSendGridRequest) String() string {
 func (*InvokeSendGridRequest) ProtoMessage() {}
 
 func (x *InvokeSendGridRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[4]
+	mi := &file_thirdparty_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -285,7 +398,7 @@ func (x *InvokeSendGridRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvokeSendGridRequest.ProtoReflect.Descriptor instead.
 func (*InvokeSendGridRequest) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{4}
+	return file_thirdparty_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InvokeSendGridRequest) GetTo() string {
@@ -326,7 +439,7 @@ type InvokeSendGridResponse struct {
 
 func (x *InvokeSendGridResponse) Reset() {
 	*x = InvokeSendGridResponse{}
-	mi := &file_thirdparty_proto_msgTypes[5]
+	mi := &file_thirdparty_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -338,7 +451,7 @@ func (x *InvokeSendGridResponse) String() string {
 func (*InvokeSendGridResponse) ProtoMessage() {}
 
 func (x *InvokeSendGridResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[5]
+	mi := &file_thirdparty_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -351,7 +464,7 @@ func (x *InvokeSendGridResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvokeSendGridResponse.ProtoReflect.Descriptor instead.
 func (*InvokeSendGridResponse) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{5}
+	return file_thirdparty_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *InvokeSendGridResponse) GetCode() string {
@@ -378,7 +491,7 @@ type AadharVerifyRequest struct {
 
 func (x *AadharVerifyRequest) Reset() {
 	*x = AadharVerifyRequest{}
-	mi := &file_thirdparty_proto_msgTypes[6]
+	mi := &file_thirdparty_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +503,7 @@ func (x *AadharVerifyRequest) String() string {
 func (*AadharVerifyRequest) ProtoMessage() {}
 
 func (x *AadharVerifyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[6]
+	mi := &file_thirdparty_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +516,7 @@ func (x *AadharVerifyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AadharVerifyRequest.ProtoReflect.Descriptor instead.
 func (*AadharVerifyRequest) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{6}
+	return file_thirdparty_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AadharVerifyRequest) GetNumber() string {
@@ -423,7 +536,7 @@ type AadharResult struct {
 
 func (x *AadharResult) Reset() {
 	*x = AadharResult{}
-	mi := &file_thirdparty_proto_msgTypes[7]
+	mi := &file_thirdparty_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -435,7 +548,7 @@ func (x *AadharResult) String() string {
 func (*AadharResult) ProtoMessage() {}
 
 func (x *AadharResult) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[7]
+	mi := &file_thirdparty_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -448,7 +561,7 @@ func (x *AadharResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AadharResult.ProtoReflect.Descriptor instead.
 func (*AadharResult) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{7}
+	return file_thirdparty_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AadharResult) GetName() string {
@@ -477,7 +590,7 @@ type AadharVerifyResponse struct {
 
 func (x *AadharVerifyResponse) Reset() {
 	*x = AadharVerifyResponse{}
-	mi := &file_thirdparty_proto_msgTypes[8]
+	mi := &file_thirdparty_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -489,7 +602,7 @@ func (x *AadharVerifyResponse) String() string {
 func (*AadharVerifyResponse) ProtoMessage() {}
 
 func (x *AadharVerifyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[8]
+	mi := &file_thirdparty_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -502,7 +615,7 @@ func (x *AadharVerifyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AadharVerifyResponse.ProtoReflect.Descriptor instead.
 func (*AadharVerifyResponse) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{8}
+	return file_thirdparty_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AadharVerifyResponse) GetCode() string {
@@ -543,7 +656,7 @@ type PANVerifyRequest struct {
 
 func (x *PANVerifyRequest) Reset() {
 	*x = PANVerifyRequest{}
-	mi := &file_thirdparty_proto_msgTypes[9]
+	mi := &file_thirdparty_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -555,7 +668,7 @@ func (x *PANVerifyRequest) String() string {
 func (*PANVerifyRequest) ProtoMessage() {}
 
 func (x *PANVerifyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[9]
+	mi := &file_thirdparty_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -568,7 +681,7 @@ func (x *PANVerifyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PANVerifyRequest.ProtoReflect.Descriptor instead.
 func (*PANVerifyRequest) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{9}
+	return file_thirdparty_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PANVerifyRequest) GetNumber() string {
@@ -589,7 +702,7 @@ type PanResult struct {
 
 func (x *PanResult) Reset() {
 	*x = PanResult{}
-	mi := &file_thirdparty_proto_msgTypes[10]
+	mi := &file_thirdparty_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -601,7 +714,7 @@ func (x *PanResult) String() string {
 func (*PanResult) ProtoMessage() {}
 
 func (x *PanResult) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[10]
+	mi := &file_thirdparty_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -614,7 +727,7 @@ func (x *PanResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PanResult.ProtoReflect.Descriptor instead.
 func (*PanResult) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{10}
+	return file_thirdparty_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PanResult) GetName() string {
@@ -650,7 +763,7 @@ type PANVerifyResponse struct {
 
 func (x *PANVerifyResponse) Reset() {
 	*x = PANVerifyResponse{}
-	mi := &file_thirdparty_proto_msgTypes[11]
+	mi := &file_thirdparty_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -662,7 +775,7 @@ func (x *PANVerifyResponse) String() string {
 func (*PANVerifyResponse) ProtoMessage() {}
 
 func (x *PANVerifyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_thirdparty_proto_msgTypes[11]
+	mi := &file_thirdparty_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -675,7 +788,7 @@ func (x *PANVerifyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PANVerifyResponse.ProtoReflect.Descriptor instead.
 func (*PANVerifyResponse) Descriptor() ([]byte, []int) {
-	return file_thirdparty_proto_rawDescGZIP(), []int{11}
+	return file_thirdparty_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PANVerifyResponse) GetCode() string {
@@ -724,6 +837,13 @@ const file_thirdparty_proto_rawDesc = "" +
 	"\fcountry_code\x18\x03 \x01(\tR\vcountryCode\"F\n" +
 	"\x16InvokeWhatsAppResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"^\n" +
+	"\x17PushNotificationRequest\x12\x19\n" +
+	"\bto_token\x18\x01 \x01(\tR\atoToken\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
+	"\x04body\x18\x03 \x01(\tR\x04body\"L\n" +
+	"\x18PushNotificationResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"i\n" +
 	"\x15InvokeSendGridRequest\x12\x0e\n" +
 	"\x02to\x18\x01 \x01(\tR\x02to\x12\x18\n" +
@@ -753,13 +873,14 @@ const file_thirdparty_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1a\n" +
 	"\bverified\x18\x03 \x01(\bR\bverified\x12!\n" +
-	"\x04data\x18\x04 \x01(\v2\r.pb.PanResultR\x04data2\xf4\x02\n" +
+	"\x04data\x18\x04 \x01(\v2\r.pb.PanResultR\x04data2\xc9\x03\n" +
 	"\x11ThirdPartyService\x12D\n" +
 	"\x0fInvokeTwilioSms\x12\x17.pb.InvokeTwilioRequest\x1a\x18.pb.InvokeTwilioResponse\x12N\n" +
 	"\x15InvokeWhatsAppMessage\x12\x19.pb.InvokeWhatsAppRequest\x1a\x1a.pb.InvokeWhatsAppResponse\x12L\n" +
 	"\x13InvokeSendgridEmail\x12\x19.pb.InvokeSendGridRequest\x1a\x1a.pb.InvokeSendGridResponse\x12A\n" +
 	"\fVerifyAadhar\x12\x17.pb.AadharVerifyRequest\x1a\x18.pb.AadharVerifyResponse\x128\n" +
-	"\tVerifyPan\x12\x14.pb.PANVerifyRequest\x1a\x15.pb.PANVerifyResponseB1Z/github.com/kkwitslab/go-boilerplate/internal/pbb\x06proto3"
+	"\tVerifyPan\x12\x14.pb.PANVerifyRequest\x1a\x15.pb.PANVerifyResponse\x12S\n" +
+	"\x16InvokePushNotification\x12\x1b.pb.PushNotificationRequest\x1a\x1c.pb.PushNotificationResponseB1Z/github.com/kkwitslab/go-boilerplate/internal/pbb\x06proto3"
 
 var (
 	file_thirdparty_proto_rawDescOnce sync.Once
@@ -773,36 +894,40 @@ func file_thirdparty_proto_rawDescGZIP() []byte {
 	return file_thirdparty_proto_rawDescData
 }
 
-var file_thirdparty_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_thirdparty_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_thirdparty_proto_goTypes = []any{
-	(*InvokeTwilioRequest)(nil),    // 0: pb.InvokeTwilioRequest
-	(*InvokeTwilioResponse)(nil),   // 1: pb.InvokeTwilioResponse
-	(*InvokeWhatsAppRequest)(nil),  // 2: pb.InvokeWhatsAppRequest
-	(*InvokeWhatsAppResponse)(nil), // 3: pb.InvokeWhatsAppResponse
-	(*InvokeSendGridRequest)(nil),  // 4: pb.InvokeSendGridRequest
-	(*InvokeSendGridResponse)(nil), // 5: pb.InvokeSendGridResponse
-	(*AadharVerifyRequest)(nil),    // 6: pb.AadharVerifyRequest
-	(*AadharResult)(nil),           // 7: pb.AadharResult
-	(*AadharVerifyResponse)(nil),   // 8: pb.AadharVerifyResponse
-	(*PANVerifyRequest)(nil),       // 9: pb.PANVerifyRequest
-	(*PanResult)(nil),              // 10: pb.PanResult
-	(*PANVerifyResponse)(nil),      // 11: pb.PANVerifyResponse
+	(*InvokeTwilioRequest)(nil),      // 0: pb.InvokeTwilioRequest
+	(*InvokeTwilioResponse)(nil),     // 1: pb.InvokeTwilioResponse
+	(*InvokeWhatsAppRequest)(nil),    // 2: pb.InvokeWhatsAppRequest
+	(*InvokeWhatsAppResponse)(nil),   // 3: pb.InvokeWhatsAppResponse
+	(*PushNotificationRequest)(nil),  // 4: pb.PushNotificationRequest
+	(*PushNotificationResponse)(nil), // 5: pb.PushNotificationResponse
+	(*InvokeSendGridRequest)(nil),    // 6: pb.InvokeSendGridRequest
+	(*InvokeSendGridResponse)(nil),   // 7: pb.InvokeSendGridResponse
+	(*AadharVerifyRequest)(nil),      // 8: pb.AadharVerifyRequest
+	(*AadharResult)(nil),             // 9: pb.AadharResult
+	(*AadharVerifyResponse)(nil),     // 10: pb.AadharVerifyResponse
+	(*PANVerifyRequest)(nil),         // 11: pb.PANVerifyRequest
+	(*PanResult)(nil),                // 12: pb.PanResult
+	(*PANVerifyResponse)(nil),        // 13: pb.PANVerifyResponse
 }
 var file_thirdparty_proto_depIdxs = []int32{
-	7,  // 0: pb.AadharVerifyResponse.data:type_name -> pb.AadharResult
-	10, // 1: pb.PANVerifyResponse.data:type_name -> pb.PanResult
+	9,  // 0: pb.AadharVerifyResponse.data:type_name -> pb.AadharResult
+	12, // 1: pb.PANVerifyResponse.data:type_name -> pb.PanResult
 	0,  // 2: pb.ThirdPartyService.InvokeTwilioSms:input_type -> pb.InvokeTwilioRequest
 	2,  // 3: pb.ThirdPartyService.InvokeWhatsAppMessage:input_type -> pb.InvokeWhatsAppRequest
-	4,  // 4: pb.ThirdPartyService.InvokeSendgridEmail:input_type -> pb.InvokeSendGridRequest
-	6,  // 5: pb.ThirdPartyService.VerifyAadhar:input_type -> pb.AadharVerifyRequest
-	9,  // 6: pb.ThirdPartyService.VerifyPan:input_type -> pb.PANVerifyRequest
-	1,  // 7: pb.ThirdPartyService.InvokeTwilioSms:output_type -> pb.InvokeTwilioResponse
-	3,  // 8: pb.ThirdPartyService.InvokeWhatsAppMessage:output_type -> pb.InvokeWhatsAppResponse
-	5,  // 9: pb.ThirdPartyService.InvokeSendgridEmail:output_type -> pb.InvokeSendGridResponse
-	8,  // 10: pb.ThirdPartyService.VerifyAadhar:output_type -> pb.AadharVerifyResponse
-	11, // 11: pb.ThirdPartyService.VerifyPan:output_type -> pb.PANVerifyResponse
-	7,  // [7:12] is the sub-list for method output_type
-	2,  // [2:7] is the sub-list for method input_type
+	6,  // 4: pb.ThirdPartyService.InvokeSendgridEmail:input_type -> pb.InvokeSendGridRequest
+	8,  // 5: pb.ThirdPartyService.VerifyAadhar:input_type -> pb.AadharVerifyRequest
+	11, // 6: pb.ThirdPartyService.VerifyPan:input_type -> pb.PANVerifyRequest
+	4,  // 7: pb.ThirdPartyService.InvokePushNotification:input_type -> pb.PushNotificationRequest
+	1,  // 8: pb.ThirdPartyService.InvokeTwilioSms:output_type -> pb.InvokeTwilioResponse
+	3,  // 9: pb.ThirdPartyService.InvokeWhatsAppMessage:output_type -> pb.InvokeWhatsAppResponse
+	7,  // 10: pb.ThirdPartyService.InvokeSendgridEmail:output_type -> pb.InvokeSendGridResponse
+	10, // 11: pb.ThirdPartyService.VerifyAadhar:output_type -> pb.AadharVerifyResponse
+	13, // 12: pb.ThirdPartyService.VerifyPan:output_type -> pb.PANVerifyResponse
+	5,  // 13: pb.ThirdPartyService.InvokePushNotification:output_type -> pb.PushNotificationResponse
+	8,  // [8:14] is the sub-list for method output_type
+	2,  // [2:8] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -819,7 +944,7 @@ func file_thirdparty_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_thirdparty_proto_rawDesc), len(file_thirdparty_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

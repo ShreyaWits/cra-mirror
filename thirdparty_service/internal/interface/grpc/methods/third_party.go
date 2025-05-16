@@ -124,6 +124,36 @@ if len(validationErr) > 0 {
 	}, nil
 }
 
+func (h *ThirdPartyServer) InvokePushNotification(ctx context.Context, req *protos.PushNotificationRequest) (*protos.PushNotificationResponse, error) {
+	payload := &dtos.PushNotificationRequest{
+		ToToken: req.ToToken,
+		Title:   req.Title,
+		Body:    req.Body,
+	}
+
+	validationErr := utils.Validate(payload)
+	if validationErr != nil || len(validationErr) > 0 {
+		err := validationErr[0]
+		return &protos.PushNotificationResponse{
+			Status:    err.Code,
+			Message: codes.ErrorMessage(err.Code),
+		}, nil
+	}
+
+	err := h.svc.SendPushNotification(payload)
+	if err != nil {
+		return &protos.PushNotificationResponse{
+			Status:    codes.TS1013, 
+			Message: codes.ErrorMessage(codes.TS1013),
+		}, nil
+	}
+
+	return &protos.PushNotificationResponse{
+		Status:    codes.TS0001,
+		Message: codes.SuccessMessage(codes.TS0001),
+	}, nil
+}
+
 func (h *ThirdPartyServer) VerifyAadhaar(ctx context.Context, req *protos.AadharVerifyRequest) (*protos.AadharVerifyResponse, error) {
 
 	// validate request

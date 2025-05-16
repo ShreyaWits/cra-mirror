@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"thirdparty_service/internal/config"
 	"thirdparty_service/internal/modules/execute/dtos"
@@ -8,6 +9,7 @@ import (
 	"thirdparty_service/pkg/sendgrid"
 	twilio_sms "thirdparty_service/pkg/twilio"
 	"thirdparty_service/pkg/whatsapp"
+	"thirdparty_service/pkg/push"
 )
 
 type Service interface {
@@ -18,6 +20,7 @@ type Service interface {
 	SendTwilioSms(payload *dtos.TwilioSmsRequest) error
 	SendWhatsAppMessage(payload *dtos.SendWhatsAppMessageRequest) error
 	SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error
+	SendPushNotification(payload *dtos.PushNotificationRequest) error
 }
 
 type service struct {
@@ -123,6 +126,27 @@ func (s *service) SendWhatsAppMessage(payload *dtos.SendWhatsAppMessageRequest) 
 	return nil
 }
 
+func (s *service) SendPushNotification(payload *dtos.PushNotificationRequest) error {
+	if payload == nil || payload.ToToken == "" || payload.Title == "" || payload.Body == "" {
+		return fmt.Errorf("invalid push notification payload")
+	}
+
+	creds := config.AppConfig.PushNotificationAccountCreds
+	projectID := config.AppConfig.PushNotificationProjectID
+
+	ctx := context.Background()
+	client, err := push_service.NewFCMClient(ctx, creds, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to create FCM client: %w", err)
+	}
+
+	err = client.SendNotification(ctx, payload.ToToken, payload.Title, payload.Body)
+	if err != nil {
+		return fmt.Errorf("failed to send push notification: %w", err)
+	}
+
+	return nil
+}
 
 func (s *service) InitiatePayment(userID string, amount float64) (string, string, error) {
 	return s.repo.InitiatePayment(userID, amount)

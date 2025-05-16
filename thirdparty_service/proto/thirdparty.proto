@@ -11,6 +11,7 @@ service ThirdPartyService {
   rpc InvokeSendgridEmail(InvokeSendGridRequest) returns (InvokeSendGridResponse);
   rpc VerifyAadhar(AadharVerifyRequest) returns (AadharVerifyResponse);
   rpc VerifyPan(PANVerifyRequest) returns (PANVerifyResponse);
+  rpc InvokePushNotification(PushNotificationRequest) returns (PushNotificationResponse);
 }
 
 // --- Twilio SMS ---
@@ -35,6 +36,18 @@ message InvokeWhatsAppRequest {
 message InvokeWhatsAppResponse {
   string code = 1;
   string message = 2;
+}
+
+// --- Push Notification ---
+message PushNotificationRequest {
+  string to_token = 1; // Firebase device token
+  string title = 2;    // Notification title
+  string body = 3;     // Notification body
+}
+
+message PushNotificationResponse {
+  string status = 1;  // "success" or "error"
+  string message = 2; // error details or confirmation
 }
 
 // --- SendGrid Email ---
