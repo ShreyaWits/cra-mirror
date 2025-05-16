@@ -1,0 +1,43 @@
+services:
+  cra-config-service:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: cra-config-service
+
+      restart: always
+      networks:
+        - nps2.0
+        - temporal-network
+      ports:
+        - "4001:4001"
+      environment:
+        - PORT=4001
+        - IS_DOCKER=true
+        - DATABASE_HOST=host.docker.internal
+        - DATABASE_PORT=5433
+        - DATABASE_USER=yugabyte
+        - DATABASE_PASSWORD=yugabyte
+        - DATABASE_NAME=yugabyte
+        - ETCD_ENDPOINT=etcd:2379
+        - TEMPORAL_ENDPOINT=temporal:7233
+        - ADMIN_SECRET=abd5f3e65f1f1e40f5cbdac1ef0344519ab7b0b569313c97db13cb9cce4bcf7d
+        - JWT_SECRET=aklsdjflk
+     
+  worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    restart: always
+    environment:
+      - IS_DOCKER=true
+      - TEMPORAL_ENDPOINT=temporal:7233
+    networks:
+      - nps2.0
+      - temporal-network
+
+networks:
+  nps2.0:
+    external: true
+  temporal-network:
+    external: true
