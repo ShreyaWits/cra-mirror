@@ -11,7 +11,7 @@ import (
 )
 
 type RedisConfig struct {
-	Client *redis.Client
+	Client IRedisClient
 	Ctx    context.Context
 }
 

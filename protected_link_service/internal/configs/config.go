@@ -42,7 +42,7 @@ func LoadConfig() (*Config, error) {
 	config := &Config{
 		ServerPort:         getEnv("PORT", "9090"),
 		GRPCPort:           getEnv("GRPC_PORT", "50051"),
-		DBHost:             getEnv("DB_HOST", "redis"),
+		DBHost:             getEnv("DB_HOST", "localhost"),
 		DBPort:             getEnv("DB_PORT", "6379"),
 		DBUser:             getEnv("DB_USER", "sarbjeet"),
 		DBPassword:         getEnv("DB_PASSWORD", "sarb"),
@@ -51,7 +51,7 @@ func LoadConfig() (*Config, error) {
 		Kafka_Broker_Url:   getEnv("KAFKA_BROKER_URL", "localhost:9092"),
 		JWTSecret:          getEnv("JWT_SECRET", "mySuperSecureKey1234567890@GoLan"),
 		RedirectionURL:     getEnv("REDIRECTION_URL", "http://localhost:8080"),
-		CASSANDRA_HOST:     getEnv("CASSANDRA_HOST", "localhost"),
+		CASSANDRA_HOST:     getEnv("CASSANDRA_HOST", "cassandra"),
 		CASSANDRA_KEYSPACE: getEnv("CASSANDRA_KEYSPACE", "protectedlink"),
 		CASSANDRA_USERNAME: getEnv("CASSANDRA_USERNAME", "cassandra"),
 		CASSANDRA_PASSWORD: getEnv("CASSANDRA_PASSWORD", "cassandra"),

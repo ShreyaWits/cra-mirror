@@ -18,6 +18,8 @@ func LoadMessages() {
 		env := os.Getenv("APP_ENV")
 		var path string
 
+		log.Println("✅ Environment configuration loaded successfully", env)
+
 		switch env {
 		case "docker":
 			path = "/app/internal/configs/message_helper_config.json"
@@ -48,4 +50,9 @@ func GetMessage(key string) string {
 		return msg
 	}
 	return "Message not found for key: " + key
+}
+
+// SetTestMessages sets the messages map for testing purposes
+func SetTestMessages(testMessages map[string]string) {
+	messages = testMessages
 }

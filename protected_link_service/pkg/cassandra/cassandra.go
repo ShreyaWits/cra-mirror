@@ -3,66 +3,142 @@ package cassandra
 import (
 	"fmt"
 	"log"
-	configEnv "protected_link/internal/configs"
-	cassandra "protected_link/migrations"
 	"time"
+
+	configEnv "protected_link/internal/configs"
 
 	"github.com/gocql/gocql"
 )
 
-type CassandraConfig struct {
-	Session *gocql.Session
+// --- INTERFACES ---
+
+type SessionInterface interface {
+	Query(string, ...interface{}) QueryInterface
+	Close()
 }
+
+type QueryInterface interface {
+	Consistency(gocql.Consistency) QueryInterface
+	Scan(...interface{}) error
+	Exec() error
+}
+
+// --- WRAPPER TYPES FOR REAL IMPLEMENTATION ---
+
+type RealSession struct {
+	*gocql.Session
+}
+
+func (r *RealSession) Query(stmt string, values ...interface{}) QueryInterface {
+	return &RealQuery{r.Session.Query(stmt, values...)}
+}
+
+type RealQuery struct {
+	*gocql.Query
+}
+
+func (r *RealQuery) Consistency(c gocql.Consistency) QueryInterface {
+	r.Query = r.Query.Consistency(c)
+	return r
+}
+
+func (r *RealQuery) Scan(dest ...interface{}) error {
+	return r.Query.Scan(dest...)
+}
+
+func (r *RealQuery) Exec() error {
+	return r.Query.Exec()
+}
+
+// --- CASSANDRA CONFIG STRUCT ---
+
+type CassandraConfig struct {
+	Session SessionInterface
+}
+
+// --- FACTORY METHODS ---
 
 func NewCassandraConfig(cfg *configEnv.Config) (*CassandraConfig, error) {
 	maxRetries := 3
 	retryDelay := 2 * time.Second
-	var session *gocql.Session
-	var err error
 
 	cassandraAddress := fmt.Sprintf("%s:%s", cfg.CASSANDRA_HOST, cfg.CASSANDRA_PORT)
-
 	log.Println("🔧 Cassandra Config:")
 	log.Println("   Host:", cassandraAddress)
 	log.Println("   Keyspace:", cfg.CASSANDRA_KEYSPACE)
 	log.Println("   Username:", cfg.CASSANDRA_USERNAME)
 
-	cluster := gocql.NewCluster(cassandraAddress)
+	cluster := gocql.NewCluster("cassandra")
 	cluster.Keyspace = cfg.CASSANDRA_KEYSPACE
 	cluster.Consistency = gocql.Quorum
 	cluster.Authenticator = gocql.PasswordAuthenticator{
 		Username: cfg.CASSANDRA_USERNAME,
 		Password: cfg.CASSANDRA_PASSWORD,
 	}
-	cluster.ProtoVersion = 4 // Manually setting protocol version can help avoid negotiation issues
-	cluster.Timeout = 10 * time.Second
+	cluster.Timeout = 5 * time.Second
+
+	var session *gocql.Session
+	var err error
 
 	for i := 1; i <= maxRetries; i++ {
 		log.Printf("🔄 Attempting to connect to Cassandra (Attempt %d/%d)...", i, maxRetries)
 		session, err = cluster.CreateSession()
 		if err == nil {
 			log.Println("✅ Successfully connected to Cassandra")
-
-			// Apply migrations after successful connection
-			if err := cassandra.ApplyMigrations(session, "./migrations"); err != nil {
-				log.Printf("❌ Failed to apply migrations: %v", err)
-				return nil, err
-			}
-
 			return &CassandraConfig{
-				Session: session,
+				Session: &RealSession{session},
 			}, nil
 		}
-
 		log.Printf("❌ Cassandra connection failed (Attempt %d/%d): %v", i, maxRetries, err)
-		if i < maxRetries {
-			log.Printf("⏳ Retrying in %v...", retryDelay)
-			time.Sleep(retryDelay)
-		}
+		time.Sleep(retryDelay)
 	}
 
 	return nil, fmt.Errorf("failed to connect to Cassandra after %d retries: %w", maxRetries, err)
 }
+
+func (c *CassandraConfig) CreateTables() error {
+	// Create keyspace (optional if already set from config)
+	keyspaceStmt := `
+	CREATE KEYSPACE IF NOT EXISTS protectedlink 
+	WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}`
+	err := c.Session.Query(keyspaceStmt).Exec()
+	if err != nil {
+		log.Printf("❌ Failed to create keyspace: %v", err)
+		return err
+	}
+	log.Println("✅ Keyspace 'protectedlink' created or already exists")
+
+	// Create table
+	tableStmt := `
+	CREATE TABLE IF NOT EXISTS protectedLink (
+		id UUID PRIMARY KEY,
+		user_id TEXT,
+		name TEXT,
+		request_type TEXT,
+		model_type TEXT,
+		email TEXT,
+		expire_in TEXT,
+		otp_required BOOLEAN,
+		phone TEXT,
+		channel_type TEXT,
+		data TEXT
+	)`
+	err = c.Session.Query(tableStmt).Exec()
+	if err != nil {
+		log.Printf("❌ Failed to create table: %v", err)
+		return err
+	}
+	log.Println("✅ Table 'protectedLink' created or already exists")
+
+	return nil
+}
+
+func NewMockCassandraConfig(session SessionInterface) *CassandraConfig {
+	return &CassandraConfig{
+		Session: session,
+	}
+}
+
 func (c *CassandraConfig) Close() {
 	if c.Session != nil {
 		c.Session.Close()
