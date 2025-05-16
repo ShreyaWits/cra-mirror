@@ -1,5 +1,3 @@
-
-
 services:
   app:
     build:
@@ -28,6 +26,8 @@ services:
     volumes:
       - ./migrations:/app/migrations
     restart: unless-stopped
+    networks:
+      - protected-link-network
 
   redis:
     image: redis:latest
@@ -38,6 +38,8 @@ services:
     environment:
       - REDIS_PASSWORD=${DB_PASSWORD:-password}
     restart: unless-stopped
+    networks:
+      - protected-link-network
 
 
   zookeeper:
@@ -48,6 +50,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_PORT:-2181}
       ZOOKEEPER_TICK_TIME: ${ZOOKEEPER_TICK_TIME:-2000}
+    networks:
+      - protected-link-network
 
 
   kafka:
@@ -63,6 +67,8 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_HOST:-kafka}:${KAFKA_PORT:-9092}
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:${KAFKA_PORT:-9092}
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_REPLICATION_FACTOR:-1}
+    networks:
+      - protected-link-network
   
 
   cassandra:
@@ -80,6 +86,8 @@ services:
       timeout: ${HEALTHCHECK_TIMEOUT:-10s}
       retries: ${HEALTHCHECK_RETRIES:-5}
       start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    networks:
+      - protected-link-network
 
 
   cassandra-init:
@@ -97,4 +105,10 @@ services:
         cqlsh ${CASSANDRA_HOST:-cassandra} -f /cassandra-init/init.cql
       "
     restart: on-failure
+    networks:
+      - protected-link-network
+  
+networks:
+  protected-link-network:
+    driver: bridge
   
