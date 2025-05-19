@@ -7,7 +7,7 @@ import (
 
 	"messaging_service/internal/modules/message_broker/mock"
 	"messaging_service/pkg/confluent"
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func TestNewDLQProducer(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// dlqProducer,err := confluent.NewFactory().CreateDLQProducer(tc.cfg);
-			dlqProducer, err := confluent.NewDLQProducer(tc.cfg)
+			dlqProducer, err := confluent.NewDLQProducer(tc.cfg, &observability.ObservabilityStack{})
 			if tc.shouldFail {
 				assert.Error(t, err)
 				assert.Nil(t, dlqProducer)
@@ -47,7 +47,6 @@ func TestNewDLQProducer(t *testing.T) {
 }
 
 func TestSendToDLQ(t *testing.T) {
-	logger.InitLogger()
 
 	type fields struct {
 		mockSetup func(p *mock.MockKafkaProducerInterface)
@@ -121,7 +120,7 @@ func TestSendToDLQ(t *testing.T) {
 	}
 }
 func TestDLQClose(t *testing.T) {
-	logger.InitLogger()
+
 	tests := []struct {
 		name      string
 		mockSetup func(p *mock.MockKafkaProducerInterface)

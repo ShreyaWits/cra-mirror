@@ -23,7 +23,7 @@ type Producer interface {
 	WriteWithRetry(ctx context.Context, key, value []byte, headers []Header) error
 
 	// BeginTransaction starts a new transaction for exactly-once semantics
-	BeginTransaction() error
+	BeginTransaction(ctx context.Context) error
 
 	// CommitTransaction commits the current transaction
 	CommitTransaction(ctx context.Context) error
@@ -54,10 +54,10 @@ type KafkaAdmin interface {
 // KafkaFactory defines the factory interface for creating Confluent Kafka components
 type KafkaFactory interface {
 	// CreateProducer creates a new producer
-	CreateProducer(cfg KafkaConfig) (Producer, error)
+	CreateProducer(ctx context.Context,cfg KafkaConfig) (Producer, error)
 
 	// CreateConsumer creates a new consumer
-	CreateConsumer(cfg KafkaConfig, groupID string, handler func([]byte) error) (Consumer, error)
+	CreateConsumer(ctx context.Context, cfg KafkaConfig, groupID string, handler func([]byte) error) (Consumer, error)
 
 	// CreateAdmin creates a new admin client
 	CreateAdmin(*config.Config) (KafkaAdmin, error)

@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"time"
 
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -19,12 +19,19 @@ import (
 // ProducerImpl implements the Producer interface using confluent-kafka-go
 type ProducerImpl struct {
 	KafkaProducer KafkaProducerInterface
-	Config   KafkaConfig
-	Topic    string
+	Config        KafkaConfig
+	Topic         string
+	obs           *observability.ObservabilityStack
 }
 
 // NewProducer creates a new Producer instance for a specific topic
-func NewProducer(cfg KafkaConfig) (Producer, error) {
+func NewProducer(ctx context.Context, cfg KafkaConfig, obs *observability.ObservabilityStack) (Producer, error) {
+	functionName := "NewProducer"
+
+
+	_, span := obs.TracerService.StartTracer(ctx, functionName)
+	defer obs.TracerService.StopSpan(span)
+
 	if cfg.Topic == "" {
 		return nil, fmt.Errorf("kafka topic must be specified")
 	}
@@ -48,8 +55,10 @@ func NewProducer(cfg KafkaConfig) (Producer, error) {
 	// Create producer
 	kafkaProducer, err := kafka.NewProducer(producerConfig)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_producer_creation", cfg.Topic, "error",
-			fmt.Sprintf("Failed to create Kafka producer: %v", err))
+		obs.LoggerService.Error(ctx, "Failed to create Kafka producer", map[string]interface{}{
+			"topic": cfg.Topic,
+			"error": err.Error(),
+		})
 		return nil, err
 	}
 
@@ -67,8 +76,9 @@ func NewProducer(cfg KafkaConfig) (Producer, error) {
 			cancel()
 
 			if initErr == nil {
-				logger.LogEvent("", "kafka_transaction_init_success", cfg.Topic, "info",
-					"Successfully initialized transactions for producer")
+				obs.LoggerService.Info(ctx, "Successfully initialized transactions for producer", map[string]interface{}{
+					"topic": cfg.Topic,
+				})
 				break
 			}
 
@@ -83,9 +93,13 @@ func NewProducer(cfg KafkaConfig) (Producer, error) {
 				backoffMs := int(math.Min(float64(baseBackoffMs*int(math.Pow(2, float64(i)))+jitter), float64(maxBackoffMs)))
 				backoffDuration := time.Duration(backoffMs) * time.Millisecond
 
-				logger.LogWarnEvent("", "kafka_transaction_init_retry", cfg.Topic, "warn",
-					fmt.Sprintf("Transaction coordinator not ready, retrying in %d ms (attempt %d/%d): %v",
-						backoffMs, i+1, maxRetries, initErr))
+				obs.LoggerService.Warn(ctx, "Transaction coordinator not ready, retrying", map[string]interface{}{
+					"topic":      cfg.Topic,
+					"attempt":    i + 1,
+					"maxRetries": maxRetries,
+					"backoffMs":  backoffMs,
+					"error":      initErr.Error(),
+				})
 
 				time.Sleep(backoffDuration)
 				continue
@@ -98,24 +112,37 @@ func NewProducer(cfg KafkaConfig) (Producer, error) {
 		if initErr != nil {
 			// Close producer and return error if initialization fails after retries
 			kafkaProducer.Close()
-			logger.LogErrorEvent("", "kafka_transaction_init_failed", cfg.Topic, "error",
-				fmt.Sprintf("Failed to initialize transactions after %d attempts: %v", maxRetries, initErr))
+			obs.LoggerService.Error(ctx, "Failed to initialize transactions", map[string]interface{}{
+				"topic":    cfg.Topic,
+				"attempts": maxRetries,
+				"error":    initErr.Error(),
+			})
 			return nil, fmt.Errorf("failed to initialize transactions after %d attempts: %w", maxRetries, initErr)
 		}
 	}
 
 	// Start delivery report monitoring goroutine
-	go KafkaMonitorDeliveryReports(kafkaProducer, cfg.Topic)
+	go KafkaMonitorDeliveryReports(kafkaProducer, cfg.Topic, obs)
+
+	obs.LoggerService.Info(ctx, "Kafka producer created successfully", map[string]interface{}{
+		"topic": cfg.Topic,
+	})
 
 	return &ProducerImpl{
 		KafkaProducer: kafkaProducer,
-		Config:   cfg,
-		Topic:    cfg.Topic,
+		Config:        cfg,
+		Topic:         cfg.Topic,
+		obs:           obs,
 	}, nil
 }
 
 // WriteWithRetry sends a message to Kafka with retry logic
 func (p *ProducerImpl) WriteWithRetry(ctx context.Context, key, value []byte, headers []Header) error {
+	functionName := "WriteWithRetry"
+
+	_, span := p.obs.TracerService.StartTracer(ctx, functionName)
+	defer p.obs.TracerService.StopSpan(span)
+
 	// Add timestamp header if not already present
 	hasTimestamp := false
 	for _, header := range headers {
@@ -160,15 +187,21 @@ func (p *ProducerImpl) WriteWithRetry(ctx context.Context, key, value []byte, he
 			// If the message was sent successfully, flush to ensure it's delivered
 			remaining := p.KafkaProducer.Flush(int(p.Config.WriteTimeout.Milliseconds()))
 			if remaining > 0 {
-				logger.LogWarnEvent("", "kafka_flush_incomplete", p.Topic, "warn",
-					fmt.Sprintf("%d messages still in queue after flush timeout", remaining))
+				p.obs.LoggerService.Warn(ctx, "Messages still in queue after flush timeout", map[string]interface{}{
+					"topic":     p.Topic,
+					"remaining": remaining,
+					"timeout":   p.Config.WriteTimeout.String(),
+				})
 			}
 			return nil
 		}
 
 		// Log retry attempt
-		logger.LogWarnEvent("", "kafka_publish_retry", p.Topic, "attempt",
-			fmt.Sprintf("%d/%d", i+1, maxRetries))
+		p.obs.LoggerService.Warn(ctx, "Retrying message publish", map[string]interface{}{
+			"topic":      p.Topic,
+			"attempt":    i + 1,
+			"maxRetries": maxRetries,
+		})
 
 		// Calculate backoff with exponential increase and jitter
 		jitter := rand.Intn(100)
@@ -184,13 +217,21 @@ func (p *ProducerImpl) WriteWithRetry(ctx context.Context, key, value []byte, he
 		}
 	}
 
-	logger.LogErrorEvent("", "kafka_publish_failed", p.Topic, "error",
-		fmt.Sprintf("Failed to publish message after %d retries: %v", maxRetries, err))
+	p.obs.LoggerService.Error(ctx, "Failed to publish message after retries", map[string]interface{}{
+		"topic":    p.Topic,
+		"attempts": maxRetries,
+		"error":    err.Error(),
+	})
 	return fmt.Errorf("failed to publish message after %d retries: %w", maxRetries, err)
 }
 
 // BeginTransaction starts a new transaction for exactly-once semantics
-func (p *ProducerImpl) BeginTransaction() error {
+func (p *ProducerImpl) BeginTransaction(ctx context.Context) error {
+	functionName := "BeginTransaction"
+
+	_, span := p.obs.TracerService.StartTracer(ctx, functionName)
+	defer p.obs.TracerService.StopSpan(span)
+
 	if p.Config.DeliverySemantics != ExactlyOnce || !p.Config.ExactlyOnceConfig.EnableTransactions {
 		return fmt.Errorf("transactions only supported with exactly-once semantics")
 	}
@@ -205,7 +246,9 @@ func (p *ProducerImpl) BeginTransaction() error {
 		// Attempt to begin the transaction
 		err = p.KafkaProducer.BeginTransaction()
 		if err == nil {
-			// Success
+			p.obs.LoggerService.Info(ctx, "Transaction begun successfully", map[string]interface{}{
+				"topic": p.Topic,
+			})
 			return nil
 		}
 
@@ -220,9 +263,13 @@ func (p *ProducerImpl) BeginTransaction() error {
 			backoffMs := int(math.Min(float64(baseBackoffMs*int(math.Pow(2, float64(i)))+jitter), float64(maxBackoffMs)))
 			backoffDuration := time.Duration(backoffMs) * time.Millisecond
 
-			logger.LogWarnEvent("", "kafka_transaction_begin_retry", p.Topic, "warn",
-				fmt.Sprintf("Begin transaction failed, retrying in %d ms (attempt %d/%d): %v",
-					backoffMs, i+1, maxRetries, err))
+			p.obs.LoggerService.Warn(ctx, "Begin transaction failed, retrying", map[string]interface{}{
+				"topic":      p.Topic,
+				"attempt":    i + 1,
+				"maxRetries": maxRetries,
+				"backoffMs":  backoffMs,
+				"error":      err.Error(),
+			})
 
 			time.Sleep(backoffDuration)
 			continue
@@ -233,13 +280,21 @@ func (p *ProducerImpl) BeginTransaction() error {
 	}
 
 	// Report the final error
-	logger.LogErrorEvent("", "kafka_transaction_begin_failed", p.Topic, "error",
-		fmt.Sprintf("Failed to begin transaction after %d attempts: %v", maxRetries, err))
+	p.obs.LoggerService.Error(ctx, "Failed to begin transaction", map[string]interface{}{
+		"topic":    p.Topic,
+		"attempts": maxRetries,
+		"error":    err.Error(),
+	})
 	return fmt.Errorf("failed to begin transaction after %d attempts: %w", maxRetries, err)
 }
 
 // CommitTransaction commits the current transaction
 func (p *ProducerImpl) CommitTransaction(ctx context.Context) error {
+	functionName := "CommitTransaction"
+
+	_, span := p.obs.TracerService.StartTracer(ctx, functionName)
+	defer p.obs.TracerService.StopSpan(span)
+
 	if p.Config.DeliverySemantics != ExactlyOnce || !p.Config.ExactlyOnceConfig.EnableTransactions {
 		return fmt.Errorf("transactions only supported with exactly-once semantics")
 	}
@@ -264,7 +319,9 @@ func (p *ProducerImpl) CommitTransaction(ctx context.Context) error {
 		cancel() // Always cancel the context to avoid leaks
 
 		if err == nil {
-			// Success
+			p.obs.LoggerService.Info(ctx, "Transaction committed successfully", map[string]interface{}{
+				"topic": p.Topic,
+			})
 			return nil
 		}
 
@@ -279,9 +336,13 @@ func (p *ProducerImpl) CommitTransaction(ctx context.Context) error {
 			backoffMs := int(math.Min(float64(baseBackoffMs*int(math.Pow(2, float64(i)))+jitter), float64(maxBackoffMs)))
 			backoffDuration := time.Duration(backoffMs) * time.Millisecond
 
-			logger.LogWarnEvent("", "kafka_transaction_commit_retry", p.Topic, "warn",
-				fmt.Sprintf("Commit transaction failed, retrying in %d ms (attempt %d/%d): %v",
-					backoffMs, i+1, maxRetries, err))
+			p.obs.LoggerService.Warn(ctx, "Commit transaction failed, retrying", map[string]interface{}{
+				"topic":      p.Topic,
+				"attempt":    i + 1,
+				"maxRetries": maxRetries,
+				"backoffMs":  backoffMs,
+				"error":      err.Error(),
+			})
 
 			// Wait before retrying, but respect the context
 			select {
@@ -297,13 +358,21 @@ func (p *ProducerImpl) CommitTransaction(ctx context.Context) error {
 	}
 
 	// Report the final error
-	logger.LogErrorEvent("", "kafka_transaction_commit_failed", p.Topic, "error",
-		fmt.Sprintf("Failed to commit transaction after %d attempts: %v", maxRetries, err))
+	p.obs.LoggerService.Error(ctx, "Failed to commit transaction", map[string]interface{}{
+		"topic":    p.Topic,
+		"attempts": maxRetries,
+		"error":    err.Error(),
+	})
 	return fmt.Errorf("failed to commit transaction after %d attempts: %w", maxRetries, err)
 }
 
 // AbortTransaction aborts the current transaction
 func (p *ProducerImpl) AbortTransaction(ctx context.Context) error {
+	functionName := "AbortTransaction"
+
+	_, span := p.obs.TracerService.StartTracer(ctx, functionName)
+	defer p.obs.TracerService.StopSpan(span)
+
 	if p.Config.DeliverySemantics != ExactlyOnce || !p.Config.ExactlyOnceConfig.EnableTransactions {
 		return fmt.Errorf("transactions only supported with exactly-once semantics")
 	}
@@ -328,7 +397,9 @@ func (p *ProducerImpl) AbortTransaction(ctx context.Context) error {
 		cancel() // Always cancel the context to avoid leaks
 
 		if err == nil {
-			// Success
+			p.obs.LoggerService.Info(ctx, "Transaction aborted successfully", map[string]interface{}{
+				"topic": p.Topic,
+			})
 			return nil
 		}
 
@@ -343,9 +414,13 @@ func (p *ProducerImpl) AbortTransaction(ctx context.Context) error {
 			backoffMs := int(math.Min(float64(baseBackoffMs*int(math.Pow(2, float64(i)))+jitter), float64(maxBackoffMs)))
 			backoffDuration := time.Duration(backoffMs) * time.Millisecond
 
-			logger.LogWarnEvent("", "kafka_transaction_abort_retry", p.Topic, "warn",
-				fmt.Sprintf("Abort transaction failed, retrying in %d ms (attempt %d/%d): %v",
-					backoffMs, i+1, maxRetries, err))
+			p.obs.LoggerService.Warn(ctx, "Abort transaction failed, retrying", map[string]interface{}{
+				"topic":      p.Topic,
+				"attempt":    i + 1,
+				"maxRetries": maxRetries,
+				"backoffMs":  backoffMs,
+				"error":      err.Error(),
+			})
 
 			// Wait before retrying, but respect the context
 			select {
@@ -361,22 +436,43 @@ func (p *ProducerImpl) AbortTransaction(ctx context.Context) error {
 	}
 
 	// Report the final error
-	logger.LogErrorEvent("", "kafka_transaction_abort_failed", p.Topic, "error",
-		fmt.Sprintf("Failed to abort transaction after %d attempts: %v", maxRetries, err))
+	p.obs.LoggerService.Error(ctx, "Failed to abort transaction", map[string]interface{}{
+		"topic":    p.Topic,
+		"attempts": maxRetries,
+		"error":    err.Error(),
+	})
 	return fmt.Errorf("failed to abort transaction after %d attempts: %w", maxRetries, err)
 }
 
 // Close safely closes the Kafka producer and frees resources
 func (p *ProducerImpl) Close() error {
+	functionName := "Close"
+
+	ctx := context.Background()
+	_, span := p.obs.TracerService.StartTracer(ctx, functionName)
+	defer p.obs.TracerService.StopSpan(span)
+
+	p.obs.LoggerService.Info(ctx, "Closing Kafka producer", map[string]interface{}{
+		"topic": p.Topic,
+	})
+
 	// Flush any pending messages
 	remaining := p.KafkaProducer.Flush(int(p.Config.WriteTimeout.Milliseconds()))
 	if remaining > 0 {
-		logger.LogWarnEvent("", "kafka_close_incomplete", p.Topic, "warn",
-			fmt.Sprintf("%d messages still in queue after close flush timeout", remaining))
+		p.obs.LoggerService.Warn(ctx, "Messages still in queue after close flush timeout", map[string]interface{}{
+			"topic":     p.Topic,
+			"remaining": remaining,
+			"timeout":   p.Config.WriteTimeout.String(),
+		})
 	}
 
 	// Close the producer
 	p.KafkaProducer.Close()
+
+	p.obs.LoggerService.Info(ctx, "Kafka producer closed successfully", map[string]interface{}{
+		"topic": p.Topic,
+	})
+
 	return nil
 }
 

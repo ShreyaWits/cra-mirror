@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -14,85 +13,92 @@ import (
 	pb "cra-protos/messaging_service"
 	routes "messaging_service/internal/app"
 	"messaging_service/internal/modules/message_broker/di"
+	"messaging_service/pkg/observability"
 
 	"github.com/gofiber/fiber/v2"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
 const shutdownTimeout = 5 * time.Second
 
 func main() {
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
-	defer func() {
-		if err := logger.Sync(); err != nil {
-			log.Printf("Failed to flush logger: %v", err)
-		}
-	}()
-	sugar := logger.Sugar()
-
 	container, err := di.NewContainer()
 	if err != nil {
-		sugar.Fatalw("Failed to initialize container", "error", err)
+		panic(err)
 	}
+	obs := container.Obs
+	contx := context.Background()
+	ctx, span := container.Obs.TracerService.StartTracer(contx, container.Env.ServiceName)
+	defer container.Obs.TracerService.StopSpan(span)
 
 	// Setup servers
-	grpcServer, grpcListener := setupGRPC(container, sugar)
-	httpServer := setupHTTP(container, sugar)
+	grpcServer, grpcListener := setupGRPC(ctx, container, obs)
+	httpServer := setupHTTP(container)
 
 	// Start servers
 	var wg sync.WaitGroup
 	wg.Add(2)
-
+	defer container.Obs.TracerService.StopSpan(span)
 	go func() {
 		defer wg.Done()
-		sugar.Infow("Starting gRPC server", "port", container.Env.GrpcPort)
+		obs.LoggerService.Info(ctx, "Starting gRPC server", map[string]interface{}{
+			"port": container.Env.GrpcPort,
+		})
 		if err := grpcServer.Serve(grpcListener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
-			sugar.Errorw("gRPC server failed", "error", err)
+			obs.LoggerService.Error(ctx, "gRPC server failed", map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		sugar.Infow("Starting HTTP server", "port", container.Env.HttpPort)
+		obs.LoggerService.Info(ctx, "Starting HTTP server", map[string]interface{}{
+			"port": container.Env.HttpPort,
+		})
 		if err := httpServer.Listen(":" + container.Env.HttpPort); err != nil {
-			sugar.Errorw("HTTP server failed", "error", err)
+			obs.LoggerService.Error(ctx, "HTTP server failed", map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 	}()
 
 	// Handle shutdown
-	handleShutdown(sugar, grpcServer, httpServer)
+	handleShutdown(ctx, obs, grpcServer, httpServer)
 	wg.Wait()
-	sugar.Info("Service shutdown complete")
+	obs.LoggerService.Info(ctx, "Service shutdown complete")
 }
 
-func setupGRPC(container *di.Container, logger *zap.SugaredLogger) (*grpc.Server, net.Listener) {
+func setupGRPC(ctx context.Context, container *di.Container, obs *observability.ObservabilityStack) (*grpc.Server, net.Listener) {
+
 	listener, err := net.Listen("tcp", ":"+container.Env.GrpcPort)
 	if err != nil {
-		logger.Fatalw("Failed to bind gRPC port", "port", container.Env.GrpcPort, "error", err)
+		obs.LoggerService.Error(ctx, "Failed to bind gRPC port", map[string]interface{}{
+			"port":  container.Env.GrpcPort,
+			"error": err.Error(),
+		})
+		os.Exit(1)
 	}
 	server := grpc.NewServer()
 	pb.RegisterMessagingServiceServer(server, container.MessagingHandler)
 	return server, listener
 }
 
-func setupHTTP(container *di.Container, logger *zap.SugaredLogger) *fiber.App {
+func setupHTTP(container *di.Container) *fiber.App {
 	app := fiber.New()
-	routes.RegisterConfigRoutes(app, container.ConfigHandler) // typo? should be just RegisterConfigRoutes
+	routes.RegisterConfigRoutes(app, container.ConfigHandler)
 	return app
 }
 
-func handleShutdown(logger *zap.SugaredLogger, grpcServer *grpc.Server, fiberApp *fiber.App) {
+func handleShutdown(ctx context.Context, obs *observability.ObservabilityStack, grpcServer *grpc.Server, fiberApp *fiber.App) {
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
-	logger.Infow("Shutdown signal received")
+	obs.LoggerService.Info(ctx, "Shutdown signal received")
 
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, cancel := context.WithTimeout(ctx, shutdownTimeout)
 	defer cancel()
 
 	// gRPC shutdown
@@ -104,16 +110,18 @@ func handleShutdown(logger *zap.SugaredLogger, grpcServer *grpc.Server, fiberApp
 
 	select {
 	case <-done:
-		logger.Info("gRPC server shut down gracefully")
+		obs.LoggerService.Info(ctx, "gRPC server shut down gracefully")
 	case <-ctx.Done():
-		logger.Warn("gRPC shutdown timed out, forcing stop")
+		obs.LoggerService.Warn(ctx, "gRPC shutdown timed out, forcing stop")
 		grpcServer.Stop()
 	}
 
 	// Fiber shutdown
 	if err := fiberApp.Shutdown(); err != nil {
-		logger.Warnw("Fiber shutdown failed", "error", err)
+		obs.LoggerService.Warn(ctx, "Fiber shutdown failed", map[string]interface{}{
+			"error": err.Error(),
+		})
 	} else {
-		logger.Info("Fiber server shut down gracefully")
+		obs.LoggerService.Info(ctx, "Fiber server shut down gracefully")
 	}
 }

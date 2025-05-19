@@ -53,7 +53,9 @@ type EnvConfig struct {
 	CACHE_TTL int `json:"cacheTTL"`
 
 	// Deployment info
-	Environment string `json:"environment"`
-	ServiceName string `json:"serviceName"`
-	CacheUrl    string `json:"cacheUrl"`
+	Environment    string `json:"environment"`
+	ServiceName    string `json:"serviceName"`
+	ServiceVersion string `json:"serviceVersion"`
+	CacheUrl       string `json:"cacheUrl"`
+	ObservabilityUrl string `json:"ObservabilityUrl"`
 }

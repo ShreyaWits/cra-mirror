@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -32,10 +32,17 @@ type DLQProducerImpl struct {
 	Producer KafkaProducerInterface
 	Topic    string
 	Config   KafkaConfig
+	obs      *observability.ObservabilityStack
 }
 
 // NewDLQProducer creates a new DLQ producer
-func NewDLQProducer(cfg KafkaConfig) (DLQProducer, error) {
+func NewDLQProducer(cfg KafkaConfig, obs *observability.ObservabilityStack) (DLQProducer, error) {
+	functionName := "NewDLQProducer"
+	ctx := context.Background()
+
+	_, span := obs.TracerService.StartTracer(ctx, functionName)
+	defer obs.TracerService.StopSpan(span)
+
 	// Create DLQ topic name
 	dlqTopic := GetDLQTopicName(cfg.Topic)
 
@@ -49,23 +56,35 @@ func NewDLQProducer(cfg KafkaConfig) (DLQProducer, error) {
 	// Create the producer
 	producer, err := kafka.NewProducer(producerConfig)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_dlq_producer_creation", dlqTopic, "error",
-			fmt.Sprintf("Failed to create DLQ producer: %v", err))
+		obs.LoggerService.Error(ctx, "Failed to create DLQ producer", map[string]interface{}{
+			"topic": dlqTopic,
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("failed to create DLQ producer: %w", err)
 	}
 
 	// Start monitoring delivery reports
-	go KafkaMonitorDeliveryReports(producer, dlqTopic)
+	go KafkaMonitorDeliveryReports(producer, dlqTopic, obs)
+
+	obs.LoggerService.Info(ctx, "DLQ producer created successfully", map[string]interface{}{
+		"topic": dlqTopic,
+	})
 
 	return &DLQProducerImpl{
 		Producer: producer,
 		Topic:    dlqTopic,
 		Config:   dlqConfig,
+		obs:      obs,
 	}, nil
 }
 
 // SendToDLQ sends a failed message to the DLQ
 func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value []byte, headers []Header, failureReason string) error {
+	functionName := "SendToDLQ"
+
+	_, span := d.obs.TracerService.StartTracer(ctx, functionName)
+	defer d.obs.TracerService.StopSpan(span)
+
 	// Add DLQ-specific headers
 	dlqHeaders := append(headers, []Header{
 		{
@@ -83,8 +102,13 @@ func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value
 	}...)
 
 	// Log the DLQ event
-	logger.LogEvent("", "kafka_dlq_event", messageID, "info",
-		fmt.Sprintf("Sending message to DLQ %s: %s", d.Topic, failureReason))
+	d.obs.LoggerService.Info(ctx, "Sending message to DLQ", map[string]interface{}{
+		"topic":         d.Topic,
+		"messageID":     messageID,
+		"failureReason": failureReason,
+		"sourceTopic":   d.Config.Topic,
+		"headerCount":   len(dlqHeaders),
+	})
 
 	// Create Kafka message
 	msg := &Message{
@@ -98,32 +122,61 @@ func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value
 	// Produce the message
 	err := d.Producer.Produce(msg, nil)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_dlq_send_failed", d.Topic, "error",
-			fmt.Sprintf("Failed to send message to DLQ: %v", err))
+		d.obs.LoggerService.Error(ctx, "Failed to send message to DLQ", map[string]interface{}{
+			"topic":     d.Topic,
+			"messageID": messageID,
+			"error":     err.Error(),
+		})
 		return fmt.Errorf("failed to send message to DLQ: %w", err)
 	}
 
 	// Flush to ensure delivery
 	remaining := d.Producer.Flush(int(d.Config.WriteTimeout.Milliseconds()))
 	if remaining > 0 {
-		logger.LogWarnEvent("", "kafka_dlq_flush_incomplete", d.Topic, "warn",
-			fmt.Sprintf("%d messages still in queue after flush timeout", remaining))
+		d.obs.LoggerService.Warn(ctx,"Messages still in queue after flush timeout", map[string]interface{}{
+			"topic":     d.Topic,
+			"remaining": remaining,
+			"timeout":   d.Config.WriteTimeout.String(),
+		})
 	}
+
+	d.obs.LoggerService.Info(ctx, "Message successfully sent to DLQ", map[string]interface{}{
+		"topic":     d.Topic,
+		"messageID": messageID,
+	})
 
 	return nil
 }
 
 // Close closes the DLQ producer
 func (d *DLQProducerImpl) Close() error {
+	functionName := "Close"
+
+	ctx := context.Background()
+	_, span := d.obs.TracerService.StartTracer(ctx, functionName)
+	defer d.obs.TracerService.StopSpan(span)
+
+	d.obs.LoggerService.Info(ctx, "Closing DLQ producer", map[string]interface{}{
+		"topic": d.Topic,
+	})
+
 	// Flush any pending messages
 	remaining := d.Producer.Flush(int(d.Config.WriteTimeout.Milliseconds()))
 	if remaining > 0 {
-		logger.LogWarnEvent("", "kafka_dlq_close_incomplete", d.Topic, "warn",
-			fmt.Sprintf("%d messages still in queue after close flush timeout", remaining))
+		d.obs.LoggerService.Warn(ctx,"Messages still in queue after close flush timeout", map[string]interface{}{
+			"topic":     d.Topic,
+			"remaining": remaining,
+			"timeout":   d.Config.WriteTimeout.String(),
+		})
 	}
 
 	// Close the producer
 	d.Producer.Close()
+
+	d.obs.LoggerService.Info(ctx, "DLQ producer closed successfully", map[string]interface{}{
+		"topic": d.Topic,
+	})
+
 	return nil
 }
 

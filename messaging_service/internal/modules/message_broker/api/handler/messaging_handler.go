@@ -11,7 +11,7 @@ import (
 	"messaging_service/internal/utils/validation"
 	"messaging_service/pkg/confluent"
 	"messaging_service/pkg/errors"
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 )
 
 const (
@@ -23,49 +23,52 @@ type MessagingHandler struct {
 	config           *appconfig.Config
 	messagingService service.MessagingService
 	kafkaConfig      *confluent.Configurator
+	obs              *observability.ObservabilityStack
 }
 
 // NewMessagingHandler creates a new instance of MessagingHandler
-func NewMessagingHandler(config *appconfig.Config, messagingService service.MessagingService) *MessagingHandler {
+func NewMessagingHandler(config *appconfig.Config, messagingService service.MessagingService, obs *observability.ObservabilityStack) *MessagingHandler {
 	return &MessagingHandler{
 		config:           config,
 		messagingService: messagingService,
 		kafkaConfig:      confluent.NewConfigurator(config.KafkaBrokers, config),
+		obs:              obs,
 	}
 }
 
 func (s *MessagingHandler) PublishMessageV1(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
-	// Create timeout context
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-
 	// Get request ID from context or generate new one
-	requestID := getRequestID(ctx)
+	// requestID := getRequestID(ctx)
+	functionName := "PublishMessageV1"
+	functionFailed := "PublishMessageV1_Failed"
 
+	s.obs.MetricsService.IncrementCounter(ctx, functionName, 1, map[string]string{})
+
+	// Create timeout context
+
+	tCtx, span := s.obs.TracerService.StartTracer(ctx, functionName)
+	defer s.obs.TracerService.StopSpan(span)
 	// Validate request
 	if customErr := validation.ValidatePublishRequest(req); customErr != nil {
-		logger.LogEvent(requestID, "validation_failed", req.Topic, "error",
-			fmt.Sprintf("Publish validation failed: %v", customErr))
+		loggerdata := fmt.Sprintf("Publish validation failed: %v", customErr.Error())
+		s.obs.LoggerService.Error(tCtx,loggerdata)
+		s.obs.MetricsService.IncrementCounter(ctx, functionFailed, 1, map[string]string{"error": loggerdata})
 		return nil, errors.NewGRPCError(customErr)
 	}
 
 	// Create Confluent Kafka configuration with exactly-once semantics
 	cfg := s.kafkaConfig.CreatePublishConfig(req.Topic, req)
 
-	// Log the publish request
-	logger.LogEvent(requestID, "kafka_publish_start", req.Topic, "info",
-		fmt.Sprintf("Publishing to topic %s with exactly-once semantics", req.Topic))
-
 	// Publish message
-	customErr := s.messagingService.PublishMessage(ctx, cfg, req)
+	customErr := s.messagingService.PublishMessage(tCtx, cfg, req)
 	if customErr != nil {
-		logger.LogEvent(requestID, "kafka_publish_failed", req.Topic, "error",
-			fmt.Sprintf("Failed to publish message: %v", customErr))
+		loggerdata := fmt.Sprintf("Failed to publish message: %v", customErr.Error())
+		s.obs.LoggerService.Error(tCtx,loggerdata)
+		s.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{"error": loggerdata})
 		return nil, errors.NewGRPCError(customErr)
 	}
-
-	logger.LogEvent(requestID, "kafka_publish_success", req.Topic, "info",
-		fmt.Sprintf("Successfully published message to topic %s", req.Topic))
 
 	return &pb.PublishResponse{
 		Status:  "success",
@@ -74,13 +77,23 @@ func (s *MessagingHandler) PublishMessageV1(ctx context.Context, req *pb.Publish
 }
 
 func (s *MessagingHandler) SubscribeV1(req *pb.SubscribeRequest, stream pb.MessagingService_SubscribeV1Server) error {
-	// Get request ID from stream context or generate new one
-	requestID := getRequestID(stream.Context())
+	functionName := "SubscribeV1"
+	functionFailed := "SubscribeV1_Failed"
+
+	s.obs.MetricsService.IncrementCounter(stream.Context(), functionName, 1, map[string]string{})
+
+	// Create timeout context
+	ctx, cancel := context.WithTimeout(stream.Context(), defaultTimeout)
+	defer cancel()
+
+	tCtx, span := s.obs.TracerService.StartTracer(ctx, functionName)
+	defer s.obs.TracerService.StopSpan(span)
 
 	// Validate request
 	if customErr := validation.ValidateSubscribeRequest(req); customErr != nil {
-		logger.LogEvent(requestID, "validation_failed", req.Topic, "error",
-			fmt.Sprintf("Subscribe validation failed: %v", customErr))
+		loggerdata := fmt.Sprintf("Subscribe validation failed: %v", customErr.Error())
+		s.obs.LoggerService.Error(tCtx,loggerdata)
+		s.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{"error": loggerdata})
 		return errors.NewGRPCError(customErr)
 	}
 
@@ -88,20 +101,21 @@ func (s *MessagingHandler) SubscribeV1(req *pb.SubscribeRequest, stream pb.Messa
 	cfg := s.kafkaConfig.CreateSubscribeConfig(req.Topic, req.GroupId, req)
 
 	// Log the subscribe request
-	logger.LogEvent(requestID, "kafka_subscribe_start", req.Topic, "info",
-		fmt.Sprintf("Subscribing to topic %s with group %s (read committed, latest offset)",
-			req.Topic, req.GroupId))
+	s.obs.LoggerService.Info(tCtx,fmt.Sprintf("Subscribing to topic %s with group %s (read committed, latest offset)",
+		req.Topic, req.GroupId))
+
+	// Log successful subscription before starting consumer
+	s.obs.LoggerService.Info(tCtx,fmt.Sprintf("Successfully subscribed to topic %s", req.Topic))
 
 	// Start consuming messages
 	customErr := s.messagingService.ConsumeMessage(stream, cfg)
 	if customErr != nil {
-		logger.LogEvent(requestID, "kafka_subscribe_failed", req.Topic, "error",
-			fmt.Sprintf("Failed to subscribe: %v", customErr))
+		loggerdata := fmt.Sprintf("Failed to subscribe: %v", customErr.Error())
+		s.obs.LoggerService.Error(tCtx,loggerdata)
+		s.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{"error": loggerdata})
 		return errors.NewGRPCError(customErr)
 	}
 
-	logger.LogEvent(requestID, "kafka_subscribe_success", req.Topic, "info",
-		fmt.Sprintf("Successfully subscribed to topic %s", req.Topic))
 	return nil
 }
 
@@ -110,13 +124,19 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
-	// Get request ID from context or generate new one
-	requestID := getRequestID(ctx)
+	functionName := "CreateTopicV1"
+	functionFailed := "CreateTopicV1_Failed"
+
+	s.obs.MetricsService.IncrementCounter(ctx, functionName, 1, map[string]string{})
+
+	tCtx, span := s.obs.TracerService.StartTracer(ctx, functionName)
+	defer s.obs.TracerService.StopSpan(span)
 
 	// Validate request
 	if customErr := validation.ValidateCreateTopicRequest(req); customErr != nil {
-		logger.LogEvent(requestID, "validation_failed", req.Topic, "error",
-			fmt.Sprintf("Topic creation validation failed: %v", customErr))
+		loggerdata := fmt.Sprintf("Topic creation validation failed: %v", customErr.Error())
+		s.obs.LoggerService.Error(tCtx,loggerdata)
+		s.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{"error": loggerdata})
 		return nil, errors.NewGRPCError(customErr)
 	}
 
@@ -124,17 +144,15 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 	cfg := s.kafkaConfig.CreateTopicConfig(req.Topic, req)
 
 	// Log the create topic request using configured values
-	logger.LogEvent(requestID, "kafka_create_topic_start", req.Topic, "info",
-		fmt.Sprintf("Creating topic %s with %d partitions and replication factor %d",
-			req.Topic, s.config.KafkaNumPartitions, s.config.KafkaReplicationFactor))
+	s.obs.LoggerService.Info(tCtx,fmt.Sprintf("Creating topic %s with %d partitions and replication factor %d",
+		req.Topic, s.config.KafkaNumPartitions, s.config.KafkaReplicationFactor))
 
 	// Create topic
-	customErr := s.messagingService.CreateTopic(ctx, req, cfg)
+	customErr := s.messagingService.CreateTopic(tCtx, req, cfg)
 	if customErr != nil {
 		// Check if this is a "topic already exists" error, which is not actually an error
 		if customErr.ErrorCode == errors.TOPErrTopicExists {
-			logger.LogEvent(requestID, "kafka_topic_exists", req.Topic, "info",
-				fmt.Sprintf("Topic %s already exists", req.Topic))
+			s.obs.LoggerService.Info(tCtx,fmt.Sprintf("Topic %s already exists", req.Topic))
 
 			// Return success response with a message indicating the topic already exists
 			return &pb.CreateTopicResponse{
@@ -144,13 +162,13 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 		}
 
 		// For any other error, handle as before
-		logger.LogEvent(requestID, "kafka_create_topic_failed", req.Topic, "error",
-			fmt.Sprintf("Failed to create topic: %v", customErr))
+		loggerdata := fmt.Sprintf("Failed to create topic: %v", customErr.Error())
+		s.obs.LoggerService.Error(tCtx,loggerdata)
+		s.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{"error": loggerdata})
 		return nil, errors.NewGRPCError(customErr)
 	}
 
-	logger.LogEvent(requestID, "kafka_create_topic_success", req.Topic, "info",
-		fmt.Sprintf("Successfully created topic %s", req.Topic))
+	s.obs.LoggerService.Info(tCtx,fmt.Sprintf("Successfully created topic %s", req.Topic))
 
 	return &pb.CreateTopicResponse{
 		Status: "success",

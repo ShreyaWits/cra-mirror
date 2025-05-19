@@ -1,6 +1,7 @@
 package di
 
 import (
+	"context"
 	"fmt"
 	"messaging_service/internal/config"
 	"messaging_service/internal/modules/message_broker/api/handler"
@@ -10,6 +11,9 @@ import (
 	"messaging_service/pkg/confluent"
 	httpclient "messaging_service/pkg/http"
 	"messaging_service/pkg/logger"
+	metrics "messaging_service/pkg/matrics"
+	"messaging_service/pkg/observability"
+	"messaging_service/pkg/tracer"
 	"time"
 )
 
@@ -25,6 +29,8 @@ type Container struct {
 
 	// Services
 	MessagingService service.MessagingService
+
+	Obs *observability.ObservabilityStack
 }
 
 // NewContainer creates a new dependency injection container
@@ -36,13 +42,21 @@ type Container struct {
 //     with exactly-once delivery guarantees, transaction support, and automatic retries
 //   - Creates the messaging service handler
 func NewContainer() (*Container, error) {
-	// Initialize logger
-	logger.InitLogger()
 
+	ctx := context.Background()
 	// Load configuration
 	env, err := config.LoadConfig()
 	if err != nil {
 		return nil, err
+	}
+
+	// Then setup OpenTelemetry
+	observability.SetupOTelSDK(ctx, env)
+
+	obs := &observability.ObservabilityStack{
+		TracerService:  tracer.NewTracer(env.ServiceName, true),
+		MetricsService: metrics.NewMetricsService(env.ServiceName, true),
+		LoggerService:  logger.NewLogger(env.ServiceName, true),
 	}
 
 	httpClient := httpclient.New(5 * time.Second)
@@ -61,15 +75,15 @@ func NewContainer() (*Container, error) {
 		return nil, fmt.Errorf("not able to fetch config %v", err)
 	}
 
-	factory := confluent.NewFactory()
+	factory := confluent.NewFactory(obs)
 	// Create the messaging service with confluent-kafka-go
-	messagingService, err := service.NewConfluentMessagingService(cfg, factory)
+	messagingService, err := service.NewConfluentMessagingService(cfg, factory, obs)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create the handler with the service
-	msgHandler := handler.NewMessagingHandler(cfg, messagingService)
+	msgHandler := handler.NewMessagingHandler(cfg, messagingService, obs)
 
 	// Create the config handler using the constructor
 	configHandler := handler.NewConfigHandler(configManagerService)
@@ -81,18 +95,19 @@ func NewContainer() (*Container, error) {
 		MessagingHandler: msgHandler,
 		MessagingService: messagingService,
 		ConfigHandler:    configHandler,
+		Obs:              obs,
 	}
 
 	return container, nil
 }
 
 // Close properly shuts down all resources
-func (c *Container) Close() error {
+func (c *Container) Close(ctx context.Context) error {
 	// Close messaging service (which will close producers)
 	if closer, ok := c.MessagingService.(interface{ Close() error }); ok {
 		if err := closer.Close(); err != nil {
-			logger.LogErrorEvent("", "container_close", "", "error",
-				"Failed to close messaging service")
+			c.Obs.LoggerService.Error(ctx, "Failed to close messaging service %v", err)
+
 			return err
 		}
 	}

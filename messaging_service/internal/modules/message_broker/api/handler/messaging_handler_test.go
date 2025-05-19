@@ -14,13 +14,8 @@ import (
 	"messaging_service/internal/modules/message_broker/api/handler"
 	mock_service "messaging_service/internal/modules/message_broker/mock"
 	"messaging_service/pkg/errors"
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 )
-
-func init() {
-	// Initialize logger to avoid nil pointer dereference
-	logger.InitLogger()
-}
 
 func setupHandler(t *testing.T) (*handler.MessagingHandler, *mock_service.MockMessagingService, *gomock.Controller) {
 	ctrl := gomock.NewController(t)
@@ -31,7 +26,7 @@ func setupHandler(t *testing.T) (*handler.MessagingHandler, *mock_service.MockMe
 		KafkaNumPartitions:     3,
 		KafkaReplicationFactor: 3,
 	}
-	h := handler.NewMessagingHandler(cfg, mockSvc)
+	h := handler.NewMessagingHandler(cfg, mockSvc, &observability.ObservabilityStack{})
 
 	return h, mockSvc, ctrl
 }

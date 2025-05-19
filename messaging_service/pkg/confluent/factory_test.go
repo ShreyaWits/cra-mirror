@@ -1,8 +1,10 @@
 package confluent_test
 
 import (
+	"context"
 	"messaging_service/internal/config"
 	"messaging_service/pkg/confluent"
+	"messaging_service/pkg/observability"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +21,7 @@ func TestFactoryMethods(t *testing.T) {
 			method: func(f confluent.KafkaFactory) (interface{}, error) {
 				cfg := confluent.NewDefaultKafkaConfig([]string{"localhost:9092"}, "test-topic")
 				cfg.SkipTransactionInit = true
-				return f.CreateProducer(cfg)
+				return f.CreateProducer(context.Background(), cfg)
 			},
 			expectedError: nil,
 		},
@@ -29,7 +31,7 @@ func TestFactoryMethods(t *testing.T) {
 				cfg := confluent.NewDefaultKafkaConfig([]string{"localhost:9092"}, "test-topic")
 				groupID := "test-group"
 				handler := func(data []byte) error { return nil }
-				return f.CreateConsumer(cfg, groupID, handler)
+				return f.CreateConsumer(context.Background(), cfg, groupID, handler)
 			},
 			expectedError: nil,
 		},
@@ -54,7 +56,7 @@ func TestFactoryMethods(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			factory := confluent.NewFactory()
+			factory := confluent.NewFactory(&observability.ObservabilityStack{})
 			result, err := tt.method(factory)
 			if tt.expectedError != nil {
 				assert.Error(t, err)

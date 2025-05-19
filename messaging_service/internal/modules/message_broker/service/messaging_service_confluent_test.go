@@ -11,7 +11,7 @@ import (
 	"messaging_service/internal/modules/message_broker/service"
 	"messaging_service/pkg/confluent"
 	pkgErrors "messaging_service/pkg/errors"
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 	"sync"
 	"testing"
 	"time"
@@ -82,7 +82,7 @@ func TestTopicExists(t *testing.T) {
 }
 
 func TestConsumeMessage(t *testing.T) {
-	logger.InitLogger()
+
 	tests := []struct {
 		name      string
 		topic     string
@@ -136,7 +136,7 @@ func TestConsumeMessage(t *testing.T) {
 			switch tt.name {
 			case "consume message successfully":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
-				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockConsumer, nil)
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockConsumer, nil)
 				// Simulate consumer Start and cancel after mock call
 				mockConsumer.EXPECT().Start(gomock.Any()).Do(func(ctx context.Context) {
 					cancel()
@@ -148,14 +148,14 @@ func TestConsumeMessage(t *testing.T) {
 
 			case "topic does not exist":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
-				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
-				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
-				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
 			case "error creating consumer":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
-				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
-				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
-				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
+				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
 			}
 			configurator := confluent.NewConfigurator([]string{"localhost:9092"}, cfg)
 			kafkaConfig := configurator.CreateSubscribeConfig(tt.topic, tt.group, &pb.SubscribeRequest{Topic: tt.topic, GroupId: tt.group})
@@ -193,7 +193,7 @@ func (m *mockSubscribeV1Server) Context() context.Context {
 }
 
 func TestPublishMessage(t *testing.T) {
-	logger.InitLogger()
+
 	tests := []struct {
 		name      string
 		topic     string
@@ -322,7 +322,7 @@ func TestPublishMessage(t *testing.T) {
 			case "publish message successfully":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(true, nil)
-				mockProducer.EXPECT().BeginTransaction().DoAndReturn(func() error {
+				mockProducer.EXPECT().BeginTransaction(gomock.Any()).DoAndReturn(func() error {
 					time.Sleep(time.Second) // simulate delay
 					return nil
 				})
@@ -339,7 +339,7 @@ func TestPublishMessage(t *testing.T) {
 			case "error publishing message":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(true, nil)
-				mockProducer.EXPECT().BeginTransaction().Return(nil)
+				mockProducer.EXPECT().BeginTransaction(gomock.Any()).Return(nil)
 				mockProducer.EXPECT().WriteWithRetry(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish error"))
 				mockProducer.EXPECT().AbortTransaction(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					time.Sleep(time.Second) // simulate delay
@@ -354,7 +354,7 @@ func TestPublishMessage(t *testing.T) {
 				service.Producers = make(map[string]confluent.Producer)
 
 				// Setup a factory that fails producer creation
-				service.Factory.(*mock.MockKafkaFactory).EXPECT().CreateProducer(gomock.Any()).Return(nil, errors.New("producer creation failed"))
+				service.Factory.(*mock.MockKafkaFactory).EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(nil, errors.New("producer creation failed"))
 			}
 
 			err := service.PublishMessage(context.Background(), tt.cfg.(confluent.KafkaConfig), &pb.PublishRequest{Topic: tt.topic, Value: tt.value, Key: tt.key})
@@ -369,7 +369,7 @@ func TestPublishMessage(t *testing.T) {
 }
 
 func TestCreateTopic(t *testing.T) {
-	logger.InitLogger()
+
 	tests := []struct {
 		name      string
 		topic     string
@@ -471,7 +471,7 @@ func TestCreateTopic(t *testing.T) {
 }
 
 func TestNewConfluentMessagingService(t *testing.T) {
-	logger.InitLogger()
+
 	tests := []struct {
 		name              string
 		setupMock         func(f *mock.MockKafkaFactory, a *mock.MockKafkaAdmin)
@@ -547,7 +547,7 @@ func TestNewConfluentMessagingService(t *testing.T) {
 
 			// Use the real constructor but monkey-patch the factory
 			// This would require your production code to allow injecting the factory.
-			_, err := service.NewConfluentMessagingService(cfg, mockFactory) // hypothetical constructor
+			_, err := service.NewConfluentMessagingService(cfg, mockFactory, &observability.ObservabilityStack{}) // hypothetical constructor
 
 			if tt.expectAdminNil {
 				assert.Error(t, err)
@@ -580,7 +580,6 @@ func createCircularReference() map[string]interface{} {
 
 // TestPublishMessageJSONError tests the specific error case where JSON marshaling fails
 func TestPublishMessageJSONError(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -604,7 +603,7 @@ func TestPublishMessageJSONError(t *testing.T) {
 	mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), "json-error-topic").Return(true, nil)
 
 	// Since we don't have the producer in the map, expect a call to create one
-	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(mockProducer, nil)
+	mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(mockProducer, nil)
 
 	// Now we need to create a request that will cause json.Marshal to fail
 	// Instead of using an invalid UTF-8 string (which Go might handle),
@@ -643,7 +642,6 @@ func TestPublishMessageJSONError(t *testing.T) {
 // TestPublishMessageBeginTransactionFailure tests the scenario where BeginTransaction fails
 // and the service tries to recreate the producer and retry
 func TestPublishMessageBeginTransactionFailure(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -686,13 +684,13 @@ func TestPublishMessageBeginTransactionFailure(t *testing.T) {
 	mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), "transaction-error-topic").Return(true, nil)
 
 	// 2. First producer's BeginTransaction fails
-	mockProducer.EXPECT().BeginTransaction().Return(errors.New("transaction begin failed"))
+	mockProducer.EXPECT().BeginTransaction(gomock.Any()).Return(errors.New("transaction begin failed"))
 
 	// 3. Expect a call to create a new producer after the first one fails
-	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(mockReplacementProducer, nil)
+	mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(mockReplacementProducer, nil)
 
 	// 4. Second producer's BeginTransaction succeeds
-	mockReplacementProducer.EXPECT().BeginTransaction().Return(nil)
+	mockReplacementProducer.EXPECT().BeginTransaction(gomock.Any()).Return(nil)
 
 	// 5. WriteWithRetry and transaction commit
 	mockReplacementProducer.EXPECT().WriteWithRetry(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key, value []byte, headers []confluent.Header) error {
@@ -716,7 +714,6 @@ func TestPublishMessageBeginTransactionFailure(t *testing.T) {
 
 // TestPublishMessageBeginTransactionDoubleFailure tests the scenario where BeginTransaction fails both times
 func TestPublishMessageBeginTransactionDoubleFailure(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -759,13 +756,13 @@ func TestPublishMessageBeginTransactionDoubleFailure(t *testing.T) {
 	mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), "transaction-error-topic").Return(true, nil)
 
 	// 2. First producer's BeginTransaction fails
-	mockProducer.EXPECT().BeginTransaction().Return(errors.New("first transaction begin failed"))
+	mockProducer.EXPECT().BeginTransaction(gomock.Any()).Return(errors.New("first transaction begin failed"))
 
 	// 3. Expect a call to create a new producer after the first one fails
-	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(mockReplacementProducer, nil)
+	mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(mockReplacementProducer, nil)
 
 	// 4. Second producer's BeginTransaction also fails
-	mockReplacementProducer.EXPECT().BeginTransaction().Return(errors.New("second transaction begin failed"))
+	mockReplacementProducer.EXPECT().BeginTransaction(gomock.Any()).Return(errors.New("second transaction begin failed"))
 
 	// Call the method
 	err := service.PublishMessage(context.Background(), kafkaConfig, req)
@@ -777,7 +774,6 @@ func TestPublishMessageBeginTransactionDoubleFailure(t *testing.T) {
 
 // TestPublishMessageCircularReference tests the case where a circular reference causes JSON marshaling to fail
 func TestPublishMessageCircularReference(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -801,7 +797,7 @@ func TestPublishMessageCircularReference(t *testing.T) {
 	mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), "circular-ref-topic").Return(true, nil)
 
 	// Expect a call to create producer
-	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(mockProducer, nil)
+	mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(mockProducer, nil)
 
 	// Generate a circular reference that will cause json.Marshal to fail
 	circular := createCircularReference()
@@ -841,7 +837,6 @@ func TestPublishMessageCircularReference(t *testing.T) {
 
 // TestPublishMessageGetOrCreateProducerError tests the case where GetOrCreateProducer returns an error
 func TestPublishMessageGetOrCreateProducerError(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -864,7 +859,7 @@ func TestPublishMessageGetOrCreateProducerError(t *testing.T) {
 	mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), "producer-error-topic").Return(true, nil)
 
 	// Mock factory to return error when CreateProducer is called
-	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(nil, errors.New("producer creation failed"))
+	mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(nil, errors.New("producer creation failed"))
 
 	// Create request
 	req := &pb.PublishRequest{
@@ -888,7 +883,6 @@ func TestPublishMessageGetOrCreateProducerError(t *testing.T) {
 
 // TestPublishMessageProducerRecreationAfterTxnError tests the scenario where producer recreation fails after BeginTransaction error
 func TestPublishMessageProducerRecreationAfterTxnError(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -914,10 +908,10 @@ func TestPublishMessageProducerRecreationAfterTxnError(t *testing.T) {
 	mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), "txn-recreation-error-topic").Return(true, nil)
 
 	// Make BeginTransaction fail
-	mockProducer.EXPECT().BeginTransaction().Return(errors.New("transaction init failed"))
+	mockProducer.EXPECT().BeginTransaction(gomock.Any()).Return(errors.New("transaction init failed"))
 
 	// Mock factory to return error during producer recreation
-	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(nil, errors.New("producer recreation failed"))
+	mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(nil, errors.New("producer recreation failed"))
 
 	// Create request
 	req := &pb.PublishRequest{
@@ -944,7 +938,6 @@ func TestPublishMessageProducerRecreationAfterTxnError(t *testing.T) {
 }
 
 func TestGetOrCreateProducer(t *testing.T) {
-	logger.InitLogger()
 
 	tests := []struct {
 		name           string
@@ -968,7 +961,7 @@ func TestGetOrCreateProducer(t *testing.T) {
 			name:  "create new producer successfully",
 			topic: "new-topic",
 			setupMock: func(factory *mock.MockKafkaFactory, producer *mock.MockProducer) {
-				factory.EXPECT().CreateProducer(gomock.Any()).Return(producer, nil)
+				factory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(producer, nil)
 			},
 			expectedErr:    false,
 			expectNewCall:  true,
@@ -978,7 +971,7 @@ func TestGetOrCreateProducer(t *testing.T) {
 			name:  "create producer fails",
 			topic: "error-topic",
 			setupMock: func(factory *mock.MockKafkaFactory, producer *mock.MockProducer) {
-				factory.EXPECT().CreateProducer(gomock.Any()).Return(nil, errors.New("producer creation failed"))
+				factory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(nil, errors.New("producer creation failed"))
 			},
 			expectedErr:    true,
 			expectNewCall:  true,
@@ -989,7 +982,7 @@ func TestGetOrCreateProducer(t *testing.T) {
 			topic: "concurrent-topic",
 			setupMock: func(factory *mock.MockKafkaFactory, producer *mock.MockProducer) {
 				// Simulate only one call succeeding (the other would be blocked by mutex)
-				factory.EXPECT().CreateProducer(gomock.Any()).Return(producer, nil).MaxTimes(1)
+				factory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(producer, nil).MaxTimes(1)
 			},
 			expectedErr:    false,
 			expectNewCall:  true,
@@ -1056,7 +1049,7 @@ func TestGetOrCreateProducer(t *testing.T) {
 			}
 
 			// Call the method
-			producer, err := confluentService.GetOrCreateProducer(kafkaConfig)
+			producer, err := confluentService.GetOrCreateProducer(context.Background(), kafkaConfig)
 
 			// Check results
 			if tt.expectedErr {
@@ -1077,7 +1070,6 @@ func TestGetOrCreateProducer(t *testing.T) {
 
 // TestGetOrCreateProducerConcurrency tests the thread safety of GetOrCreateProducer
 func TestGetOrCreateProducerConcurrency(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1086,7 +1078,7 @@ func TestGetOrCreateProducerConcurrency(t *testing.T) {
 	mockProducer := mock.NewMockProducer(ctrl)
 
 	// We expect exactly one call to CreateProducer despite multiple goroutines
-	mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(mockProducer, nil).Times(1)
+	mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(mockProducer, nil).Times(1)
 
 	// Create service
 	cfg := config.GetMockConfig()
@@ -1111,7 +1103,7 @@ func TestGetOrCreateProducerConcurrency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			producer, err := confluentService.GetOrCreateProducer(kafkaConfig)
+			producer, err := confluentService.GetOrCreateProducer(context.Background(), kafkaConfig)
 			assert.NoError(t, err)
 			assert.Equal(t, mockProducer, producer)
 		}()
@@ -1128,7 +1120,6 @@ func TestGetOrCreateProducerConcurrency(t *testing.T) {
 // This ensures the method correctly handles the case where another goroutine creates a producer
 // between the first check and acquiring the lock
 func TestGetOrCreateProducerDoubleCheckLocking(t *testing.T) {
-	logger.InitLogger()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1160,7 +1151,7 @@ func TestGetOrCreateProducerDoubleCheckLocking(t *testing.T) {
 	confluentService.Producers[topic] = mockProducer
 
 	// Call GetOrCreateProducer
-	producer, err := confluentService.GetOrCreateProducer(kafkaConfig)
+	producer, err := confluentService.GetOrCreateProducer(context.Background(), kafkaConfig)
 
 	// Verify results
 	assert.NoError(t, err)
@@ -1170,7 +1161,6 @@ func TestGetOrCreateProducerDoubleCheckLocking(t *testing.T) {
 
 // TestGetOrCreateProducerErrorCases tests specific error cases
 func TestGetOrCreateProducerErrorCases(t *testing.T) {
-	logger.InitLogger()
 
 	// Test case: Transaction begin failure and producer recreation
 	t.Run("producer creation fails", func(t *testing.T) {
@@ -1195,10 +1185,10 @@ func TestGetOrCreateProducerErrorCases(t *testing.T) {
 		}
 
 		// Expect factory call to create producer and return error
-		mockFactory.EXPECT().CreateProducer(gomock.Any()).Return(nil, errors.New("producer creation failed"))
+		mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(nil, errors.New("producer creation failed"))
 
 		// Call the method
-		producer, err := confluentService.GetOrCreateProducer(kafkaConfig)
+		producer, err := confluentService.GetOrCreateProducer(context.Background(), kafkaConfig)
 
 		// Verify error
 		assert.Error(t, err)

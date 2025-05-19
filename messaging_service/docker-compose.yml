@@ -8,6 +8,7 @@ services:
     ports:
       - "${GRPC_PORT}:${GRPC_PORT}"
       - "${HTTP_PORT}:${HTTP_PORT}"
+    networks: [messaging-service-network]
     environment:
       GRPC_PORT: ${GRPC_PORT}
       CONFIG_SERVICE_URL: ${CONFIG_SERVICE_URL}
@@ -17,10 +18,14 @@ services:
       CACHE_TTL: ${CACHE_TTL}
       SERVICE_NAME: ${SERVICE_NAME}
       CACHE_URL: ${CACHE_URL}
+      OBSERVABILITY_URL: ${OBSERVABILITY_URL}
+      SERVICE_VERSION : ${SERVICE_VERSION}
 
     restart: on-failure
 
-
+networks:
+  messaging-service-network:
+    external: true
 
 # Command to start the service:
 # docker compose -f 'messaging_service/docker-compose.yml' up --build 'messaging_service'

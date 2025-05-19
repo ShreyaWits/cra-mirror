@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"messaging_service/internal/modules/message_broker/mock"
 	"messaging_service/pkg/confluent"
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 	"testing"
 	"time"
 
@@ -49,7 +49,7 @@ func TestNewProducer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := confluent.NewProducer(tt.cfg)
+			p, err := confluent.NewProducer(context.Background(), tt.cfg, &observability.ObservabilityStack{})
 			if tt.shouldFail {
 				assert.Error(t, err)
 				assert.Nil(t, p)
@@ -63,7 +63,6 @@ func TestNewProducer(t *testing.T) {
 
 func TestProducerImpl_WriteWithRetry(t *testing.T) {
 	// Initialize logger
-	logger.InitLogger()
 
 	// Setup mock controller
 	ctrl := gomock.NewController(t)
@@ -155,7 +154,6 @@ func TestProducerImpl_WriteWithRetry(t *testing.T) {
 
 func TestProducerImpl_BeginTransaction(t *testing.T) {
 	// Initialize logger
-	logger.InitLogger()
 
 	// Setup mock controller
 	ctrl := gomock.NewController(t)
@@ -234,7 +232,6 @@ func TestProducerImpl_BeginTransaction(t *testing.T) {
 
 func TestProducerImpl_CommitTransaction(t *testing.T) {
 	// Initialize logger
-	logger.InitLogger()
 
 	// Setup mock controller
 	ctrl := gomock.NewController(t)
@@ -340,7 +337,6 @@ func TestProducerImpl_CommitTransaction(t *testing.T) {
 
 func TestProducerImpl_AbortTransaction(t *testing.T) {
 	// Initialize logger
-	logger.InitLogger()
 
 	// Setup mock controller
 	ctrl := gomock.NewController(t)

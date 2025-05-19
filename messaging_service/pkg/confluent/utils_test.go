@@ -1,10 +1,11 @@
 package confluent_test
 
 import (
+	"context"
 	"fmt"
 	"messaging_service/internal/modules/message_broker/mock"
 	"messaging_service/pkg/confluent"
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 	"sync"
 	"testing"
 
@@ -12,9 +13,11 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
+var obs = &observability.ObservabilityStack{}
+
 // TestKafkaMonitorDeliveryReports tests handling of Kafka delivery reports
 func TestKafkaMonitorDeliveryReports(t *testing.T) {
-	logger.InitLogger()
+
 	topic := "test-topic"
 	topicPtr := &topic
 
@@ -70,7 +73,7 @@ func TestKafkaMonitorDeliveryReports(t *testing.T) {
 
 			go func() {
 				defer wg.Done()
-				confluent.KafkaMonitorDeliveryReports(producer, "test-topic")
+				confluent.KafkaMonitorDeliveryReports(producer, "test-topic", obs)
 			}()
 
 			// Wait for the goroutine to finish processing
@@ -80,22 +83,17 @@ func TestKafkaMonitorDeliveryReports(t *testing.T) {
 }
 func TestLogKafkaError(t *testing.T) {
 
-	logger.InitLogger()
-
-	confluent.LogKafkaError("test_event", "test-topic", "test message", fmt.Errorf("sample error"))
+	confluent.LogKafkaError(context.Background(), "test_event", "test-topic", "test message", fmt.Errorf("sample error"), obs)
 
 }
 
 func TestKafkaWarning(t *testing.T) {
 
-	logger.InitLogger()
-
-	confluent.LogKafkaWarning("test_event", "test-topic", "test message")
+	confluent.LogKafkaWarning(context.Background(), "test_event", "test-topic", "test message", obs)
 
 }
 
 func TestLogKafkaInfo(t *testing.T) {
-	logger.InitLogger()
 
-	confluent.LogKafkaInfo("test_event", "test-topic", "test message")
+	confluent.LogKafkaInfo(context.Background(), "test_event", "test-topic", "test message", obs)
 }

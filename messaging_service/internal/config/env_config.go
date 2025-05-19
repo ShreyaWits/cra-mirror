@@ -69,6 +69,8 @@ func LoadConfig() (*Env, error) {
 		HttpPort:           getEnvString("HTTP_PORT", ""),
 		GrpcPort:           getEnvString("GRPC_PORT", ""),
 		CacheUrl:           getEnvString("CACHE_URL", ""),
+		ObservabilityUrl:   getEnvString("OBSERVABILITY_URL", ""),
+		ServiceVersion:     getEnvString("SERVICE_VERSION", ""),
 	}
 
 	// --- Validation ---
@@ -97,6 +99,14 @@ func LoadConfig() (*Env, error) {
 
 	if envConfig.CacheUrl == "" {
 		return nil, fmt.Errorf("CacheUrl environment variable is required")
+	}
+
+	if envConfig.ServiceVersion == "" {
+		return nil, fmt.Errorf("ServiceVersion environment variable is required")
+	}
+
+	if envConfig.ObservabilityUrl == "" {
+		return nil, fmt.Errorf("ObservabilityUrl environment variable is required")
 	}
 
 	return envConfig, nil

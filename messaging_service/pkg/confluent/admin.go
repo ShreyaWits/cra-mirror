@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"messaging_service/internal/config"
-	"messaging_service/pkg/logger"
+	"messaging_service/pkg/observability"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -17,6 +17,7 @@ import (
 type AdminImpl struct {
 	adminClient *AdminClient
 	config      *config.Config
+	obs         *observability.ObservabilityStack
 }
 
 // DefaultTopicConfig returns a default configuration for a new topic
@@ -32,7 +33,13 @@ func DefaultTopicConfig() map[string]string {
 }
 
 // NewAdmin creates a new Kafka admin client
-func NewAdmin(cfg *config.Config) (KafkaAdmin, error) {
+func NewAdmin(cfg *config.Config, obs *observability.ObservabilityStack) (KafkaAdmin, error) {
+	functionName := "NewAdmin"
+	ctx := context.Background()
+
+	_, span := obs.TracerService.StartTracer(ctx, functionName)
+	defer obs.TracerService.StopSpan(span)
+
 	// Create admin client configuration
 	adminConfig := &ConfigMap{
 		"bootstrap.servers": buildBrokerString(cfg.KafkaBrokers),
@@ -41,19 +48,23 @@ func NewAdmin(cfg *config.Config) (KafkaAdmin, error) {
 	// Create admin client
 	adminClient, err := kafka.NewAdminClient(adminConfig)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_admin_creation", "", "error",
-			fmt.Sprintf("Failed to create Kafka admin client: %v", err))
 		return nil, fmt.Errorf("failed to create Kafka admin client: %w", err)
 	}
 
 	return &AdminImpl{
 		adminClient: adminClient,
 		config:      cfg,
+		obs:         obs,
 	}, nil
 }
 
 // CreateTopic creates a new Kafka topic
 func (a *AdminImpl) CreateTopic(ctx context.Context, topic string, numPartitions, replicationFactor int, configs map[string]string) error {
+	functionName := "CreateTopic"
+
+	tCtx, span := a.obs.TracerService.StartTracer(ctx, functionName)
+	defer a.obs.TracerService.StopSpan(span)
+
 	// Set default values if necessary
 	if numPartitions <= 0 {
 		numPartitions = 3
@@ -83,55 +94,50 @@ func (a *AdminImpl) CreateTopic(ctx context.Context, topic string, numPartitions
 	}
 
 	// Create the topic
-	result, err := a.adminClient.CreateTopics(ctx, []TopicSpecification{topicSpec})
+	result, err := a.adminClient.CreateTopics(tCtx, []TopicSpecification{topicSpec})
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_create_topic_failed", topic, "error",
-			fmt.Sprintf("Failed to create Kafka topic: %v", err))
 		return fmt.Errorf("failed to create Kafka topic: %w", err)
 	}
 
 	// Check for per-topic errors
 	if len(result) > 0 && result[0].Error.Code() != ErrNoError {
-		logger.LogErrorEvent("", "kafka_create_topic_failed", topic, "error",
-			fmt.Sprintf("Failed to create Kafka topic: %v", result[0].Error))
 		return fmt.Errorf("failed to create Kafka topic: %v", result[0].Error)
 	}
 
-	logger.LogEvent("", "kafka_create_topic_success", topic, "info",
-		fmt.Sprintf("Created Kafka topic %s with %d partitions and replication factor %d",
-			topic, numPartitions, replicationFactor))
 	return nil
 }
 
 // DeleteTopic deletes a Kafka topic
 func (a *AdminImpl) DeleteTopic(ctx context.Context, topic string) error {
+	functionName := "DeleteTopic"
+
+	tCtx, span := a.obs.TracerService.StartTracer(ctx, functionName)
+	defer a.obs.TracerService.StopSpan(span)
+
 	// Delete the topic
-	result, err := a.adminClient.DeleteTopics(ctx, []string{topic})
+	result, err := a.adminClient.DeleteTopics(tCtx, []string{topic})
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_delete_topic_failed", topic, "error",
-			fmt.Sprintf("Failed to delete Kafka topic: %v", err))
 		return fmt.Errorf("failed to delete Kafka topic: %w", err)
 	}
 
 	// Check for per-topic errors
 	if len(result) > 0 && result[0].Error.Code() != ErrNoError {
-		logger.LogErrorEvent("", "kafka_delete_topic_failed", topic, "error",
-			fmt.Sprintf("Failed to delete Kafka topic: %v", result[0].Error))
 		return fmt.Errorf("failed to delete Kafka topic: %v", result[0].Error)
 	}
 
-	logger.LogEvent("", "kafka_delete_topic_success", topic, "info",
-		fmt.Sprintf("Deleted Kafka topic %s", topic))
 	return nil
 }
 
 // ListTopics lists all topics in the Kafka cluster
 func (a *AdminImpl) ListTopics(ctx context.Context) ([]string, error) {
+	functionName := "ListTopics"
+
+	_, span := a.obs.TracerService.StartTracer(ctx, functionName)
+	defer a.obs.TracerService.StopSpan(span)
+
 	// Create metadata object
 	metadata, err := a.adminClient.GetMetadata(nil, true, 30000)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_list_topics_failed", "", "error",
-			fmt.Sprintf("Failed to list Kafka topics: %v", err))
 		return nil, fmt.Errorf("failed to list Kafka topics: %w", err)
 	}
 
@@ -146,64 +152,62 @@ func (a *AdminImpl) ListTopics(ctx context.Context) ([]string, error) {
 
 // HasActiveConsumers checks if a topic has any active consumer groups
 func (a *AdminImpl) HasActiveConsumers(ctx context.Context, topic string) (bool, error) {
+	functionName := "HasActiveConsumers"
+
+	tCtx, span := a.obs.TracerService.StartTracer(ctx, functionName)
+	defer a.obs.TracerService.StopSpan(span)
+
+	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Checking for active consumers on topic: %s", topic))
+
 	// First check if topic exists
 	metadata, err := a.adminClient.GetMetadata(&topic, false, 10000)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_check_topic_failed", topic, "error",
-			fmt.Sprintf("Failed to check if topic exists: %v", err))
+		a.obs.LoggerService.Error(tCtx,fmt.Sprintf("Failed to check if topic exists: %v", err))
 		return false, fmt.Errorf("failed to check if topic exists: %w", err)
 	}
 
 	if _, exists := metadata.Topics[topic]; !exists {
-		// Topic doesn't exist
-		logger.LogEvent("", "kafka_topic_not_found", topic, "info",
-			fmt.Sprintf("Topic %s does not exist", topic))
+		a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Topic %s does not exist", topic))
 		return false, nil
 	}
+	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Topic %s exists", topic))
 
 	// Get the admin client metadata which includes information about the cluster
 	clusterMetadata, err := a.adminClient.GetMetadata(nil, true, 30000)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_get_metadata_failed", topic, "error",
-			fmt.Sprintf("Failed to get cluster metadata: %v", err))
+		a.obs.LoggerService.Warn(tCtx,fmt.Sprintf("Failed to get cluster metadata: %v. Assuming consumers exist for safety", err))
 		// Fall back to assume consumers exist (safer)
 		return true, nil
 	}
 
 	// Check if the broker is healthy
 	if len(clusterMetadata.Brokers) == 0 {
-		logger.LogErrorEvent("", "kafka_no_brokers", topic, "error",
-			"No Kafka brokers available")
+		a.obs.LoggerService.Warn(tCtx,"No brokers found in cluster metadata. Assuming consumers exist for safety")
 		// Assume consumers in case of broker connectivity issues
 		return true, nil
 	}
+	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Found %d brokers in cluster", len(clusterMetadata.Brokers)))
 
 	// Make a simple check for any consumer group activity in the cluster
-	consumerGroupsList, err := a.adminClient.ListConsumerGroups(ctx)
+	consumerGroupsList, err := a.adminClient.ListConsumerGroups(tCtx)
 	if err != nil {
-		logger.LogErrorEvent("", "kafka_list_consumer_groups_failed", topic, "error",
-			fmt.Sprintf("Failed to list consumer groups: %v", err))
+		a.obs.LoggerService.Warn(tCtx,fmt.Sprintf("Failed to list consumer groups: %v. Assuming consumers exist for safety", err))
 		// Fall back to assuming consumers exist
 		return true, nil
 	}
 
 	// If there are no consumer groups at all, the topic can't have active consumers
 	if len(consumerGroupsList.Valid) == 0 {
-		logger.LogEvent("", "kafka_no_consumer_groups", topic, "info",
-			fmt.Sprintf("No consumer groups found in the cluster, topic %s has no active consumers", topic))
+		a.obs.LoggerService.Info(tCtx,"No consumer groups found in cluster")
 		return false, nil
 	}
+	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Found %d consumer groups in cluster", len(consumerGroupsList.Valid)))
 
 	// We know there are consumer groups in the cluster
 	// For now, if topic exists and there are consumer groups, we'll assume it has consumers
 	// This is a safer approach until we can implement a more detailed check
 	// that works reliably with the Confluent Kafka API
-
-	logger.LogEvent("", "kafka_assume_active_consumer", topic, "info",
-		fmt.Sprintf("Topic %s exists and consumer groups are active in cluster, assuming topic has consumers", topic))
-
-	// If we want to enforce stricter validation, return false here instead.
-	// For now, we're using a safer approach by returning true.
+	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Topic %s exists and consumer groups are present. Assuming active consumers", topic))
 	return true, nil
 }
 
