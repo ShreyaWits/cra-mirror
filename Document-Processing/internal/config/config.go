@@ -5,19 +5,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
-	"log"
 )
 
 type Config struct {
-	ServerPort      int
-	MinioEndpoint   string
-	MinioAccessKey  string
-	MinioSecretKey  string
-	MinioBucketName string
-	GeminiAPIKey    string
+	ServerPort       int
+	MinioEndpoint    string
+	MinioAccessKey   string
+	MinioSecretKey   string
+	MinioBucketName  string
+	GeminiAPIKey     string
+	YugabyteHost     string
+	YugabyteUser     string
+	YugabytePassWord string
+	YugabyteName     string
+	YugabytePort     string
 }
 
 type ConfigResponse struct {
@@ -65,6 +70,11 @@ func NewConfig(data map[string]string) (*Config, error) {
 		"MINIO_BUCKET_NAME",
 		"GEMINI_API_KEY",
 		"SERVER_PORT",
+		"YUGABYTE_HOST",
+		"YUGABYTE_USER",
+		"YUGABYTE_PASSWORD",
+		"YUGABYTE_NAME",
+		"YUGABYTE_PORT",
 	}
 
 	// Check all required keys
@@ -82,11 +92,16 @@ func NewConfig(data map[string]string) (*Config, error) {
 	}
 
 	return &Config{
-		ServerPort:      port,
-		MinioEndpoint:   data["MINIO_ENDPOINT"],
-		MinioAccessKey:  data["MINIO_ACCESS_KEY"],
-		MinioSecretKey:  data["MINIO_SECRET_KEY"],
-		MinioBucketName: data["MINIO_BUCKET_NAME"],
-		GeminiAPIKey:    data["GEMINI_API_KEY"],
+		ServerPort:       port,
+		MinioEndpoint:    data["MINIO_ENDPOINT"],
+		MinioAccessKey:   data["MINIO_ACCESS_KEY"],
+		MinioSecretKey:   data["MINIO_SECRET_KEY"],
+		MinioBucketName:  data["MINIO_BUCKET_NAME"],
+		GeminiAPIKey:     data["GEMINI_API_KEY"],
+		YugabyteHost:     data["YUGABYTE_HOST"],
+		YugabyteUser:     data["YUGABYTE_USER"],
+		YugabytePassWord: data["YUGABYTE_PASSWORD"],
+		YugabyteName:     data["YUGABYTE_NAME"],
+		YugabytePort:     data["YUGABYTE_PORT"],
 	}, nil
 }

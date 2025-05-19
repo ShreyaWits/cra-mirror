@@ -29,7 +29,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		return nil, err
 	}
 
-	db, err := yugabytedb.ConnectDB()
+	db, err := yugabytedb.ConnectDB(cfg.YugabyteHost,cfg.YugabyteName,cfg.YugabytePassWord, cfg.YugabytePort, cfg.YugabyteUser)
 	if err != nil {
 		return nil, err
 	}

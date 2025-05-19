@@ -3,7 +3,7 @@
 # Create .env file
 cat > .env << EOL
 SERVER_PORT=50051
-MINIO_ENDPOINT=localhost:9000
+MINIO_ENDPOINT=minio:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 MINIO_BUCKET_NAME=documents

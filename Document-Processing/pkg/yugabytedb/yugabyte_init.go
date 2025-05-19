@@ -10,16 +10,16 @@ import (
 	"gorm.io/gorm"
 )
 
-func ConnectDB() (*gorm.DB, error) {
+func ConnectDB(host string, dbname string, password string, port string, user string) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		getEnv("DB_HOST", "localhost"),
-		getEnv("DB_USER", "yugabyte"),
-		getEnv("DB_PASSWORD", "yugabyte"),
-		getEnv("DB_NAME", "yugabyte"),
-		getEnv("DB_PORT", "5434"),
+		host,
+		user,
+		password,
+		dbname,
+		port,
 	)
-
+	
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to YugabyteDB: %w", err)
