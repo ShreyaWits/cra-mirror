@@ -48,14 +48,14 @@ func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	grpcEndpoint := config.AppConfig.OTEL_COLLECTOR_URL
+	grpcEndpoint := config.AppConfig.OtelCollectorURL
 
 	// Create a resource with service information
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(config.AppConfig.SERVICE_NAME),
+			semconv.ServiceNameKey.String(config.AppConfig.ServiceName),
 			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.AppConfig.DEPLOYMENT_ENV),
+			semconv.DeploymentEnvironmentKey.String(config.AppConfig.Environment),
 		),
 	)
 	if err != nil {
@@ -139,9 +139,9 @@ func newTracerProvider(ctx context.Context, endpoint string) (*trace.TracerProvi
 	// Create a resource with service information
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(config.AppConfig.SERVICE_NAME),
+			semconv.ServiceNameKey.String(config.AppConfig.ServiceName),
 			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.AppConfig.DEPLOYMENT_ENV),
+			semconv.DeploymentEnvironmentKey.String(config.AppConfig.Environment),
 		),
 	)
 	if err != nil {
@@ -175,9 +175,9 @@ func newMeterProvider(grpcEndpoint string) (*metric.MeterProvider, error) {
 			metric.WithInterval(3*time.Second))),
 		metric.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(config.AppConfig.SERVICE_NAME),
+			semconv.ServiceNameKey.String(config.AppConfig.ServiceName),
 			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.AppConfig.DEPLOYMENT_ENV),
+			semconv.DeploymentEnvironmentKey.String(config.AppConfig.Environment),
 		),
 		),
 	)
@@ -187,7 +187,7 @@ func newMeterProvider(grpcEndpoint string) (*metric.MeterProvider, error) {
 func newResource() (*resource.Resource, error) {
 	return resource.Merge(resource.Default(),
 		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceNameKey.String(config.AppConfig.SERVICE_NAME),
+			semconv.ServiceNameKey.String(config.AppConfig.ServiceName),
 			// semconv.ServiceVersion("0.1.0"),
 		))
 }
@@ -230,9 +230,9 @@ func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 		log.WithProcessor(log.NewBatchProcessor(stdout)),
 		log.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(config.AppConfig.SERVICE_NAME),
+			semconv.ServiceNameKey.String(config.AppConfig.ServiceName),
 			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.AppConfig.DEPLOYMENT_ENV),
+			semconv.DeploymentEnvironmentKey.String(config.AppConfig.Environment),
 		),
 		),
 	)

@@ -14,5 +14,8 @@ func InitializeServer(app *fiber.App) (*fiber.App, error) {
 	v1Group := app.Group("/api/v1")
 	v1.SetupRoutes(v1Group)
 
+	// health check endpoint
+	app.Get("/healthz", v1.HandleHealthCheck)
+
 	return app, nil
 }

@@ -2,27 +2,39 @@ package v1
 
 import (
 	"net/http"
+	"thirdparty_service/internal/app"
+	"thirdparty_service/internal/config"
 	"thirdparty_service/internal/dtos"
-	user_router "thirdparty_service/internal/modules/user/apis/router"
-	webhook_router "thirdparty_service/internal/modules/webhooks/api/router"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app_router fiber.Router) error {
-	v1 := app_router.Group("/api/v1")
+func SetupRoutes(v1 fiber.Router) error {
 
-	// health check route
-	app_router.Get("/healthz", HandleHealthCheck)
-
-	user_router.SetupUserRoutes(v1)
-	webhook_router.SetupWebhookRoutes(v1)
+	// webhook route route
+	webhookRoute := v1.Group("/webhook")
+	webhookRoute.Post("/", HandleConfig)
 
 	return nil
 }
 
-func HandleHealthCheck(c *fiber.Ctx) error {
+func HandleConfig(c *fiber.Ctx) error {
+	configHandler := app.GetConfigHandler()
+	dynamicConfig, err := configHandler.GetConfig()
+	if err != nil {
+		return dtos.Response{
+			Code: http.StatusInternalServerError,
+			Msg:  err.Error(),
+		}
+	}
+	config.AppConfig.SetEnv(dynamicConfig)
+	return dtos.Response{
+		Code: http.StatusOK,
+		Msg:  "Webhook Received Successfully",
+	}
+}
 
+func HandleHealthCheck(c *fiber.Ctx) error {
 	return dtos.Response{
 		Code: http.StatusOK,
 		Msg:  "Service OK",

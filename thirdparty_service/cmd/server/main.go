@@ -27,6 +27,11 @@ func main() {
 
 	app_module.InitDependencyInjection()
 
+	// init config service
+	if err := config.LoadEnv(); err != nil {
+		log.Fatalf("error loading env: %v", err)
+	}
+
 	// init otel sdk
 	shutdown, err := opentelemetry.SetupOTelSDK(ctx)
 	if err != nil {
