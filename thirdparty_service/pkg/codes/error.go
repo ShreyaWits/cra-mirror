@@ -13,6 +13,7 @@ const (
 	TS1010 string = "TS1010"
 	TS1011 string = "TS1011"
 	TS1012 string = "TS1012"
+	TS1013 string = "TS1013" // Push notification failed
 )
 
 func ErrorMessage(code string) string {
@@ -28,6 +29,7 @@ func ErrorMessage(code string) string {
 		"TS1009": "Email content type required for sending email.",
 		"TS1010": "Aadhar Number in not valid",
 		"TS1011": "Pan Number is not valid",
+		"TS1012": "WhatsApp messaging Failed",
 	}
 	return codesMap[code]
 }

@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ThirdPartyService_InvokeTwilioSms_FullMethodName       = "/pb.ThirdPartyService/InvokeTwilioSms"
-	ThirdPartyService_InvokeWhatsAppMessage_FullMethodName = "/pb.ThirdPartyService/InvokeWhatsAppMessage"
-	ThirdPartyService_InvokeSendgridEmail_FullMethodName   = "/pb.ThirdPartyService/InvokeSendgridEmail"
-	ThirdPartyService_VerifyAadhar_FullMethodName          = "/pb.ThirdPartyService/VerifyAadhar"
-	ThirdPartyService_VerifyPan_FullMethodName             = "/pb.ThirdPartyService/VerifyPan"
+	ThirdPartyService_InvokeTwilioSms_FullMethodName        = "/pb.ThirdPartyService/InvokeTwilioSms"
+	ThirdPartyService_InvokeWhatsAppMessage_FullMethodName  = "/pb.ThirdPartyService/InvokeWhatsAppMessage"
+	ThirdPartyService_InvokeSendgridEmail_FullMethodName    = "/pb.ThirdPartyService/InvokeSendgridEmail"
+	ThirdPartyService_VerifyAadhar_FullMethodName           = "/pb.ThirdPartyService/VerifyAadhar"
+	ThirdPartyService_VerifyPan_FullMethodName              = "/pb.ThirdPartyService/VerifyPan"
+	ThirdPartyService_InvokePushNotification_FullMethodName = "/pb.ThirdPartyService/InvokePushNotification"
 )
 
 // ThirdPartyServiceClient is the client API for ThirdPartyService service.
@@ -37,6 +38,7 @@ type ThirdPartyServiceClient interface {
 	InvokeSendgridEmail(ctx context.Context, in *InvokeSendGridRequest, opts ...grpc.CallOption) (*InvokeSendGridResponse, error)
 	VerifyAadhar(ctx context.Context, in *AadharVerifyRequest, opts ...grpc.CallOption) (*AadharVerifyResponse, error)
 	VerifyPan(ctx context.Context, in *PANVerifyRequest, opts ...grpc.CallOption) (*PANVerifyResponse, error)
+	InvokePushNotification(ctx context.Context, in *PushNotificationRequest, opts ...grpc.CallOption) (*PushNotificationResponse, error)
 }
 
 type thirdPartyServiceClient struct {
@@ -97,6 +99,16 @@ func (c *thirdPartyServiceClient) VerifyPan(ctx context.Context, in *PANVerifyRe
 	return out, nil
 }
 
+func (c *thirdPartyServiceClient) InvokePushNotification(ctx context.Context, in *PushNotificationRequest, opts ...grpc.CallOption) (*PushNotificationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PushNotificationResponse)
+	err := c.cc.Invoke(ctx, ThirdPartyService_InvokePushNotification_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ThirdPartyServiceServer is the server API for ThirdPartyService service.
 // All implementations must embed UnimplementedThirdPartyServiceServer
 // for forward compatibility.
@@ -108,6 +120,7 @@ type ThirdPartyServiceServer interface {
 	InvokeSendgridEmail(context.Context, *InvokeSendGridRequest) (*InvokeSendGridResponse, error)
 	VerifyAadhar(context.Context, *AadharVerifyRequest) (*AadharVerifyResponse, error)
 	VerifyPan(context.Context, *PANVerifyRequest) (*PANVerifyResponse, error)
+	InvokePushNotification(context.Context, *PushNotificationRequest) (*PushNotificationResponse, error)
 	mustEmbedUnimplementedThirdPartyServiceServer()
 }
 
@@ -132,6 +145,9 @@ func (UnimplementedThirdPartyServiceServer) VerifyAadhar(context.Context, *Aadha
 }
 func (UnimplementedThirdPartyServiceServer) VerifyPan(context.Context, *PANVerifyRequest) (*PANVerifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyPan not implemented")
+}
+func (UnimplementedThirdPartyServiceServer) InvokePushNotification(context.Context, *PushNotificationRequest) (*PushNotificationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvokePushNotification not implemented")
 }
 func (UnimplementedThirdPartyServiceServer) mustEmbedUnimplementedThirdPartyServiceServer() {}
 func (UnimplementedThirdPartyServiceServer) testEmbeddedByValue()                           {}
@@ -244,6 +260,24 @@ func _ThirdPartyService_VerifyPan_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ThirdPartyService_InvokePushNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PushNotificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ThirdPartyServiceServer).InvokePushNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ThirdPartyService_InvokePushNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ThirdPartyServiceServer).InvokePushNotification(ctx, req.(*PushNotificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ThirdPartyService_ServiceDesc is the grpc.ServiceDesc for ThirdPartyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -270,6 +304,10 @@ var ThirdPartyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VerifyPan",
 			Handler:    _ThirdPartyService_VerifyPan_Handler,
+		},
+		{
+			MethodName: "InvokePushNotification",
+			Handler:    _ThirdPartyService_InvokePushNotification_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

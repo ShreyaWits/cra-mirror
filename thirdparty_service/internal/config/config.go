@@ -1,3 +1,5 @@
+//go:build !test
+
 package config
 
 import (
@@ -33,9 +35,10 @@ type StaticConfig struct {
 
 // LoadEnv reads from .env and sets global config variables
 func LoadEnv() error {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println(".env file not found, falling back to system env")
+	if os.Getenv("IS_DOCKER") != "true" {
+		if err := godotenv.Load(".env"); err != nil {
+			log.Println(".env file not found, falling back to system env")
+		}
 	}
 
 	AppConfig.StaticConfig = StaticConfig{
@@ -48,10 +51,16 @@ func LoadEnv() error {
 	}
 
 	validateErr := utils.Validate(AppConfig.StaticConfig)
-
 	if validateErr != nil || len(validateErr) > 0 {
 		return errors.New("invalid config")
 	}
+
+	// Skip config service in test environment
+	if AppConfig.Environment == "test" {
+		AppConfig.dynamicConfig = &dto.ConfigResponse{}
+		return nil
+	}
+
 	// fetch config from config service
 	configService := service.NewConfigService(AppConfig.Environment, AppConfig.ServiceName, AppConfig.ConfigServiceURL, AppConfig.ConfigServiceUsername, AppConfig.ConfigServicePassword)
 	configHandler := handler.NewConfigHandler(configService)
@@ -62,7 +71,6 @@ func LoadEnv() error {
 	AppConfig.dynamicConfig = dConfig
 
 	return nil
-
 }
 
 func getEnv(key, fallback string) string {

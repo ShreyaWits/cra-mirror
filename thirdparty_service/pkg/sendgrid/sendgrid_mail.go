@@ -4,23 +4,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
 // SendGridClient encapsulates the API key and HTTP client
 type SendGridClient struct {
-	APIKey     string
-	HTTPClient *http.Client
+    APIKey          string
+    HTTPClient      *http.Client
+    newRequestFunc  func(method, url string, body io.Reader) (*http.Request, error)
 }
 
-// NewSendGridClient creates a new SendGrid client with the given API key
 func NewSendGridClient(apiKey string) *SendGridClient {
-	return &SendGridClient{
-		APIKey:     apiKey,
-		HTTPClient: &http.Client{},
-	}
+    return &SendGridClient{
+        APIKey:         apiKey,
+        HTTPClient:     &http.Client{},
+        newRequestFunc: http.NewRequest,
+    }
 }
-
 // Email represents the structure of a SendGrid email
 type Email struct {
 	Personalizations []Personalization `json:"personalizations"`
@@ -44,16 +45,24 @@ type Content struct {
 	Value string `json:"value"`
 }
 
+var sendgridAPIURL = "https://api.sendgrid.com/v3/mail/send"
+
 // SendEmail sends an email using SendGrid API
 func (c *SendGridClient) SendEmail(email Email) error {
-	url := "https://api.sendgrid.com/v3/mail/send"
+	url := sendgridAPIURL
 
 	payload, err := json.Marshal(email)
 	if err != nil {
 		return fmt.Errorf("failed to marshal email payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	// Use the injected newRequestFunc (fallback to http.NewRequest if nil)
+	newReq := c.newRequestFunc
+	if newReq == nil {
+		newReq = http.NewRequest
+	}
+
+	req, err := newReq("POST", url, bytes.NewBuffer(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

@@ -19,6 +19,12 @@ type SendWhatsAppMessageRequest struct {
 	CountryCode string `json:"country_code" validate:"required,len=2"`  // e.g., "IN"
 }
 
+type PushNotificationRequest struct {
+	ToToken string `json:"toToken"` // Device token
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+}
+
 type VerifyAadharRequest struct {
 	AadharNumber string `json:"number" validate:"required,min=12,max=12" error_code:"TS1010"`
 }
