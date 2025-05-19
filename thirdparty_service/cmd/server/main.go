@@ -15,6 +15,7 @@ import (
 	rest "thirdparty_service/internal/interface/http"
 	v1 "thirdparty_service/internal/interface/http/v1"
 	"thirdparty_service/internal/middleware"
+	opentelemetry "thirdparty_service/pkg/otel"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -25,6 +26,22 @@ func main() {
 	defer stop()
 
 	app_module.InitDependencyInjection()
+
+	// init config service
+	if err := config.LoadEnv(); err != nil {
+		log.Fatalf("error loading env: %v", err)
+	}
+
+	// init otel sdk
+	shutdown, err := opentelemetry.SetupOTelSDK(ctx)
+	if err != nil {
+		log.Fatalf("Failed to initialize OpenTelemetry: %v", err)
+	}
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Fatalf("Failed to shutdown OpenTelemetry: %v", err)
+		}
+	}()
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: middleware.FiberErrorHandler, // <-- Your custom handler
