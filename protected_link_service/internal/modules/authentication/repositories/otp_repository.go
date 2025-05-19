@@ -26,11 +26,13 @@ import (
 // OTPRepository handles OTP-related operations
 type OTPRepository struct {
 	redisClient *database.RedisConfig
-	service     *kafkaService.NotifierService
+	service     kafkaService.INotifierService
 	ctx         context.Context
 	cfg         *configEnv.Config
 	cassendra   repository.ICassandraRepository
 }
+
+var _ IOTPRepository = (*OTPRepository)(nil)
 
 // NewOTPRepository creates a new instance of OTPRepository
 func NewOTPRepository(redisClient *database.RedisConfig, casendra repository.ICassandraRepository) *OTPRepository {

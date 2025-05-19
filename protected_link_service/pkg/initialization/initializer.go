@@ -49,6 +49,9 @@ func (a *AppConfig) InitializeDatabaseConnections() error {
 	if err != nil {
 		return err
 	}
+	if err := cassandraConfig.CreateTables(); err != nil {
+		log.Fatalf("❌ Table creation failed: %v", err)
+	}
 	a.Cassandra = cassandraConfig
 
 	// Initialize Redis
