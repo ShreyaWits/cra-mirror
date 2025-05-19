@@ -6,10 +6,10 @@ import (
 	"thirdparty_service/internal/config"
 	"thirdparty_service/internal/modules/execute/dtos"
 	"thirdparty_service/internal/modules/execute/repositories"
+	push_service "thirdparty_service/pkg/push"
 	"thirdparty_service/pkg/sendgrid"
 	twilio_sms "thirdparty_service/pkg/twilio"
 	"thirdparty_service/pkg/whatsapp"
-	"thirdparty_service/pkg/push"
 )
 
 type Service interface {
@@ -24,11 +24,27 @@ type Service interface {
 }
 
 type service struct {
-	repo repositories.Repository
+	repo                      repositories.Repository
+	twilioClientConstructor   func(accountSid, authToken string) *twilio_sms.TwilioClient
+	sendGridClientConstructor func(apiKey string) *sendgrid.SendGridClient
+	whatsAppClientConstructor func(accountSid, authToken, fromNumber string) (*whatsapp.WhatsAppClient, error)
+	fcmClientConstructor      func(ctx context.Context, creds, projectID string) (push_service.FCMClient, error)
 }
 
-func New(repo repositories.Repository) Service {
-	return &service{repo: repo}
+func New(
+	repo repositories.Repository,
+	twilioClientConstructor func(accountSid, authToken string) *twilio_sms.TwilioClient,
+	sendGridClientConstructor func(apiKey string) *sendgrid.SendGridClient,
+	whatsAppClientConstructor func(accountSid, authToken, fromNumber string) (*whatsapp.WhatsAppClient, error),
+	fcmClientConstructor func(ctx context.Context, creds, projectID string) (push_service.FCMClient, error),
+) Service {
+	return &service{
+		repo:                      repo,
+		twilioClientConstructor:   twilioClientConstructor,
+		sendGridClientConstructor: sendGridClientConstructor,
+		whatsAppClientConstructor: whatsAppClientConstructor,
+		fcmClientConstructor:      fcmClientConstructor,
+	}
 }
 
 func (s *service) VerifyAadhaar(aadhaar string) (bool, string, string, error) {
@@ -46,7 +62,10 @@ func (s *service) SendTwilioSms(payload *dtos.TwilioSmsRequest) error {
 	accountSid := config.AppConfig.TwilioAccountSID
 	authToken := config.AppConfig.TwilioAuthToken
 	formNumber := config.AppConfig.TwilioFormNumber
-	client := twilio_sms.NewTwilioClient(accountSid, authToken)
+	if accountSid == "" || authToken == "" || formNumber == "" {
+		return fmt.Errorf("twilio credentials are not set in environment")
+	}
+	client := s.twilioClientConstructor(accountSid, authToken)
 	phoneNumber := fmt.Sprintf("%s %s", payload.CountryCode, payload.Phone)
 
 	if err := client.SendSMS(phoneNumber, formNumber, payload.Message); err != nil {
@@ -60,6 +79,16 @@ func (s *service) SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error 
 	fromEmail := config.AppConfig.SendGridFromEmail
 	name := config.AppConfig.SendGridFromName
 
+	if apiKey == "" {
+		return fmt.Errorf("SendGrid API key is not set")
+	}
+	if fromEmail == "" {
+		return fmt.Errorf("SendGrid from email is not set")
+	}
+	if name == "" {
+		return fmt.Errorf("SendGrid from name is not set")
+	}
+
 	contentType := "text/plain"
 
 	switch payload.Type {
@@ -70,7 +99,7 @@ func (s *service) SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error 
 	}
 
 	// new SendGrid client
-	client := sendgrid.NewSendGridClient(apiKey)
+	client := s.sendGridClientConstructor(apiKey)
 
 	err := client.SendEmail(sendgrid.Email{
 		From: sendgrid.Contact{
@@ -106,11 +135,11 @@ func (s *service) SendWhatsAppMessage(payload *dtos.SendWhatsAppMessageRequest) 
 	authToken := config.AppConfig.SendWhatsAppMessageToken
 	fromNumber := config.AppConfig.SendWhatsAppMessageFromNumber // Twilio sandbox or registered number
 
-	if accountSid == "" || authToken == "" {
+	if accountSid == "" || authToken == "" || fromNumber == "" {
 		return fmt.Errorf("twilio credentials are not set in environment")
 	}
 
-	client, err := whatsapp.NewWhatsAppClient(accountSid, authToken, fromNumber)
+	client, err := s.whatsAppClientConstructor(accountSid, authToken, fromNumber)
 	if err != nil {
 		return fmt.Errorf("failed to create WhatsApp client: %w", err)
 	}
@@ -134,8 +163,15 @@ func (s *service) SendPushNotification(payload *dtos.PushNotificationRequest) er
 	creds := config.AppConfig.PushNotificationAccountCreds
 	projectID := config.AppConfig.PushNotificationProjectID
 
+	if creds == "" {
+		return fmt.Errorf("FCM account credentials are not set")
+	}
+	if projectID == "" {
+		return fmt.Errorf("FCM project ID is not set")
+	}
+
 	ctx := context.Background()
-	client, err := push_service.NewFCMClient(ctx, creds, projectID)
+	client, err := s.fcmClientConstructor(ctx, creds, projectID)
 	if err != nil {
 		return fmt.Errorf("failed to create FCM client: %w", err)
 	}

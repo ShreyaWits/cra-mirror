@@ -26,4 +26,7 @@ type ConfigResponse struct {
 	SendWhatsAppMessageSID        string `validate:"required" json:"SEND_WHATSAPP_MESSAGE_SID"`
 	SendWhatsAppMessageToken      string `validate:"required" json:"SEND_WHATSAPP_MESSAGE_TOKEN"`
 	SendWhatsAppMessageFromNumber string `validate:"required" json:"SEND_WHATSAPP_MESSAGE_FROM_NUMBER"`
+	
+	PushNotificationAccountCreds string `validate:"required" json:"PUSH_NOTIFICATION_CRED"`
+	PushNotificationProjectID    string `validate:"required" json:"PUSH_NOTIFICATION_PROJECT_ID"`
 }
