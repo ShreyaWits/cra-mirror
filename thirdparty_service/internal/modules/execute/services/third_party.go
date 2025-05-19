@@ -7,6 +7,7 @@ import (
 	"thirdparty_service/internal/modules/execute/repositories"
 	"thirdparty_service/pkg/sendgrid"
 	twilio_sms "thirdparty_service/pkg/twilio"
+	"thirdparty_service/pkg/whatsapp"
 )
 
 type Service interface {
@@ -15,6 +16,7 @@ type Service interface {
 	SendSMS(string, string) (string, error)
 	InitiatePayment(string, float64) (string, string, error)
 	SendTwilioSms(payload *dtos.TwilioSmsRequest) error
+	SendWhatsAppMessage(payload *dtos.SendWhatsAppMessageRequest) error
 	SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error
 }
 
@@ -95,6 +97,32 @@ func (s *service) SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error 
 
 	return nil
 }
+
+func (s *service) SendWhatsAppMessage(payload *dtos.SendWhatsAppMessageRequest) error {
+	accountSid := config.AppConfig.SendWhatsAppMessageSID
+	authToken := config.AppConfig.SendWhatsAppMessageToken
+	fromNumber := config.AppConfig.SendWhatsAppMessageFromNumber // Twilio sandbox or registered number
+
+	if accountSid == "" || authToken == "" {
+		return fmt.Errorf("twilio credentials are not set in environment")
+	}
+
+	client, err := whatsapp.NewWhatsAppClient(accountSid, authToken, fromNumber)
+	if err != nil {
+		return fmt.Errorf("failed to create WhatsApp client: %w", err)
+	}
+
+	to := payload.Phone // `SendWhatsAppMessage` prepends "whatsapp:" internally
+	message := payload.Message
+
+	err = client.SendWhatsAppMessage(to, message)
+	if err != nil {
+		return fmt.Errorf("failed to send WhatsApp message: %w", err)
+	}
+
+	return nil
+}
+
 
 func (s *service) InitiatePayment(userID string, amount float64) (string, string, error) {
 	return s.repo.InitiatePayment(userID, amount)

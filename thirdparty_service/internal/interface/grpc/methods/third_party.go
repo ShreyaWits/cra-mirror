@@ -93,6 +93,37 @@ func (h *ThirdPartyServer) InvokeSendGridEmail(ctx context.Context, req *protos.
 	}, nil
 }
 
+func (h *ThirdPartyServer) InvokeWhatsAppMessage(ctx context.Context, req *protos.InvokeWhatsAppRequest) (*protos.InvokeWhatsAppResponse, error) {
+	// validate request
+	payload := &dtos.SendWhatsAppMessageRequest{
+		Phone:       req.Phone,
+		Message:     req.Message,
+		CountryCode: req.CountryCode,
+	}
+	validationErr := utils.Validate(payload)
+if len(validationErr) > 0 {
+	err := validationErr[0]
+	return &protos.InvokeWhatsAppResponse{
+		Code:    err.Code,
+		Message: codes.ErrorMessage(err.Code),
+	}, nil
+}
+
+	// send WhatsApp message
+	err := h.svc.SendWhatsAppMessage(payload)
+	if err != nil {
+		return &protos.InvokeWhatsAppResponse{
+			Code:    codes.TS1012, // define this code in `pkg/codes`
+			Message: codes.ErrorMessage(codes.TS1012),
+		}, nil
+	}
+
+	return &protos.InvokeWhatsAppResponse{
+		Code:    codes.TS0001,
+		Message: codes.SuccessMessage(codes.TS0001),
+	}, nil
+}
+
 func (h *ThirdPartyServer) VerifyAadhaar(ctx context.Context, req *protos.AadharVerifyRequest) (*protos.AadharVerifyResponse, error) {
 
 	// validate request

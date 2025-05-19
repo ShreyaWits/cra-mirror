@@ -1,23 +1,23 @@
-// api/thirdparty.proto
-
 syntax = "proto3";
 
 option go_package = "github.com/kkwitslab/go-boilerplate/internal/pb";
 
 package pb;
 
-// Aadhaar Verification
+// Third Party Integrations: Twilio, WhatsApp, SendGrid, Aadhar, PAN
 service ThirdPartyService {
   rpc InvokeTwilioSms(InvokeTwilioRequest) returns (InvokeTwilioResponse);
+  rpc InvokeWhatsAppMessage(InvokeWhatsAppRequest) returns (InvokeWhatsAppResponse);
   rpc InvokeSendgridEmail(InvokeSendGridRequest) returns (InvokeSendGridResponse);
   rpc VerifyAadhar(AadharVerifyRequest) returns (AadharVerifyResponse);
   rpc VerifyPan(PANVerifyRequest) returns (PANVerifyResponse);
 }
 
+// --- Twilio SMS ---
 message InvokeTwilioRequest {
   string phone = 1;
   string message = 2;
-  string country_code =3;
+  string country_code = 3;
 }
 
 message InvokeTwilioResponse {
@@ -25,11 +25,24 @@ message InvokeTwilioResponse {
   string message = 2;
 }
 
+// --- Twilio WhatsApp ---
+message InvokeWhatsAppRequest {
+  string phone = 1;
+  string message = 2;
+  string country_code = 3;
+}
+
+message InvokeWhatsAppResponse {
+  string code = 1;
+  string message = 2;
+}
+
+// --- SendGrid Email ---
 message InvokeSendGridRequest {
   string to = 1;
   string subject = 2;
   string body = 3;
-  string type = 4;
+  string type = 4; // e.g., "text/plain" or "text/html"
 }
 
 message InvokeSendGridResponse {
@@ -37,35 +50,37 @@ message InvokeSendGridResponse {
   string message = 2;
 }
 
+// --- Aadhar Verification ---
 message AadharVerifyRequest {
   string number = 1;
 }
 
-message aadharResult {
+message AadharResult {
   string name = 1;
   string dob = 2;
 }
+
 message AadharVerifyResponse {
   string code = 1;
   string message = 2;
   bool verified = 3;
-  aadharResult data = 4;
+  AadharResult data = 4;
 }
 
-
+// --- PAN Verification ---
 message PANVerifyRequest {
   string number = 1;
 }
 
-message panResult {
+message PanResult {
   string name = 1;
   string dob = 2;
-  string pan_type=3;
+  string pan_type = 3;
 }
 
 message PANVerifyResponse {
   string code = 1;
   string message = 2;
   bool verified = 3;
-  panResult data = 4;
+  PanResult data = 4;
 }

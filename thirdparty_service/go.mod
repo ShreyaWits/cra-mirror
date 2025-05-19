@@ -22,12 +22,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0
 	go.uber.org/dig v1.18.2
 	golang.org/x/crypto v0.38.0
+	golang.org/x/oauth2 v0.26.0
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
 	gorm.io/gorm v1.26.1
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
