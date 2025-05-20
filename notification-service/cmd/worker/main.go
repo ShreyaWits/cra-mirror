@@ -67,6 +67,13 @@ func runWorkerWithDeps(
 	CASSANDRA_PORT, err := strconv.Atoi(config.GetEnv("CASSANDRA_PORT", "9042"))
 	KAFKA_BROKER := config.GetEnv("KAFKA_BROKERS", "kafka:29092")
 
+	log.Println("cassandra host", CASSANDRA_HOST)
+	log.Println("cassandra port", CASSANDRA_PORT)
+	log.Println("cassandra keyspace", CASSANDRA_KEYSPACE)
+	log.Println("cassandra username", CASSANDRA_USERNAME)
+	log.Println("cassandra password", CASSANDRA_PASSWORD)
+	log.Println("kafka broker", KAFKA_BROKER)
+
 	if err != nil {
 		return err
 	}

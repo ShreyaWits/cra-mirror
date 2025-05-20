@@ -1,6 +1,7 @@
 package app
 
 import (
+	"log"
 	"notification-service/internal/common/repositories"
 	config "notification-service/internal/configs"
 	"notification-service/pkg/cassandra"
@@ -65,6 +66,13 @@ func InitDependency() {
 	if err != nil {
 		panic(err)
 	}
+
+	log.Println("cassandra host", CASSANDRA_HOST)
+	log.Println("cassandra port", CASSANDRA_PORT)
+	log.Println("cassandra keyspace", CASSANDRA_KEYSPACE)
+	log.Println("cassandra username", CASSANDRA_USERNAME)
+	log.Println("cassandra password", CASSANDRA_PASSWORD)
+	log.Println("kafka broker", KAFKA_BROKER)
 
 	session := newCassandraDB(CASSANDRA_HOST, CASSANDRA_PORT, CASSANDRA_KEYSPACE, CASSANDRA_USERNAME, CASSANDRA_PASSWORD)
 
