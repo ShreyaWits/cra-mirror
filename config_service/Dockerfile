@@ -26,7 +26,7 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /build/main /main
-COPY --from=builder /app/.env .env
+COPY --from=builder /build/.env .env
 
 # Command to run the executable
 ENTRYPOINT ["/main"]
