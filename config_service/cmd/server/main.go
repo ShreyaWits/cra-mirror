@@ -2,75 +2,91 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"nps-config-service/internal/app"
 	"nps-config-service/internal/configs"
 	"nps-config-service/internal/configs/db"
+	"nps-config-service/internal/modules/config-manager/di"
 	"nps-config-service/pkg/observability"
-	"os"
-	"os/signal"
 
-	"github.com/gofiber/contrib/otelfiber"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
 
 func main() {
+	// Create a context that will be canceled on SIGINT or SIGTERM
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	//env file loading
+	// Load configuration
 	config, err := configs.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
-	appFiber := fiber.New()
-	if err := run(appFiber, config); err != nil {
-		log.Fatalln(err)
-	}
-	db.ConnectDatabase(config)
 
-	//setup routes
-	appInstance := app.SetupRouter()
-
-	err = appInstance.Listen(":" + config.Port)
-	log.Println("Server started on port: " + config.Port)
+	// Initialize OpenTelemetry
+	shutdown, err := observability.SetupOTelSDK(ctx, config)
 	if err != nil {
-
-		log.Fatalf("Error starting server: %v", err)
-	}
-
-}
-
-func run(app *fiber.App, config *configs.Config) (err error) {
-	// Graceful shutdown support
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-
-	// Setup OpenTelemetry
-	otelShutdown, err := observability.SetupOTelSDK(ctx, config)
-	if err != nil {
-		return
+		log.Fatalf("Failed to initialize OpenTelemetry: %v", err)
 	}
 	defer func() {
-		err = errors.Join(err, otelShutdown(context.Background()))
+		if err := shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down OpenTelemetry: %v", err)
+		}
 	}()
 
-	// Create Fiber app
-	// app := fiber.New()
-	type Option interface {
-		// contains filtered or unexported methods
+	// Initialize database
+	db.ConnectDatabase(config)
+
+	// Initialize DI container
+	container, err := di.InitContainer()
+	if err != nil {
+		log.Fatalf("Failed to initialize DI container: %v", err)
 	}
-	app.Use(otelfiber.Middleware())
-	// Start server in background
+	defer container.Close()
+
+	// Create Fiber app
+	appFiber := fiber.New(fiber.Config{
+		AppName:      "NPS Config Service",
+		ReadTimeout:  time.Second * 10,
+		WriteTimeout: time.Second * 10,
+		IdleTimeout:  time.Second * 5,
+	})
+
+	// Add middleware
+	appFiber.Use(cors.New())
+	appFiber.Use(requestid.New())
+	appFiber.Use(logger.New())
+
+	// Setup routes with container
+	appInstance := app.SetupRouter(appFiber, container)
+
+	// Start server in a goroutine
+	go func() {
+		if err := appInstance.Listen(":" + config.Port); err != nil {
+			log.Printf("Server error: %v", err)
+			stop() // Signal shutdown on server error
+		}
+	}()
 
 	// Wait for interrupt signal
-	// <-ctx.Done()
+	<-ctx.Done()
 
-	// Gracefully shutdown Fiber
-	// ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer cancel()
-	// if err := app.ShutdownWithContext(ctxShutdown); err != nil {
-	// 	log.Printf("Error shutting down server: %v", err)
-	// }
+	// Create shutdown context with timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	return
+	// Attempt graceful shutdown
+	if err := appInstance.ShutdownWithContext(shutdownCtx); err != nil {
+		log.Printf("Error during server shutdown: %v", err)
+	}
+
+	log.Println("Server shutdown complete")
 }
