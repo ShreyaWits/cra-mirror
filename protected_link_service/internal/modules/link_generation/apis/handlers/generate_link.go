@@ -11,24 +11,22 @@ import (
 	"protected_link/internal/modules/link_generation/models"
 	"protected_link/internal/modules/link_generation/services"
 	pb "protected_link/pkg/grpc/proto"
-
 	"protected_link/pkg/validation"
 )
 
 // GenerateLinkHandler handles link generation related gRPC requests
 type GenerateLinkHandler struct {
-	services *services.GenerateLinkService
+	service services.GenerateLinkServiceInterface
 	pb.UnimplementedLinkServiceServer
 }
 
 // NewGenerateLinkHandler creates a new instance of GenerateLinkHandler
-func NewGenerateLinkHandler(services *services.GenerateLinkService) *GenerateLinkHandler {
+func NewGenerateLinkHandler(service services.GenerateLinkServiceInterface) *GenerateLinkHandler {
 	return &GenerateLinkHandler{
-		services: services,
+		service: service,
 	}
 }
 
-// SaveGeneratedLinkV1 handles the generation and saving of protected links
 func (h *GenerateLinkHandler) SaveGeneratedLinkV1(ctx context.Context, req *pb.GenerateUrlRequestV1) (*pb.GenerateUrlResponseV1, error) {
 	log.Printf("📥 [gRPC] SaveGeneratedLinkV1 invoked with request: %+v", req)
 
@@ -36,7 +34,6 @@ func (h *GenerateLinkHandler) SaveGeneratedLinkV1(ctx context.Context, req *pb.G
 		return nil, fmt.Errorf("request cannot be nil")
 	}
 
-	// Convert request data to internal format
 	dataInterfaceMap := make(map[string]interface{}, len(req.Data))
 	for k, v := range req.Data {
 		dataInterfaceMap[k] = v
@@ -55,7 +52,6 @@ func (h *GenerateLinkHandler) SaveGeneratedLinkV1(ctx context.Context, req *pb.G
 		Data:        apiDtos.JSONB(dataInterfaceMap),
 	}
 
-	// Validate request
 	fieldErrors, err := validation.ValidateGenerateUrlRequest(*internalReq)
 	if err != nil {
 		log.Printf("❌ Validation failed: %v", err)
@@ -67,8 +63,7 @@ func (h *GenerateLinkHandler) SaveGeneratedLinkV1(ctx context.Context, req *pb.G
 		}, nil
 	}
 
-	// Process request
-	response, err := h.services.SaveGeneratedLink(internalReq)
+	response, err := h.service.SaveGeneratedLink(internalReq)
 	if err != nil {
 		log.Printf("❌ Failed to save generated link: %v", err)
 		return nil, fmt.Errorf("failed to save generated link: %w", err)
@@ -85,11 +80,10 @@ func (h *GenerateLinkHandler) SaveGeneratedLinkV1(ctx context.Context, req *pb.G
 	}, nil
 }
 
-// DeleteGeneratedLinkV1 handles the deletion of protected links
 func (h *GenerateLinkHandler) DeleteGeneratedLinkV1(ctx context.Context, req *pb.DeleteGeneratedLinkRequestV1) (*pb.DeleteGeneratedLinkResponseV1, error) {
 	log.Printf("📥 [gRPC] DeleteGeneratedLinkV1 invoked with request: %+v", req)
 
-	if req == nil || req.Link == "" {
+	if req == nil || req.Token == "" {
 		log.Println("❌ Validation failed: link cannot be empty")
 		errorMap := map[string]string{
 			"validation_errors": "Link cannot be empty",
@@ -104,8 +98,7 @@ func (h *GenerateLinkHandler) DeleteGeneratedLinkV1(ctx context.Context, req *pb
 		}, nil
 	}
 
-	log.Printf("🔍 Attempting to delete link: %s", req.Link)
-	response, err := h.services.DeleteGeneratedLink(req.Link)
+	response, err := h.service.DeleteGeneratedLink(req.Token)
 	if err != nil {
 		log.Printf("❌ Failed to delete link: %v", err)
 		return nil, fmt.Errorf("failed to delete generated link: %w", err)
@@ -122,7 +115,6 @@ func (h *GenerateLinkHandler) DeleteGeneratedLinkV1(ctx context.Context, req *pb
 	}, nil
 }
 
-// GetExtractDataV1 handles the retrieval of data from protected links
 func (h *GenerateLinkHandler) GetExtractDataV1(ctx context.Context, req *pb.GetExtractDataRequestV1) (*pb.GetExtractDataResponseV1, error) {
 	log.Printf("📥 [gRPC] GetExtractDataV1 invoked with request: %+v", req)
 
@@ -141,17 +133,13 @@ func (h *GenerateLinkHandler) GetExtractDataV1(ctx context.Context, req *pb.GetE
 		}, nil
 	}
 
-	log.Printf("🔍 Fetching data for token: %s", req.Token)
-	result, err := h.services.GetExtractData(&req.Token)
+	result, err := h.service.GetExtractData(&req.Token)
 	if err != nil {
 		log.Printf("❌ Failed to retrieve token data: %v", err)
 		return nil, fmt.Errorf("failed to retrieve token data: %w", err)
 	}
 
 	dataInterfaceMap := make(map[string]string)
-	log.Printf("🔍 Processing data: %+v", result.Data)
-
-	// Handle different types of data
 	switch data := result.Data.(type) {
 	case map[string]interface{}:
 		for k, v := range data {

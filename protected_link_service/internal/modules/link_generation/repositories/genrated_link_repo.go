@@ -30,6 +30,8 @@ type GeneratedRepository struct {
 	cassandra  repository.ICassandraRepository
 }
 
+var _ IGeneratedRepository = (*GeneratedRepository)(nil)
+
 // NewGeneratedRepository creates a new instance of GeneratedRepository
 func NewGeneratedRepository(redis *database.RedisConfig, cassandra repository.ICassandraRepository) (*GeneratedRepository, error) {
 	jwtService, err := jwt.NewJwtCreation()
@@ -48,6 +50,16 @@ func NewGeneratedRepository(redis *database.RedisConfig, cassandra repository.IC
 		config:     cfg,
 		cassandra:  cassandra,
 	}, nil
+}
+
+// newGeneratedRepositoryWithDependencies creates a new instance with the given dependencies (for testing)
+func newGeneratedRepositoryWithDependencies(redis *database.RedisConfig, cassandra repository.ICassandraRepository, jwtService *jwt.JwtCreation, config *configEnv.Config) *GeneratedRepository {
+	return &GeneratedRepository{
+		redis:      redis,
+		jwtService: jwtService,
+		config:     config,
+		cassandra:  cassandra,
+	}
 }
 
 // SaveGeneratedLink saves a generated link with the provided data

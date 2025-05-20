@@ -1,0 +1,60 @@
+version: '3.8'
+
+networks:
+  template-services-network: {}
+
+services:
+  template-service:
+    build: .
+    ports:
+      - "50051:50051"  # gRPC
+      - "5000:8080"    # REST
+    depends_on:
+      yugabyte:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_USER=templateuser
+      - REDIS_PASSWORD=templatepassword
+      - REDIS_URL=redis:6379
+      - YUGABYTE_HOST=yugabyte
+      - YUGABYTE_PORT=5433
+      - YUGABYTE_USER=yugabyte
+      - YUGABYTE_PASSWORD=yugabyte
+      - YUGABYTE_DB=yugabyte
+
+  yugabyte:
+    container_name: yugabyte
+    image: yugabytedb/yugabyte:latest
+    command: ["bin/yugabyted", "start", "--background=false"]
+    ports:
+      - "5435:5433"
+      - "9042:9042"
+      - "15433:15433"
+      - "7001:7000"
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5435"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5  
+    restart: unless-stopped
+      

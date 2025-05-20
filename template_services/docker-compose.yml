@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  cra-template-service:
+    build: .
+    ports:
+      - "${GRPC_PORT}:50051"  # gRPC
+      - "${REST_PORT}:8081"    # REST
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_URL=${REDIS_URL}
+      - YUGABYTEDB_HOST=${YUGABYTEDB_HOST}
+      - YUGABYTEDB_PORT=${YUGABYTEDB_PORT}
+      - YUGABYTEDB_USER=${YUGABYTEDB_USER}
+      - YUGABYTEDB_PASSWORD=${YUGABYTEDB_PASSWORD}
+      - YUGABYTEDB_NAME=${YUGABYTEDB_NAME}
