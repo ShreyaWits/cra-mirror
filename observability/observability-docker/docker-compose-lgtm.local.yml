@@ -1,0 +1,74 @@
+services:
+  loki:
+    image: grafana/loki:2.9.4
+    # ports:
+      # - "3100:3100"
+    # command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+    #   - ./loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - loki
+      - prometheus
+      - tempo
+    volumes:
+      - grafana_data:/var/lib/grafana
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      # - 1888:1888 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus exporter metrics
+      # - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      # - 4318:4318 # OTLP http receiver
+      # - 55679:55679 # zpages extension
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # UI
+      # - "4378:4317"  # HTTP trace ingestion (Jaeger collector)
+  
+  tempo:
+    image: grafana/tempo
+    ports:
+      - "3200:3200"
+      # - "4327:4327"
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo-config.yaml:/etc/tempo.yaml
+
+  prometheus:
+    image: prom/prometheus:latest # Changed to directly pull the image
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus-config.yaml:/etc/prometheus/prometheus.yml
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"     
+      - "9001:9001"    
+    environment:
+      MINIO_ROOT_USER: minioadmin       
+      MINIO_ROOT_PASSWORD: minioadmin   
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+
+
+volumes:
+  grafana_data: {}
+  minio-data: {}
+  loki-data: {}
