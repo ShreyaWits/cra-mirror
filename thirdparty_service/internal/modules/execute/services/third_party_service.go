@@ -14,7 +14,7 @@ import (
 
 type Service interface {
 	VerifyAadhaar(string) (bool, string, string, error)
-	VerifyPAN(string) (bool, string, error)
+	VerifyPAN(string) (bool, string, string, error)
 	SendSMS(string, string) (string, error)
 	InitiatePayment(string, float64) (string, string, error)
 	SendTwilioSms(payload *dtos.TwilioSmsRequest) error
@@ -51,7 +51,7 @@ func (s *service) VerifyAadhaar(aadhaar string) (bool, string, string, error) {
 	return s.repo.VerifyAadhaar(aadhaar)
 }
 
-func (s *service) VerifyPAN(pan string) (bool, string, error) {
+func (s *service) VerifyPAN(pan string) (bool, string, string, error) {
 	return s.repo.VerifyPAN(pan)
 }
 

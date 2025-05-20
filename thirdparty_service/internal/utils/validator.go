@@ -38,11 +38,20 @@ func getErrorCode(structVal any, fieldName string) string {
 		rt = rt.Elem()
 	}
 
+	// ✅ Add check for Struct kind before accessing fields
+	if rt.Kind() != reflect.Struct {
+		return "VALIDATION_ERROR"
+	}
+
 	if field, ok := rt.FieldByName(fieldName); ok {
-		return field.Tag.Get("error_code")
+		code := field.Tag.Get("error_code")
+		if code != "" {
+			return code
+		}
 	}
 	return "VALIDATION_ERROR" // fallback default
 }
+
 
 func generateErrorMessage(fe validator.FieldError) string {
 	switch fe.Tag() {

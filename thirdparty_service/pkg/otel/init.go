@@ -184,12 +184,14 @@ func newMeterProvider(grpcEndpoint string) (*metric.MeterProvider, error) {
 	return meterProvider, nil
 }
 
-func newResource() (*resource.Resource, error) {
-	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
+func NewResource() (*resource.Resource, error) {
+	return resource.New(context.Background(),
+		resource.WithAttributes(
 			semconv.ServiceNameKey.String(config.AppConfig.ServiceName),
-			// semconv.ServiceVersion("0.1.0"),
-		))
+			semconv.ServiceVersionKey.String("v0.1.0"), // Add version for consistency
+			semconv.DeploymentEnvironmentKey.String(config.AppConfig.Environment), // Add environment for consistency
+		),
+	)
 }
 
 type stdoutExporter struct{}

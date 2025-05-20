@@ -6,10 +6,10 @@ import (
 )
 
 type ConfigHandler struct {
-	service *service.ConfigService
+	service service.ConfigService
 }
 
-func NewConfigHandler(service *service.ConfigService) *ConfigHandler {
+func NewConfigHandler(service service.ConfigService) *ConfigHandler {
 	return &ConfigHandler{service: service}
 }
 

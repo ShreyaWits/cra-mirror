@@ -46,8 +46,8 @@ func TestMockRepo_VerifyPAN(t *testing.T) {
 	expectedErr := errors.New("some error")
 
 	// Test case 1: Successful verification
-	mockRepo.On("VerifyPAN", pan).Return(expectedValid, expectedName, nil).Once()
-	valid, name, err := mockRepo.VerifyPAN(pan)
+	mockRepo.On("VerifyPAN", pan).Return(expectedValid, expectedName, "", nil).Once()
+	valid, name,_, err := mockRepo.VerifyPAN(pan)
 	assert.Equal(t, expectedValid, valid)
 	assert.Equal(t, expectedName, name)
 	assert.NoError(t, err)
@@ -57,8 +57,8 @@ func TestMockRepo_VerifyPAN(t *testing.T) {
 	mockRepo = new(MockRepo)
 
 	// Test case 2: Verification with error
-	mockRepo.On("VerifyPAN", pan).Return(false, "", expectedErr).Once()
-	valid, name, err = mockRepo.VerifyPAN(pan)
+	mockRepo.On("VerifyPAN", pan).Return(false, "", "", expectedErr).Once()
+	valid, name,_, err = mockRepo.VerifyPAN(pan)
 	assert.False(t, valid)
 	assert.Equal(t, "", name)
 	assert.Error(t, err)

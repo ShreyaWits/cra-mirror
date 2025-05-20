@@ -29,9 +29,9 @@ func (m *MockRepository) VerifyAadhaar(aadhaar string) (bool, string, string, er
 	return args.Bool(0), args.String(1), args.String(2), args.Error(3)
 }
 
-func (m *MockRepository) VerifyPAN(pan string) (bool, string, error) {
+func (m *MockRepository) VerifyPAN(pan string) (bool, string, string, error) {
 	args := m.Called(pan)
-	return args.Bool(0), args.String(1), args.Error(2)
+	return args.Bool(0), args.String(1), args.String(2), args.Error(3)
 }
 
 func (m *MockRepository) SendSMS(phone, message string) (string, error) {
@@ -165,17 +165,17 @@ func TestVerifyPAN(t *testing.T) {
 	expectedString := "details"
 	expectedErr := errors.New("pan verification error")
 
-	mockRepo.On("VerifyPAN", "ABCDE1234F").Return(expectedBool, expectedString, nil).Once()
-	mockRepo.On("VerifyPAN", "invalid").Return(false, "", expectedErr).Once()
+	mockRepo.On("VerifyPAN", "ABCDE1234F").Return(expectedBool, expectedString, interface{}(""), nil).Once()
+	mockRepo.On("VerifyPAN", "invalid").Return(false, "", interface{}(""), expectedErr).Once()
 
 	// Test success case
-	b, s, err := service.VerifyPAN("ABCDE1234F")
+	b, s, _, err := service.VerifyPAN("ABCDE1234F")
 	assert.Equal(t, expectedBool, b)
 	assert.Equal(t, expectedString, s)
 	assert.NoError(t, err)
 
 	// Test error case
-	b, s, err = service.VerifyPAN("invalid")
+	b, s, _, err = service.VerifyPAN("invalid")
 	assert.False(t, b)
 	assert.Empty(t, s)
 	assert.Error(t, err)

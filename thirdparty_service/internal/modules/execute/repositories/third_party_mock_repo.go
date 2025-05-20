@@ -14,9 +14,9 @@ func (m *MockRepo) VerifyAadhaar(aadhaar string) (bool, string, string, error) {
 	return args.Bool(0), args.String(1), args.String(2), args.Error(3)
 }
 
-func (m *MockRepo) VerifyPAN(pan string) (bool, string, error) {
+func (m *MockRepo) VerifyPAN(pan string) (bool, string, string, error) {
 	args := m.Called(pan)
-	return args.Bool(0), args.String(1), args.Error(2)
+	return args.Bool(0), args.String(1), args.String(2), args.Error(3)
 }
 
 func (m *MockRepo) SendSMS(phone, message string) (string, error) {

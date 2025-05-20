@@ -11,7 +11,16 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type ConfigService struct {
+// ConfigService defines the interface for the configuration service.
+// ConfigService defines the interface for the configuration service.
+type ConfigService interface {
+	LoginToConfigService() (string, error)
+	FetchDynamicConfig(token string) (*dto.ConfigResponse, error)
+	ValidateConfig(config dto.ConfigResponse) error
+}
+
+// ConfigServiceImpl is the concrete implementation of the ConfigService interface.
+type ConfigServiceImpl struct {
 	Environment           string
 	ServiceName           string
 	ConfigServiceURL      string
@@ -20,8 +29,11 @@ type ConfigService struct {
 	HttpClient            *http.Client
 }
 
-func NewConfigService(Environment, ServiceName, ConfigServiceURL, ConfigServiceUsername, ConfigServicePassword string) *ConfigService {
-	return &ConfigService{
+// Ensure the concrete ConfigServiceImpl struct implements the ConfigService interface
+var _ ConfigService = (*ConfigServiceImpl)(nil)
+
+func NewConfigService(Environment, ServiceName, ConfigServiceURL, ConfigServiceUsername, ConfigServicePassword string) ConfigService {
+	return &ConfigServiceImpl{
 		Environment:           Environment,
 		ServiceName:           ServiceName,
 		ConfigServiceURL:      ConfigServiceURL,
@@ -31,7 +43,7 @@ func NewConfigService(Environment, ServiceName, ConfigServiceURL, ConfigServiceU
 	}
 }
 
-func (cs *ConfigService) LoginToConfigService() (string, error) {
+func (cs *ConfigServiceImpl) LoginToConfigService() (string, error) {
 	loginPayload := map[string]string{
 		"username": cs.ConfigServiceUsername,
 		"password": cs.ConfigServicePassword,
@@ -67,7 +79,7 @@ func (cs *ConfigService) LoginToConfigService() (string, error) {
 	return result.Token, nil
 }
 
-func (cs *ConfigService) FetchDynamicConfig(token string) (*dto.ConfigResponse, error) {
+func (cs *ConfigServiceImpl) FetchDynamicConfig(token string) (*dto.ConfigResponse, error) {
 	url := fmt.Sprintf("%s/config/%s/%s", cs.ConfigServiceURL, cs.Environment, cs.ServiceName)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -98,7 +110,7 @@ func (cs *ConfigService) FetchDynamicConfig(token string) (*dto.ConfigResponse, 
 
 }
 
-func (cs *ConfigService) ValidateConfig(cfg dto.ConfigResponse) error {
+func (cs *ConfigServiceImpl) ValidateConfig(cfg dto.ConfigResponse) error {
 
 	validator := validator.New(validator.WithRequiredStructEnabled())
 
