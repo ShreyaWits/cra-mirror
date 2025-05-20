@@ -4,19 +4,44 @@ import (
 	"fmt"
 	"messaging_service/internal/modules/message_broker/models"
 	"os"
+	"reflect"
+	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 )
 
 type Config = models.MessaggingConfigResponse
 type Env = models.EnvConfig
 
-var config *Config = &Config{}
+var (
+	config    *Config = &Config{}
+	envConfig *Env    = &Env{}
+	validate  *validator.Validate
+)
 
-var envConfig *models.EnvConfig = &models.EnvConfig{}
+func init() {
+	// Initialize validator
+	validate = validator.New()
 
-func SetConfig(cfg *Config) {
+	// Register field name function for better error messages
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return fld.Name
+		}
+		return name
+	})
+}
+
+func SetConfig(cfg *Config) error {
+	// Validate configuration before setting it
+	if err := validate.Struct(cfg); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
 	config = cfg
+	return nil
 }
 
 func GetConfig() *Config {
@@ -24,8 +49,7 @@ func GetConfig() *Config {
 }
 
 func GetMockConfig() *Config {
-	return &Config{
-
+	cfg := &Config{
 		KafkaBrokers:          []string{"localhost:9092"},
 		KafkaAutoCreateTopics: "true",
 
@@ -53,6 +77,13 @@ func GetMockConfig() *Config {
 		KafkaEnableAutoCommit:         false,
 		KafkaIsolationLevel:           "read_committed",
 	}
+
+	// Validate mock config to ensure it meets requirements
+	if err := validate.Struct(cfg); err != nil {
+		panic(fmt.Sprintf("invalid mock configuration: %v", err))
+	}
+
+	return cfg
 }
 
 // LoadConfig loads configuration from environment variables
@@ -60,8 +91,8 @@ func LoadConfig() (*Env, error) {
 	// Load .env file if it exists
 	godotenv.Load()
 
+	// Load environment variables into struct
 	envConfig = &models.EnvConfig{
-		// // Server settings
 		ConfigServiceUrl:   getEnvString("CONFIG_SERVICE_URL", ""),
 		ConfigServiceToken: getEnvString("CONFIG_SERVICE_TOKEN", ""),
 		Environment:        getEnvString("ENVIRONMENT", ""),
@@ -71,42 +102,23 @@ func LoadConfig() (*Env, error) {
 		CacheUrl:           getEnvString("CACHE_URL", ""),
 		ObservabilityUrl:   getEnvString("OBSERVABILITY_URL", ""),
 		ServiceVersion:     getEnvString("SERVICE_VERSION", ""),
+		CACHE_TTL:          getEnvInt("CACHE_TTL", 24), // Default 24 hours
+		TLSDisabled:        getEnvBool("TLSDISABLE", false),
+		SamplingRatio:      getEnvFloat("SAMPLINGRATIO", 1.0), // Default to 100% sampling
 	}
 
-	// --- Validation ---
-
-	if envConfig.ConfigServiceUrl == "" {
-		return nil, fmt.Errorf("CONFIG_SERVICE_URL environment variable is required")
-	}
-
-	if envConfig.ConfigServiceToken == "" {
-		return nil, fmt.Errorf("CONFIG_SERVICE_TOKEN environment variable is required")
-	}
-	if envConfig.Environment == "" {
-		return nil, fmt.Errorf("ENVIRONMENT environment variable is required")
-	}
-	if envConfig.ServiceName == "" {
-		return nil, fmt.Errorf("SERVICE_NAME environment variable is required")
-	}
-
-	if envConfig.HttpPort == "" {
-		return nil, fmt.Errorf("HttpPort environment variable is required")
-	}
-
-	if envConfig.GrpcPort == "" {
-		return nil, fmt.Errorf("GrpcPort environment variable is required")
-	}
-
-	if envConfig.CacheUrl == "" {
-		return nil, fmt.Errorf("CacheUrl environment variable is required")
-	}
-
-	if envConfig.ServiceVersion == "" {
-		return nil, fmt.Errorf("ServiceVersion environment variable is required")
-	}
-
-	if envConfig.ObservabilityUrl == "" {
-		return nil, fmt.Errorf("ObservabilityUrl environment variable is required")
+	// Validate using the validator
+	if err := validate.Struct(envConfig); err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		if ok {
+			// Format validation errors more nicely
+			var errorMessages []string
+			for _, e := range validationErrors {
+				errorMessages = append(errorMessages, fmt.Sprintf("Field '%s' failed validation: %s", e.Field(), e.Tag()))
+			}
+			return nil, fmt.Errorf("environment validation failed: %s", strings.Join(errorMessages, "; "))
+		}
+		return nil, fmt.Errorf("environment validation failed: %w", err)
 	}
 
 	return envConfig, nil
@@ -119,4 +131,55 @@ func getEnvString(key, defaultValue string) string {
 		return defaultValue
 	}
 	return value
+}
+
+// getEnvInt gets an integer environment variable or returns a default value
+func getEnvInt(key string, defaultValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	var result int
+	_, err := fmt.Sscanf(value, "%d", &result)
+	if err != nil {
+		return defaultValue
+	}
+
+	return result
+}
+
+// getEnvBool gets a boolean environment variable or returns a default value
+func getEnvBool(key string, defaultValue bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	var result bool
+	if strings.ToLower(value) == "true" || value == "1" {
+		result = true
+	} else if strings.ToLower(value) == "false" || value == "0" {
+		result = false
+	} else {
+		return defaultValue
+	}
+
+	return result
+}
+
+// getEnvFloat gets a float environment variable or returns a default value
+func getEnvFloat(key string, defaultValue float64) float64 {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	var result float64
+	_, err := fmt.Sscanf(value, "%f", &result)
+	if err != nil {
+		return defaultValue
+	}
+
+	return result
 }

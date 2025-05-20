@@ -2,6 +2,7 @@ package confluent
 
 import (
 	"context"
+	"fmt"
 	"messaging_service/internal/config"
 	"messaging_service/pkg/observability"
 )
@@ -12,8 +13,18 @@ type Factory struct {
 }
 
 // NewFactory creates a new Factory
-func NewFactory(obs *observability.ObservabilityStack) KafkaFactory {
-	return &Factory{obs: obs}
+func NewFactory(obs *observability.ObservabilityStack) (KafkaFactory, error) {
+	// Validate observability stack
+	if obs == nil {
+		return nil, fmt.Errorf("observability stack cannot be nil in Kafka factory")
+	}
+
+	// Validate required observability components
+	if obs.LoggerService == nil {
+		return nil, fmt.Errorf("logger service cannot be nil in Kafka factory")
+	}
+
+	return &Factory{obs: obs}, nil
 }
 
 // CreateProducer creates a new Confluent Producer

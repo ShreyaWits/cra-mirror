@@ -157,57 +157,57 @@ func (a *AdminImpl) HasActiveConsumers(ctx context.Context, topic string) (bool,
 	tCtx, span := a.obs.TracerService.StartTracer(ctx, functionName)
 	defer a.obs.TracerService.StopSpan(span)
 
-	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Checking for active consumers on topic: %s", topic))
+	a.obs.LoggerService.Info(tCtx, fmt.Sprintf("Checking for active consumers on topic: %s", topic))
 
 	// First check if topic exists
 	metadata, err := a.adminClient.GetMetadata(&topic, false, 10000)
 	if err != nil {
-		a.obs.LoggerService.Error(tCtx,fmt.Sprintf("Failed to check if topic exists: %v", err))
+		a.obs.LoggerService.Error(tCtx, fmt.Sprintf("Failed to check if topic exists: %v", err))
 		return false, fmt.Errorf("failed to check if topic exists: %w", err)
 	}
 
 	if _, exists := metadata.Topics[topic]; !exists {
-		a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Topic %s does not exist", topic))
+		a.obs.LoggerService.Info(tCtx, fmt.Sprintf("Topic %s does not exist", topic))
 		return false, nil
 	}
-	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Topic %s exists", topic))
+	a.obs.LoggerService.Info(tCtx, fmt.Sprintf("Topic %s exists", topic))
 
 	// Get the admin client metadata which includes information about the cluster
 	clusterMetadata, err := a.adminClient.GetMetadata(nil, true, 30000)
 	if err != nil {
-		a.obs.LoggerService.Warn(tCtx,fmt.Sprintf("Failed to get cluster metadata: %v. Assuming consumers exist for safety", err))
+		a.obs.LoggerService.Warn(tCtx, fmt.Sprintf("Failed to get cluster metadata: %v. Assuming consumers exist for safety", err))
 		// Fall back to assume consumers exist (safer)
 		return true, nil
 	}
 
 	// Check if the broker is healthy
 	if len(clusterMetadata.Brokers) == 0 {
-		a.obs.LoggerService.Warn(tCtx,"No brokers found in cluster metadata. Assuming consumers exist for safety")
+		a.obs.LoggerService.Warn(tCtx, "No brokers found in cluster metadata. Assuming consumers exist for safety")
 		// Assume consumers in case of broker connectivity issues
 		return true, nil
 	}
-	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Found %d brokers in cluster", len(clusterMetadata.Brokers)))
+	a.obs.LoggerService.Info(tCtx, fmt.Sprintf("Found %d brokers in cluster", len(clusterMetadata.Brokers)))
 
 	// Make a simple check for any consumer group activity in the cluster
 	consumerGroupsList, err := a.adminClient.ListConsumerGroups(tCtx)
 	if err != nil {
-		a.obs.LoggerService.Warn(tCtx,fmt.Sprintf("Failed to list consumer groups: %v. Assuming consumers exist for safety", err))
+		a.obs.LoggerService.Warn(tCtx, fmt.Sprintf("Failed to list consumer groups: %v. Assuming consumers exist for safety", err))
 		// Fall back to assuming consumers exist
 		return true, nil
 	}
 
 	// If there are no consumer groups at all, the topic can't have active consumers
 	if len(consumerGroupsList.Valid) == 0 {
-		a.obs.LoggerService.Info(tCtx,"No consumer groups found in cluster")
+		a.obs.LoggerService.Info(tCtx, "No consumer groups found in cluster")
 		return false, nil
 	}
-	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Found %d consumer groups in cluster", len(consumerGroupsList.Valid)))
+	a.obs.LoggerService.Info(tCtx, fmt.Sprintf("Found %d consumer groups in cluster", len(consumerGroupsList.Valid)))
 
 	// We know there are consumer groups in the cluster
 	// For now, if topic exists and there are consumer groups, we'll assume it has consumers
 	// This is a safer approach until we can implement a more detailed check
 	// that works reliably with the Confluent Kafka API
-	a.obs.LoggerService.Info(tCtx,fmt.Sprintf("Topic %s exists and consumer groups are present. Assuming active consumers", topic))
+	a.obs.LoggerService.Info(tCtx, fmt.Sprintf("Topic %s exists and consumer groups are present. Assuming active consumers", topic))
 	return true, nil
 }
 

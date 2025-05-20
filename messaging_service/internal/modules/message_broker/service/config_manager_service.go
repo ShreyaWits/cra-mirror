@@ -18,30 +18,48 @@ type ConfigManagerService struct {
 	env          config.Env
 }
 
-func NewConfigManager(configClient client.ConfigClient, cacheclient cacheclient.RedisClient) *ConfigManagerService {
+func NewConfigManager(configClient client.ConfigClient, cacheclient cacheclient.RedisClient) (*ConfigManagerService, error) {
+	// Validate input arguments
+	if configClient == nil {
+		return nil, fmt.Errorf("configClient cannot be nil in NewConfigManager")
+	}
+	if cacheclient == nil {
+		return nil, fmt.Errorf("cacheClient cannot be nil in NewConfigManager")
+	}
+
 	return &ConfigManagerService{
 		configClient: configClient,
 		cacheclient:  cacheclient,
-	}
+	}, nil
 }
-func (s *ConfigManagerService) GetFromApiConfiguration() (*config.Config, error) {
 
+func (s *ConfigManagerService) GetFromApiConfiguration() (*config.Config, error) {
 	var data *config.Config
 	var err error
 	var cacheErr error
+
+	// Try to fetch config from API
 	data, err = s.configClient.FetchConfig(context.Background())
 	if err != nil {
+		// If API fetch fails, try to get from cache
 		data, cacheErr = s.GetDataToCache(context.Background(), s.env.ServiceName)
 		if cacheErr != nil {
 			return nil, err
 		}
 		return data, nil
 	}
-	config.SetConfig(data)
+
+	// Validate and set the global config
+	if err := config.SetConfig(data); err != nil {
+		return nil, fmt.Errorf("invalid configuration from API: %w", err)
+	}
+
+	// Store in cache
 	err = s.SetDataToCache(context.Background(), s.env.ServiceName, data)
 	if err != nil {
 		fmt.Println("error saving data in cache service", err)
 	}
+
 	return data, nil
 }
 

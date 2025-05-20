@@ -25,6 +25,11 @@ type RedisClientStruct struct {
 
 // NewClient creates a new Redis cache client
 func NewRedisClient(redisServiceAddr string) (*RedisClientStruct, error) {
+	// Validate input arguments
+	if redisServiceAddr == "" {
+		return nil, fmt.Errorf("redis service address cannot be empty")
+	}
+
 	conn, err := grpc.NewClient(
 		redisServiceAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -33,7 +38,18 @@ func NewRedisClient(redisServiceAddr string) (*RedisClientStruct, error) {
 		return nil, fmt.Errorf("failed to connect to Redis service: %w", err)
 	}
 
+	// Validate connection
+	if conn == nil {
+		return nil, fmt.Errorf("failed to establish connection to Redis service")
+	}
+
 	client := pb.NewCacheServiceClient(conn)
+
+	// Validate client creation
+	if client == nil {
+		conn.Close() // Clean up connection if client creation failed
+		return nil, fmt.Errorf("failed to create Redis service client")
+	}
 
 	return &RedisClientStruct{
 		conn:   conn,

@@ -36,10 +36,23 @@ type client struct {
 }
 
 // New creates a new HTTP client with the specified timeout
-func New(timeout time.Duration) HTTPClient {
-	return &client{
-		httpClient: &http.Client{Timeout: timeout},
+func New(timeout time.Duration) (HTTPClient, error) {
+	// Validate timeout value
+	if timeout <= 0 {
+		return nil, fmt.Errorf("HTTP client timeout must be greater than zero")
 	}
+
+	// Create HTTP client with timeout and sensible defaults
+	return &client{
+		httpClient: &http.Client{
+			Timeout: timeout,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 20,
+				IdleConnTimeout:     30 * time.Second,
+			},
+		},
+	}, nil
 }
 
 // Do executes an HTTP request and returns the response

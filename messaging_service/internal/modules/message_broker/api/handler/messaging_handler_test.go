@@ -26,7 +26,7 @@ func setupHandler(t *testing.T) (*handler.MessagingHandler, *mock_service.MockMe
 		KafkaNumPartitions:     3,
 		KafkaReplicationFactor: 3,
 	}
-	h := handler.NewMessagingHandler(cfg, mockSvc, &observability.ObservabilityStack{})
+	h, _ := handler.NewMessagingHandler(cfg, mockSvc, &observability.ObservabilityStack{})
 
 	return h, mockSvc, ctrl
 }
