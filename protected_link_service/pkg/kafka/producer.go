@@ -6,6 +6,11 @@ import (
 	"github.com/IBM/sarama"
 )
 
+// MessageProducer is the interface to abstract Kafka producer behavior
+type MessageProducer interface {
+	SendMessage(topic string, message []byte) error
+}
+
 type KafkaProducer struct {
 	Producer sarama.SyncProducer
 }
@@ -25,7 +30,6 @@ func NewKafkaProducer(brokers []string) (*KafkaProducer, error) {
 }
 
 func (kp *KafkaProducer) SendMessage(topic string, message []byte) error {
-
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.ByteEncoder(message),
@@ -33,14 +37,11 @@ func (kp *KafkaProducer) SendMessage(topic string, message []byte) error {
 
 	if kp.Producer != nil {
 		partition, offset, err := kp.Producer.SendMessage(msg)
-
 		if err != nil {
 			return err
 		}
 		log.Printf("Sent to topic %s [partition: %d, offset: %d]", topic, partition, offset)
-		// handle result
 	}
-
 	return nil
 }
 
