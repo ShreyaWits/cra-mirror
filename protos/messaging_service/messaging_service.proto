@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package messaging_proto;
+
+option go_package = "messaging_service/protos/messaging_service";
+
+
+// The messaging service definition
+service MessagingService {
+  // Publish a message to a Kafka topic
+  rpc PublishMessageV1(PublishRequest) returns (PublishResponse) {}
+  
+  // Subscribe to messages from a Kafka topic
+  rpc SubscribeV1(SubscribeRequest) returns (stream KafkaMessage) {}
+  
+  // Create a new Kafka topic
+  rpc CreateTopicV1(CreateTopicRequest) returns (CreateTopicResponse) {}
+}
+
+// Request to publish a message
+message PublishRequest {
+  string topic = 1;  // Required: The Kafka topic to publish to
+  map<string, string> value = 2;  // Required: The message payload
+  string key = 3;  // Optional: Message key for partitioning
+
+  // Example default message
+  // {
+  //   "topic": "my-temporary-topic",
+  //   "value": {
+  //     "action": "login",
+  //     "timestamp": "2023-10-01T12:00:00Z"
+  //   },
+  //   "key": "user123"
+  // }
+}
+
+// Response after publishing a message
+message PublishResponse {
+  string status = 1;  // Success or error status
+  string message = 2;  // Status message
+}
+
+// Request to subscribe to a topic
+message SubscribeRequest {
+  string topic = 1;  // Required: The Kafka topic to subscribe to
+  string group_id = 2;  // Required: Consumer group ID // Optional: Consumer configuration
+    // Example default message
+  // {
+  //   "topic": "my-temporary-topic",
+  //   "group_id": "my-consumer-group",
+  // }
+}
+
+// Kafka message structure
+message KafkaMessage {
+  map<string, string> value = 1;  // Message payload
+  int64 timestamp = 2;  // Message timestamp
+  string key = 3;  // Message key
+}
+
+
+// Request to create a new topic
+message CreateTopicRequest {
+  string topic = 1;  // Required: Name of the topic to create
+
+    // Example default message
+  // {
+  //   "topic": "my-temporary-topic",
+
+  // }
+}
+
+// Response after creating a topic
+message CreateTopicResponse {
+  string status = 1;  // Success or error status
+  string message = 2;  // Status message
+}
+
+
+message ErrorResponse{
+  bool success = 1;
+  string message = 2;
+  string errorCode = 3;
+}
