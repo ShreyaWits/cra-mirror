@@ -121,9 +121,6 @@ func TestRunServer_Success(t *testing.T) {
 	shutdownCalled := false
 
 	err := runServer(
-		func(service string) (func(context.Context) error, error) {
-			return func(ctx context.Context) error { shutdownCalled = true; return nil }, nil
-		},
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return grpcServer },
@@ -142,30 +139,9 @@ func TestRunServer_Success(t *testing.T) {
 	assert.True(t, shutdownCalled)
 }
 
-func TestRunServer_TracerError(t *testing.T) {
-	logger := &testLogger{}
-	err := runServer(
-		func(service string) (func(context.Context) error, error) { return nil, errors.New("tracer error") },
-		func(key, def string) string { return def },
-		func() {},
-		func(port string) GRPCServer { return &testGRPCServer{} },
-		func(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
-			return &testKafkaConsumer{}, nil
-		},
-		logger,
-		func(c chan<- os.Signal, sig ...os.Signal) {},
-		func(d time.Duration) {},
-	)
-	assert.Error(t, err)
-	assert.True(t, logger.fatalCalled)
-}
-
 func TestRunServer_KafkaError(t *testing.T) {
 	logger := &testLogger{}
 	err := runServer(
-		func(service string) (func(context.Context) error, error) {
-			return func(ctx context.Context) error { return nil }, nil
-		},
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return &testGRPCServer{} },
@@ -188,9 +164,6 @@ func TestRunServer_GRPCError(t *testing.T) {
 	kafkaConsumer := &testKafkaConsumer{}
 
 	err := runServer(
-		func(service string) (func(context.Context) error, error) {
-			return func(ctx context.Context) error { return nil }, nil
-		},
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return grpcServer },
@@ -219,9 +192,6 @@ func TestRunServer_GracefulShutdown(t *testing.T) {
 	shutdown := make(chan struct{})
 	// Simulate signal after a short delay
 	err := runServer(
-		func(service string) (func(context.Context) error, error) {
-			return func(ctx context.Context) error { shutdownCalled = true; return nil }, nil
-		},
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return grpcServer },
@@ -241,34 +211,10 @@ func TestRunServer_GracefulShutdown(t *testing.T) {
 	assert.True(t, shutdownCalled)
 }
 
-func TestRunServer_TracerErrorWithShutdown(t *testing.T) {
-	logger := &testLogger{}
-	err := runServer(
-		func(service string) (func(context.Context) error, error) {
-			return func(ctx context.Context) error { return nil }, errors.New("tracer error")
-		},
-		func(key, def string) string { return def },
-		func() {},
-		func(port string) GRPCServer { return &testGRPCServer{} },
-		func(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
-			return &testKafkaConsumer{}, nil
-		},
-		logger,
-		func(c chan<- os.Signal, sig ...os.Signal) {},
-		func(d time.Duration) {},
-	)
-	assert.Error(t, err)
-	assert.True(t, logger.fatalCalled)
-	// Do not assert shutdownCalled here, as shutdown is not called on tracer error
-}
-
 func TestRunServer_KafkaErrorWithShutdown(t *testing.T) {
 	logger := &testLogger{}
 	shutdownCalled := false
 	err := runServer(
-		func(service string) (func(context.Context) error, error) {
-			return func(ctx context.Context) error { shutdownCalled = true; return nil }, nil
-		},
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return &testGRPCServer{} },

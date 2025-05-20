@@ -12,7 +12,6 @@ import (
 	"notification-service/pkg/grpc"
 	"notification-service/pkg/kafka"
 	"notification-service/pkg/logger"
-	"notification-service/pkg/tracer"
 	"notification-service/proto"
 	"os"
 	"os/signal"
@@ -79,7 +78,6 @@ func (a *KafkaConsumerAdapter) Consume(topic string, handler interface{}) {
 func (a *KafkaConsumerAdapter) Start(ctx context.Context) { a.inner.Start(ctx) }
 
 func runServer(
-	tracerInit func(string) (func(context.Context) error, error),
 	getEnv func(string, string) string,
 	initDependency func(),
 	grpcServerFactory func(string) GRPCServer,
@@ -89,16 +87,6 @@ func runServer(
 	sleep func(time.Duration),
 ) error {
 
-	shutdown, err := tracerInit("notification-service")
-	if err != nil {
-		loggerLog.Fatalf("Cannot initialize tracer: %v", err)
-		return err
-	}
-	defer func() {
-		if shutdown != nil {
-			_ = shutdown(context.Background())
-		}
-	}()
 	initDependency()
 	grpcPort := getEnv("GRPC_PORT", ":50051")
 	loggerLog.Println("GRPC_PORT", grpcPort)
@@ -188,7 +176,6 @@ func main() {
 	LOKI_URL := config.GetEnv("LOKI_URL", "http://localhost:5000")
 	logger.InitLogger(LOKI_URL)
 	runServer(
-		tracer.InitTracer,
 		config.GetEnv,
 		app.InitDependency,
 		grpcServerAdapter,
