@@ -13,6 +13,7 @@ import (
 	"messaging_service/internal/config"
 	"messaging_service/internal/modules/message_broker/api/handler"
 	mock_service "messaging_service/internal/modules/message_broker/mock"
+	"messaging_service/internal/modules/message_broker/service"
 	"messaging_service/pkg/errors"
 	"messaging_service/pkg/observability"
 )
@@ -26,9 +27,84 @@ func setupHandler(t *testing.T) (*handler.MessagingHandler, *mock_service.MockMe
 		KafkaNumPartitions:     3,
 		KafkaReplicationFactor: 3,
 	}
-	h, _ := handler.NewMessagingHandler(cfg, mockSvc, &observability.ObservabilityStack{})
+	h, _ := handler.NewMessagingHandler(cfg, mockSvc, observability.NewObservabilityStack(&config.Env{ServiceName: "test-service", ConfigServiceUrl: "http://localhost:8080"}))
 
 	return h, mockSvc, ctrl
+}
+
+func TestNewMessagingHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockSvc := mock_service.NewMockMessagingService(ctrl)
+	validConfig := &config.Config{
+		KafkaBrokers:           []string{"localhost:9092"},
+		KafkaNumPartitions:     3,
+		KafkaReplicationFactor: 3,
+	}
+	validObs := observability.NewObservabilityStack(&config.Env{ServiceName: "test-service", ConfigServiceUrl: "http://localhost:8080"})
+
+	tests := []struct {
+		name        string
+		config      *config.Config
+		service     service.MessagingService
+		obs         *observability.ObservabilityStack
+		expectError bool
+	}{
+		{
+			name:        "nil config",
+			config:      nil,
+			service:     mockSvc,
+			obs:         validObs,
+			expectError: true,
+		},
+		{
+			name:        "nil service",
+			config:      validConfig,
+			service:     nil,
+			obs:         validObs,
+			expectError: true,
+		},
+		{
+			name:        "nil observability stack",
+			config:      validConfig,
+			service:     mockSvc,
+			obs:         nil,
+			expectError: true,
+		},
+		{
+			name: "empty kafka brokers",
+			config: &config.Config{
+				KafkaBrokers:           []string{},
+				KafkaNumPartitions:     3,
+				KafkaReplicationFactor: 3,
+			},
+			service:     mockSvc,
+			obs:         validObs,
+			expectError: true,
+		},
+		{
+			name:        "valid parameters",
+			config:      validConfig,
+			service:     mockSvc,
+			obs:         validObs,
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, err := handler.NewMessagingHandler(tt.config, tt.service, tt.obs)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, h)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, h)
+			}
+		})
+	}
 }
 
 func TestPublishMessageV1(t *testing.T) {
@@ -327,6 +403,100 @@ func TestSubscribeV1(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateMessagingService(t *testing.T) {
+	handler, mockSvc, ctrl := setupHandler(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name        string
+		config      *config.Config
+		service     service.MessagingService
+		expectError bool
+	}{
+		{
+			name: "successful update",
+			config: &config.Config{
+				KafkaBrokers:           []string{"new-broker:9092"},
+				KafkaNumPartitions:     5,
+				KafkaReplicationFactor: 2,
+			},
+			service:     mockSvc,
+			expectError: false,
+		},
+		{
+			name:        "nil config",
+			config:      nil,
+			service:     mockSvc,
+			expectError: true,
+		},
+		{
+			name: "nil service",
+			config: &config.Config{
+				KafkaBrokers:           []string{"localhost:9092"},
+				KafkaNumPartitions:     3,
+				KafkaReplicationFactor: 3,
+			},
+			service:     nil,
+			expectError: true,
+		},
+		{
+			name: "empty kafka brokers",
+			config: &config.Config{
+				KafkaBrokers:           []string{},
+				KafkaNumPartitions:     3,
+				KafkaReplicationFactor: 3,
+			},
+			service:     mockSvc,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := handler.UpdateMessagingService(tt.config, tt.service)
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				// We've confirmed no error was returned for valid scenarios
+				// We can't directly access the handler's private fields to verify they were updated
+			}
+		})
+	}
+}
+
+func TestHelperFunctions(t *testing.T) {
+	// We can't test getRequestID directly since it's unexported,
+	// so we'll just test that the code with observability works properly.
+
+	// The tests for PublishMessageV1, SubscribeV1, and CreateTopicV1 all use
+	// the observability stack, so we have good coverage of the actual functionality.
+
+	// Instead, let's test that our configuration of the observability stack works
+	t.Run("observability stack initialization", func(t *testing.T) {
+		// Create a new observability stack
+		obs := observability.NewObservabilityStack(&config.Env{
+			ServiceName:      "test-service",
+			ConfigServiceUrl: "http://localhost:8080",
+		})
+
+		// Verify it's not nil
+		assert.NotNil(t, obs)
+		assert.NotNil(t, obs.LoggerService)
+		assert.NotNil(t, obs.MetricsService)
+		assert.NotNil(t, obs.TracerService)
+
+		// Verify we can use it without panicking
+		obs.LoggerService.Info(context.Background(), "Test message")
+		obs.MetricsService.IncrementCounter(context.Background(), "test_counter", 1, map[string]string{})
+		ctx, span := obs.TracerService.StartTracer(context.Background(), "test_span")
+		assert.NotNil(t, ctx)
+		assert.NotNil(t, span)
+		obs.TracerService.StopSpan(span)
+	})
 }
 
 // --- Mock stream for SubscribeV1 ---

@@ -10,10 +10,7 @@ import (
 	"messaging_service/internal/modules/message_broker/service"
 	"messaging_service/pkg/confluent"
 	httpclient "messaging_service/pkg/http"
-	"messaging_service/pkg/logger"
-	metrics "messaging_service/pkg/matrics"
 	"messaging_service/pkg/observability"
-	"messaging_service/pkg/tracer"
 	"time"
 )
 
@@ -65,11 +62,7 @@ func NewContainer() (*Container, error) {
 	}
 
 	// Create observability stack
-	obs := &observability.ObservabilityStack{
-		TracerService:  tracer.NewTracer(env.ServiceName, true),
-		MetricsService: metrics.NewMetricsService(env.ServiceName, true),
-		LoggerService:  logger.NewLogger(env.ServiceName, true),
-	}
+	obs := observability.NewObservabilityStack(env)
 
 	// Validate observability components
 	if obs.TracerService == nil || obs.MetricsService == nil || obs.LoggerService == nil {
@@ -134,7 +127,7 @@ func NewContainer() (*Container, error) {
 	}
 
 	// Create config handler with environment
-	configHandler, err := handler.NewConfigHandler(configManagerService, env)
+	configHandler, err := handler.NewConfigHandler(configManagerService, env, obs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config handler: %w", err)
 	}

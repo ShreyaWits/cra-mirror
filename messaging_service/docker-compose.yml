@@ -20,6 +20,9 @@ services:
       CACHE_URL: ${CACHE_URL}
       OBSERVABILITY_URL: ${OBSERVABILITY_URL}
       SERVICE_VERSION : ${SERVICE_VERSION}
+      SAMPLINGRATIO: ${SAMPLINGRATIO}
+      TLSDISABLE: ${TLSDISABLE}
+      Environment: ${Environment}
 
     restart: on-failure
 

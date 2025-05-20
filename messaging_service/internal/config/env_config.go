@@ -93,7 +93,10 @@ func GetMockConfig() *Config {
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Env, error) {
 	// Load .env file if it exists
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		return nil, fmt.Errorf("error loading .env file: %w", err)
+	}
 
 	// Load environment variables into struct
 	envConfig = &models.EnvConfig{

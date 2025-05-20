@@ -56,7 +56,7 @@ type EnvConfig struct {
 	CACHE_TTL int `json:"cacheTTL" env:"CACHE_TTL" validate:"min=1"`
 
 	// Deployment info
-	Environment      string  `json:"environment" env:"ENVIRONMENT" validate:"require"`
+	Environment      string  `json:"environment" env:"ENVIRONMENT" validate:"required"`
 	ServiceName      string  `json:"serviceName" env:"SERVICE_NAME" validate:"required"`
 	ServiceVersion   string  `json:"serviceVersion" env:"SERVICE_VERSION" validate:"required,semver"`
 	CacheUrl         string  `json:"cacheUrl" env:"CACHE_URL" validate:"required"`
