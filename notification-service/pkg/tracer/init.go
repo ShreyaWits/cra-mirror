@@ -3,6 +3,7 @@ package tracer
 import (
 	"context"
 	"fmt"
+	"os"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -14,8 +15,10 @@ import (
 func InitTracer(serviceName string) (func(context.Context) error, error) {
 	logrus.Info("Initializing Jaeger tracer...")
 
+	jagerURL := os.Getenv("JAGER_URL")
+
 	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(
-		jaeger.WithEndpoint("http://jaeger:14268/api/traces"),
+		jaeger.WithEndpoint(jagerURL),
 	))
 	if err != nil {
 		logrus.Errorf("Failed to create Jaeger exporter: %v", err)

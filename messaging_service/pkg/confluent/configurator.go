@@ -2,6 +2,7 @@ package confluent
 
 import (
 	pb "cra-protos/messaging_service"
+	"fmt"
 	"messaging_service/internal/config"
 	"time"
 )
@@ -14,10 +15,35 @@ type Configurator struct {
 
 // NewConfigurator creates a new Confluent Kafka Configurator
 func NewConfigurator(brokers []string, config *config.Config) *Configurator {
+	// Note: We'll keep this for backward compatibility but update callers to use SafeNewConfigurator
+	// Validate input arguments
+	if brokers == nil || len(brokers) == 0 {
+		panic("Kafka brokers cannot be nil or empty in configurator")
+	}
+	if config == nil {
+		panic("config cannot be nil in configurator")
+	}
+
 	return &Configurator{
 		brokers: brokers,
 		config:  config,
 	}
+}
+
+// SafeNewConfigurator creates a new Confluent Kafka Configurator with error return instead of panic
+func SafeNewConfigurator(brokers []string, config *config.Config) (*Configurator, error) {
+	// Validate input arguments
+	if brokers == nil || len(brokers) == 0 {
+		return nil, fmt.Errorf("kafka brokers cannot be nil or empty in configurator")
+	}
+	if config == nil {
+		return nil, fmt.Errorf("config cannot be nil in configurator")
+	}
+
+	return &Configurator{
+		brokers: brokers,
+		config:  config,
+	}, nil
 }
 
 // CreatePublishConfig creates Confluent Kafka configuration for publishing messages

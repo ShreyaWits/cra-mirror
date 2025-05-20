@@ -36,7 +36,26 @@ type ConfluentMessagingService struct {
 
 // NewConfluentMessagingService creates a new messaging service using confluent-kafka-go
 func NewConfluentMessagingService(config *config.Config, factory confluent.KafkaFactory, obs *observability.ObservabilityStack) (MessagingService, error) {
-	// Create factory
+	// Validate input arguments
+	if config == nil {
+		return nil, fmt.Errorf("config cannot be nil")
+	}
+	if factory == nil {
+		return nil, fmt.Errorf("kafka factory cannot be nil")
+	}
+	if obs == nil {
+		return nil, fmt.Errorf("observability stack cannot be nil")
+	}
+
+	// Validate critical configuration
+	if config.KafkaBrokers == nil || len(config.KafkaBrokers) == 0 {
+		return nil, fmt.Errorf("kafka brokers are not configured")
+	}
+
+	// Validate observability components
+	if obs.LoggerService == nil {
+		return nil, fmt.Errorf("logger service is not configured")
+	}
 
 	// Create a base config
 	kafkaConfig := confluent.KafkaConfig{

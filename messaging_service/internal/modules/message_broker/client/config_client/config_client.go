@@ -19,11 +19,33 @@ type ConfigClientImpl struct {
 	cfg        *config.Env
 }
 
-func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Env) ConfigClient {
+func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Env) (ConfigClient, error) {
+	// Validate input arguments
+	if httpClient == nil {
+		return nil, fmt.Errorf("httpClient cannot be nil in NewConfigClient")
+	}
+	if cfg == nil {
+		return nil, fmt.Errorf("cfg cannot be nil in NewConfigClient")
+	}
+
+	// Validate required configuration fields
+	if cfg.ConfigServiceUrl == "" {
+		return nil, fmt.Errorf("config service URL is required in environment configuration")
+	}
+	if cfg.ConfigServiceToken == "" {
+		return nil, fmt.Errorf("config service token is required in environment configuration")
+	}
+	if cfg.Environment == "" {
+		return nil, fmt.Errorf("environment is required in environment configuration")
+	}
+	if cfg.ServiceName == "" {
+		return nil, fmt.Errorf("service name is required in environment configuration")
+	}
+
 	return &ConfigClientImpl{
 		httpClient: httpClient,
 		cfg:        cfg,
-	}
+	}, nil
 }
 
 // GetCurrentConfig returns the config for the given key.
@@ -63,6 +85,11 @@ func (c *ConfigClientImpl) FetchConfig(ctx context.Context) (*models.MessaggingC
 
 	if err := json.NewDecoder(resp.Body).Decode(&configResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode config response: %w", err)
+	}
+
+	// Basic validation of the response
+	if configResponse.Data.KafkaBrokers == nil || len(configResponse.Data.KafkaBrokers) == 0 {
+		return nil, fmt.Errorf("invalid config received: KafkaBrokers is required but missing or empty")
 	}
 
 	fmt.Println("[ConfigClient] Config data unmarshalled successfully")
