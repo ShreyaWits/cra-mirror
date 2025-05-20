@@ -18,7 +18,7 @@ func LoadEnv() {
 
 // GetEnv retrieves an environment variable or returns a default value
 func GetEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
+	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue

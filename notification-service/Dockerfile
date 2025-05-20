@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /app/main /main
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/internal/common/migrations ./internal/common/migrations
+COPY --from=builder /app/.env .env
 
 EXPOSE 50051
 

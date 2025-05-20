@@ -48,6 +48,9 @@ func runWorkerWithDeps(
 	cassandraInit func(string, int, string, string, string) CassandraSession,
 	kafkaInit func(string) KafkaProducer,
 ) error {
+
+	config.LoadEnv()
+
 	TemporalUrl := os.Getenv("TEMPORAL_SERVER_URL")
 	LOKI_URL := config.GetEnv("LOKI_URL", "http://localhost:5000")
 	logger.InitLogger(LOKI_URL)

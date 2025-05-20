@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"notification-service/internal/app"
 	"notification-service/internal/common/api/handlers"
 	"notification-service/internal/common/services"
@@ -88,10 +89,10 @@ func runServer(
 ) error {
 
 	initDependency()
-	grpcPort := getEnv("GRPC_PORT", ":50051")
+	grpcPort := getEnv("GRPC_PORT", "50051")
 	loggerLog.Println("GRPC_PORT", grpcPort)
 
-	grpcInstance := grpcServerFactory(grpcPort)
+	grpcInstance := grpcServerFactory(fmt.Sprintf(":%s", grpcPort))
 
 	KAFKA_SERVER_URL := getEnv("KAFKA_SERVER_URL", "kafka:29092")
 	KAFKA_GROUP_ID := getEnv("KAFKA_GROUP_ID", "notification-service-group")
@@ -175,6 +176,7 @@ func kafkaConsumerAdapter(brokers []string, groupID string, topics []string) (Ka
 func main() {
 	LOKI_URL := config.GetEnv("LOKI_URL", "http://localhost:5000")
 	logger.InitLogger(LOKI_URL)
+	config.LoadEnv()
 	runServer(
 		config.GetEnv,
 		app.InitDependency,

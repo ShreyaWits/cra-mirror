@@ -60,7 +60,7 @@ func InitDependency() {
 	CASSANDRA_PORT, err := strconv.Atoi(config.GetEnv("CASSANDRA_PORT", "9042"))
 	REDIS_HOST := config.GetEnv("REDIS_HOST", "localhost")
 	REDIS_PORT := config.GetEnv("REDIS_PORT", "6379")
-	TEMPORAL_URL := config.GetEnv("TEMPORAL_URL", "localhost:7233")
+	TEMPORAL_SERVER_URL := config.GetEnv("TEMPORAL_SERVER_URL", "localhost:7233")
 	TEMPORAL_QUEUE := config.GetEnv("TEMPORAL_QUEUE", "notification-service-queue")
 	KAFKA_BROKER := config.GetEnv("KAFKA_BROKERS", "kafka:29092")
 	if err != nil {
@@ -93,7 +93,7 @@ func InitDependency() {
 	notificationRepo := newNotificationRepository(wrappedSession)
 	kafkaProducer := initKafkaPublisher(KAFKA_BROKER)
 
-	temporalClient, err := initTemporal(TEMPORAL_URL, TEMPORAL_QUEUE, "notification-service", notificationRepo, kafkaProducer)
+	temporalClient, err := initTemporal(TEMPORAL_SERVER_URL, TEMPORAL_QUEUE, "notification-service", notificationRepo, kafkaProducer)
 	if err != nil {
 		panic(err)
 	}
