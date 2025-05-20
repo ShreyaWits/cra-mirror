@@ -1,34 +1,37 @@
 package services
 
 import (
+	"context"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/models"
 	"nps-config-service/internal/modules/config-manager/repositories"
+	"nps-config-service/pkg/observability"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 )
 
 type AdminService struct {
-	Repo repositories.IConfigRepo
+	Repo               repositories.IConfigRepo
+	ObservabilityStack *observability.ObservabilityStack
 }
 
 type IAdminService interface {
-	FetchAdminService(dto *dtos.AdminLoginDto, secret string) (*dtos.ResponseAdminDto, error)
-	CreateAdminService(req *dtos.AdminSignupDto) (*dtos.ResponseAdminSignupDto, error)
+	FetchAdminService(ctx context.Context, dto *dtos.AdminLoginDto, secret string) (*dtos.ResponseAdminDto, error)
+	CreateAdminService(ctx context.Context, req *dtos.AdminSignupDto) (*dtos.ResponseAdminSignupDto, error)
 }
 
-func NewAdminService(repo repositories.IConfigRepo) IAdminService {
-	return &AdminService{Repo: repo}
+func NewAdminService(repo repositories.IConfigRepo, ObservabilityStack *observability.ObservabilityStack) IAdminService {
+	return &AdminService{Repo: repo, ObservabilityStack: ObservabilityStack}
 }
 
-func (s *AdminService) CreateAdminService(req *dtos.AdminSignupDto) (*dtos.ResponseAdminSignupDto, error) {
+func (s *AdminService) CreateAdminService(ctx context.Context,req *dtos.AdminSignupDto) (*dtos.ResponseAdminSignupDto, error) {
 
 	admin := &models.Admin{
 		UserName: req.Username,
 		Password: req.Password,
 	}
-	createAdmin, err := s.Repo.CreateAdmin(admin)
+	createAdmin, err := s.Repo.CreateAdmin(ctx, admin)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +41,7 @@ func (s *AdminService) CreateAdminService(req *dtos.AdminSignupDto) (*dtos.Respo
 		AdminId: createAdmin.UserName,
 	}, nil
 }
-func (s *AdminService) FetchAdminService(req *dtos.AdminLoginDto, secret string) (*dtos.ResponseAdminDto, error) {
+func (s *AdminService) FetchAdminService(ctx context.Context, req *dtos.AdminLoginDto, secret string) (*dtos.ResponseAdminDto, error) {
 	// Create access token (1 hour expiry)
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"admin": true,
@@ -68,7 +71,7 @@ func (s *AdminService) FetchAdminService(req *dtos.AdminLoginDto, secret string)
 		Password: req.Password,
 	}
 
-	createAdmin, err := s.Repo.GetAdminByCredentials(admin.UserName, admin.Password)
+	createAdmin, err := s.Repo.GetAdminByCredentials(ctx, admin.UserName, admin.Password)
 	if err != nil {
 		return nil, err
 	}

@@ -8,41 +8,42 @@ import (
 	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/repositories"
-	"nps-config-service/pkg/temporal"
+	"nps-config-service/pkg/observability"
+	workflows "nps-config-service/pkg/temporal"
 
 	temporalClient "go.temporal.io/sdk/client"
 )
 
 type ConfigService struct {
-	Repo           repositories.IConfigRepo
-	WebhookService IWebhookService
-	temporalClient temporalClient.Client
+	Repo               repositories.IConfigRepo
+	WebhookService     IWebhookService
+	temporalClient     temporalClient.Client
+	ObservabilityStack *observability.ObservabilityStack
 }
 
 type IConfigService interface {
-	StoreConfigService(env string, service string, req map[string]interface{}) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse)
-	GetConfigService(service string, env string) (interface{}, error)
-	GetConfigValueService(serviceName string, env string, key string) (interface{}, error)
+	StoreConfigService(ctx context.Context,env string, service string, req map[string]interface{}) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse)
+	GetConfigService(ctx context.Context,service string, env string) (interface{}, error)
+	GetConfigValueService(ctx context.Context,serviceName string, env string, key string) (interface{}, error)
 }
 
-func NewConfigService(repo repositories.IConfigRepo, webHook IWebhookService, temporal temporalClient.Client) IConfigService {
-	return &ConfigService{Repo: repo, WebhookService: webHook, temporalClient: temporal}
+func NewConfigService(repo repositories.IConfigRepo, webHook IWebhookService, temporal temporalClient.Client, ObservabilityStack *observability.ObservabilityStack) IConfigService {
+	return &ConfigService{Repo: repo, WebhookService: webHook, temporalClient: temporal, ObservabilityStack: ObservabilityStack}
 }
 
-func (s *ConfigService) StoreConfigService(env string, service string, req map[string]interface{}) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
+func (s *ConfigService) StoreConfigService(ctx context.Context,env string, service string, req map[string]interface{}) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
 
-	response, err := s.Repo.StoreConfig(service, env, req)
+	response, err := s.Repo.StoreConfig(ctx, service, env, req)
 
 	if err != nil {
 		fmt.Printf("failed to store %s: %v", env, err)
 		return nil, &dtos.ServiceErrorResponse{
-			StatusCode: 500,
+			StatusCode:   500,
 			ErrorCode:    "Failed to store config",
-			ErrorMessage:      err.Error(),
+			ErrorMessage: err.Error(),
 		}
 	}
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
-	ctx := context.Background()
 	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err != nil {
 		fmt.Printf("No webhook found for %s: %v", key, err)
@@ -57,9 +58,9 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 	if err := json.Unmarshal([]byte(webHook), &hooks); err != nil {
 		fmt.Printf("Failed to parse webhook data for %s: %v", key, err)
 		return nil, &dtos.ServiceErrorResponse{
-			StatusCode: 500,
+			StatusCode:   500,
 			ErrorCode:    "Failed to parse webhook data",
-			ErrorMessage:      err.Error(),
+			ErrorMessage: err.Error(),
 		}
 	}
 
@@ -91,9 +92,9 @@ func (s *ConfigService) StoreConfigService(env string, service string, req map[s
 
 }
 
-func (s *ConfigService) GetConfigService(service string, env string) (any, error) {
+func (s *ConfigService) GetConfigService(ctx context.Context,service string, env string) (any, error) {
 
-	response, err := s.Repo.GetConfig(service, env)
+	response, err := s.Repo.GetConfig(ctx, service, env)
 
 	if err != nil {
 		return nil, err
@@ -105,8 +106,8 @@ func (s *ConfigService) GetConfigService(service string, env string) (any, error
 	return response, nil
 }
 
-func (s *ConfigService) GetConfigValueService(serviceName string, env string, key string) (any, error) {
-	response, err := s.Repo.GetConfigValue(serviceName, env, key)
+func (s *ConfigService) GetConfigValueService(ctx context.Context,serviceName string, env string, key string) (any, error) {
+	response, err := s.Repo.GetConfigValue(ctx, serviceName, env, key)
 
 	if err != nil {
 		return nil, err

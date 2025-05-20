@@ -5,20 +5,24 @@ import (
 	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services"
+	"nps-config-service/pkg/observability"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type AdminHandler struct {
-	Service services.IAdminService
+	Service            services.IAdminService
+	ObservabilityStack *observability.ObservabilityStack
 }
 
-func NewAdminHandler(service services.IAdminService) *AdminHandler {
-	return &AdminHandler{Service: service}
+func NewAdminHandler(service services.IAdminService, observabilityStack *observability.ObservabilityStack) *AdminHandler {
+	return &AdminHandler{Service: service, ObservabilityStack: observabilityStack}
 }
 
 func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
+	ctx := c.UserContext()// Get the context.
+
 	contextData, ok := c.Locals("contextData").(*dtos.AdminSignupDto)
 
 	if !ok {
@@ -43,7 +47,7 @@ func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF010")) // Invalid secret
 	}
 
-	responseData, responseError := h.Service.CreateAdminService(contextData)
+	responseData, responseError := h.Service.CreateAdminService(ctx, contextData)
 	if responseError != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "ADMIN001")) // Failed to create admin
 	}
@@ -51,6 +55,8 @@ func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
 }
 
 func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
+	ctx := c.UserContext()// Get the context.
+
 	contextData, ok := c.Locals("contextData").(*dtos.AdminLoginDto)
 	fmt.Print(contextData)
 
@@ -81,7 +87,7 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF007"))
 	}
 
-	responseData, responseError := h.Service.FetchAdminService(contextData, jwtSecret)
+	responseData, responseError := h.Service.FetchAdminService(ctx, contextData, jwtSecret)
 
 	if responseError != nil {
 		return responseError

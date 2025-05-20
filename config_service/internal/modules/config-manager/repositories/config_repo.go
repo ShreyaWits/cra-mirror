@@ -10,6 +10,7 @@ import (
 	"nps-config-service/internal/configs/db"
 	"nps-config-service/internal/modules/config-manager/models"
 	etcdDB "nps-config-service/pkg/etcd"
+	"nps-config-service/pkg/observability"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -20,26 +21,28 @@ import (
 )
 
 type ConfigRepository struct {
-	EtcdClient *etcdDB.EtcdClientImpl
+	EtcdClient         *etcdDB.EtcdClientImpl
+	ObservabilityStack *observability.ObservabilityStack
 }
 
 type IConfigRepo interface {
-	StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error)
-	GetConfig(serviceName, environment string) (map[string]interface{}, error)
-	GetConfigValue(serviceName, environment, key string) (interface{}, error)
+	StoreConfig(ctx context.Context, serviceName, environment string, configData map[string]interface{}) (interface{}, error)
+	GetConfig(ctx context.Context, serviceName, environment string) (map[string]interface{}, error)
+	GetConfigValue(ctx context.Context, serviceName, environment, key string) (interface{}, error)
 	SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error
 	GetEtcdKey(ctx context.Context, key string) (string, error)
 	DeleteEtcdKey(ctx context.Context, key string) error
-	CreateAdmin(admin *models.Admin) (*models.Admin, error)
-	GetAdminByCredentials(username, password string) (*models.Admin, error)
+	CreateAdmin(ctx context.Context, admin *models.Admin) (*models.Admin, error)
+	GetAdminByCredentials(ctx context.Context, username, password string) (*models.Admin, error)
 }
 
-func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl) IConfigRepo {
-	return &ConfigRepository{EtcdClient: etcdClient}
+func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl, observabilityStack *observability.ObservabilityStack) IConfigRepo {
+	return &ConfigRepository{EtcdClient: etcdClient, ObservabilityStack: observabilityStack}
 }
 
-func (r *ConfigRepository) StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error) {
-
+func (r *ConfigRepository) StoreConfig(ctx context.Context, serviceName, environment string, configData map[string]interface{}) (interface{}, error) {
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "StoreConfig")
+	defer span.End()
 	// Store each config field as a separate key
 	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
 
@@ -93,7 +96,7 @@ func (r *ConfigRepository) StoreConfig(serviceName, environment string, configDa
 }
 
 // GetConfig retrieves a configuration from etcd
-func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[string]interface{}, error) {
+func (r *ConfigRepository) GetConfig(ctx context.Context, serviceName, environment string) (map[string]interface{}, error) {
 
 	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
 	log.Printf("Getting all config for base key: %s", baseKey)
@@ -129,7 +132,7 @@ func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[strin
 }
 
 // GetConfigValue retrieves a specific config value from etcd
-func (r *ConfigRepository) GetConfigValue(serviceName, environment, key string) (interface{}, error) {
+func (r *ConfigRepository) GetConfigValue(ctx context.Context, serviceName, environment, key string) (interface{}, error) {
 	// app.InitEtcdDB()
 	// defer app.Client.Close()
 
@@ -166,32 +169,6 @@ func (r *ConfigRepository) GetConfigValue(serviceName, environment, key string) 
 
 	log.Printf("Successfully retrieved value for key %s: %v", key, value)
 	return value, nil
-}
-
-// Test function to demonstrate usage
-func (r *ConfigRepository) StoreAndRetrieveConfig() {
-	// Example config data
-	configData := map[string]interface{}{
-		"db_url":      "postgres://user:pass@localhost:5432/db",
-		"retry_count": 3,
-		"timeout":     5000,
-	}
-
-	// Store config
-	_, err := r.StoreConfig("user-service", "prod", configData)
-	if err != nil {
-		log.Printf("Failed to store config: %v", err)
-		return
-	}
-
-	// Retrieve config
-	config, err := r.GetConfig("user-service", "prod")
-	if err != nil {
-		log.Printf("Failed to get config: %v", err)
-		return
-	}
-
-	fmt.Printf("Retrieved config: %+v\n", config)
 }
 
 func (r *ConfigRepository) SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error {
@@ -242,7 +219,7 @@ func (r *ConfigRepository) DeleteEtcdKey(ctx context.Context, key string) error 
 	return nil
 }
 
-func (r *ConfigRepository) CreateAdmin(admin *models.Admin) (*models.Admin, error) {
+func (r *ConfigRepository) CreateAdmin(ctx context.Context, admin *models.Admin) (*models.Admin, error) {
 	// Check if user with the same email already exists
 	var existingUser models.Admin
 	if err := db.DB.Where("user_name = ?", admin.UserName).First(&existingUser).Error; err == nil {
@@ -257,7 +234,7 @@ func (r *ConfigRepository) CreateAdmin(admin *models.Admin) (*models.Admin, erro
 	return admin, nil
 }
 
-func (r *ConfigRepository) GetAdminByCredentials(username, password string) (*models.Admin, error) {
+func (r *ConfigRepository) GetAdminByCredentials(ctx context.Context, username, password string) (*models.Admin, error) {
 	var admin models.Admin
 
 	// Find user by username and password

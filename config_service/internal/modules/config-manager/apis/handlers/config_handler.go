@@ -4,19 +4,23 @@ import (
 	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/services"
 	"nps-config-service/internal/modules/config-manager/utils"
+	"nps-config-service/pkg/observability"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type ConfigHandler struct {
-	Service services.IConfigService
+	Service            services.IConfigService
+	ObservabilityStack *observability.ObservabilityStack
 }
 
-func NewConfigHandler(service services.IConfigService) *ConfigHandler {
+func NewConfigHandler(service services.IConfigService, ObservabilityStack *observability.ObservabilityStack) *ConfigHandler {
 	return &ConfigHandler{Service: service}
 }
 
 func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
+	ctx := c.UserContext() // Get the context.
+
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
@@ -28,7 +32,7 @@ func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 		return nil
 	}
 
-	responseData, responseError := h.Service.StoreConfigService(environment, serviceName, *configData)
+	responseData, responseError := h.Service.StoreConfigService(ctx, environment, serviceName, *configData)
 	if responseError != nil {
 		utils.SendError(c, fiber.StatusInternalServerError, "Failed to store config", responseError.ErrorMessage)
 		return nil
@@ -39,10 +43,12 @@ func (h *ConfigHandler) StoreConfigHandler(c *fiber.Ctx) error {
 }
 
 func (h *ConfigHandler) GetfullConfig(c *fiber.Ctx) error {
+	ctx := c.UserContext()
+
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 
-	config, err := h.Service.GetConfigService(serviceName, environment)
+	config, err := h.Service.GetConfigService(ctx, serviceName, environment)
 	if err != nil {
 		utils.SendError(c, fiber.StatusInternalServerError, "Failed to fetch config", err.Error())
 		return nil
@@ -53,11 +59,13 @@ func (h *ConfigHandler) GetfullConfig(c *fiber.Ctx) error {
 }
 
 func (h *ConfigHandler) GetByValue(c *fiber.Ctx) error {
+	ctx := c.UserContext() // Get the context.
+
 	environment := c.Params("environment")
 	serviceName := c.Params("service")
 	key := c.Params("key")
 
-	value, err := h.Service.GetConfigValueService(serviceName, environment, key)
+	value, err := h.Service.GetConfigValueService(ctx, serviceName, environment, key)
 	if err != nil {
 		utils.SendError(c, fiber.StatusInternalServerError, "Failed to get config value", err.Error())
 		return nil

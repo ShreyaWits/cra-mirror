@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/repositories"
+	"nps-config-service/pkg/observability"
 	"time"
 
 	"strings"
@@ -21,24 +22,24 @@ const (
 )
 
 type WebhookService struct {
-	Repo repositories.IConfigRepo
+	Repo               repositories.IConfigRepo
+	ObservabilityStack *observability.ObservabilityStack
 }
 
 type IWebhookService interface {
-	RegisterWebhookService(req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse)
-	GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse)
-	DeleteWebhook(env, service, url, method string) (string, *dtos.ServiceErrorResponse)
-	DeleteAllWebhooks(env, service string) error
-	NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{})
+	RegisterWebhookService(ctx context.Context, req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse)
+	GetWebhooks(ctx context.Context, env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse)
+	DeleteWebhook(ctx context.Context, env, service, url, method string) (string, *dtos.ServiceErrorResponse)
+	DeleteAllWebhooks(ctx context.Context, env, service string) error
+	NotifyWebhook(ctx context.Context, hook dtos.RegisterWebhookRequest, data map[string]interface{})
 }
 
-func NewWebhookService(repo repositories.IConfigRepo) IWebhookService {
-	return &WebhookService{Repo: repo}
+func NewWebhookService(repo repositories.IConfigRepo, ObservabilityStack *observability.ObservabilityStack) IWebhookService {
+	return &WebhookService{Repo: repo, ObservabilityStack: ObservabilityStack}
 }
 
-func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
+func (s *WebhookService) RegisterWebhookService(ctx context.Context, req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
 	key := fmt.Sprintf("/webhooks/%s/%s", req.Environment, req.ServiceName)
-	ctx := context.Background()
 	var hooks []dtos.RegisterWebhookRequest
 
 	webHook, err := s.Repo.GetEtcdKey(ctx, key)
@@ -86,9 +87,8 @@ func (s *WebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest)
 	// res := fmt.Sprintf("Webhook registered successfully for service: %s in environment: %s", req.ServiceName, req.Environment)
 	return response, nil
 }
-func (s *WebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse) {
+func (s *WebhookService) GetWebhooks(ctx context.Context, env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse) {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
-	ctx := context.Background()
 
 	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err != nil || len(webHook) == 0 {
@@ -109,11 +109,11 @@ func (s *WebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhoo
 	}
 	return hooks, nil
 }
-func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string, *dtos.ServiceErrorResponse) {
+func (s *WebhookService) DeleteWebhook(ctx context.Context, env, service, url, method string) (string, *dtos.ServiceErrorResponse) {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
-	ctx := context.Background()
 
-	hooks, errService := s.GetWebhooks(env, service)
+
+	hooks, errService := s.GetWebhooks(ctx, env, service)
 	if errService != nil {
 		return "", &dtos.ServiceErrorResponse{
 			StatusCode:   404,
@@ -156,12 +156,12 @@ func (s *WebhookService) DeleteWebhook(env, service, url, method string) (string
 	}
 	return "Webhook deleted successfully", nil
 }
-func (s *WebhookService) DeleteAllWebhooks(env, service string) error {
+func (s *WebhookService) DeleteAllWebhooks(ctx context.Context, env, service string) error {
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
-	ctx := context.Background()
+
 	return s.Repo.DeleteEtcdKey(ctx, key)
 }
-func (s *WebhookService) NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{}) {
+func (s *WebhookService) NotifyWebhook(ctx context.Context, hook dtos.RegisterWebhookRequest, data map[string]interface{}) {
 	body, err := json.Marshal(map[string]interface{}{
 		"values":      data,
 		"method":      hook.Method,

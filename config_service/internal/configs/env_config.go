@@ -10,27 +10,31 @@ import (
 )
 
 type Config struct {
-	Port             string
-	EtcdEndpoint     string
-	TemporalEndpoint string
-	DatabaseHost     string
-	DatabasePort     string
-	DatabaseUser     string
-	DatabasePassword string
-	DatabaseName     string
-	AdminSecret      string
-	JWTSecret        string
-	APISecret        string
+	Port                      string
+	EtcdEndpoint              string
+	TemporalEndpoint          string
+	DatabaseHost              string
+	DatabasePort              string
+	DatabaseUser              string
+	DatabasePassword          string
+	DatabaseName              string
+	AdminSecret               string
+	JWTSecret                 string
+	APISecret                 string
+	OtelCollectorGrpcEndpoint string
+	ServiceName               string
+	ServiceVersion            string
+	Environment               string
 }
 
 var AppConfig Config
 
 // LoadConfig loads environment variables, validates them, and populates AppConfig
-func LoadConfig() error {
+func LoadConfig() (*Config, error) {
 	if os.Getenv("IS_DOCKER") != "true" {
 		if err := godotenv.Load(); err != nil {
 			log.Printf("Warning: No .env file found. Proceeding without it. Error: %v", err)
-			return err
+			return nil, err
 		} else {
 			log.Println("Loaded .env file")
 		}
@@ -39,23 +43,27 @@ func LoadConfig() error {
 	// Validate environment variables
 	if err := ValidateEnv(); err != nil {
 		log.Fatalf("❌ Environment validation failed: %v", err)
-		return err
+		return nil, err
 	}
 
 	// Load values into AppConfig
 	AppConfig = Config{
-		Port:             os.Getenv("PORT"),
-		EtcdEndpoint:     os.Getenv("ETCD_ENDPOINT"),
-		TemporalEndpoint: os.Getenv("TEMPORAL_ENDPOINT"),
-		DatabaseHost:     os.Getenv("DATABASE_HOST"),
-		DatabasePort:     os.Getenv("DATABASE_PORT"),
-		DatabaseUser:     os.Getenv("DATABASE_USER"),
-		DatabasePassword: os.Getenv("DATABASE_PASSWORD"),
-		DatabaseName:     os.Getenv("DATABASE_NAME"),
-		AdminSecret:      os.Getenv("ADMIN_SECRET"),
-		JWTSecret:        os.Getenv("JWT_SECRET"),
+		Port:                      os.Getenv("PORT"),
+		EtcdEndpoint:              os.Getenv("ETCD_ENDPOINT"),
+		TemporalEndpoint:          os.Getenv("TEMPORAL_ENDPOINT"),
+		DatabaseHost:              os.Getenv("DATABASE_HOST"),
+		DatabasePort:              os.Getenv("DATABASE_PORT"),
+		DatabaseUser:              os.Getenv("DATABASE_USER"),
+		DatabasePassword:          os.Getenv("DATABASE_PASSWORD"),
+		DatabaseName:              os.Getenv("DATABASE_NAME"),
+		AdminSecret:               os.Getenv("ADMIN_SECRET"),
+		JWTSecret:                 os.Getenv("JWT_SECRET"),
+		OtelCollectorGrpcEndpoint: os.Getenv("OTEL_COLLECTOR_GRPC_ENDPOINT"),
+		ServiceName:               os.Getenv("SERVICE_NAME"),
+		ServiceVersion:            os.Getenv("SERVICE_VERSION"),
+		Environment:               os.Getenv("ENVIRONMENT"),
 	}
-	return nil
+	return &AppConfig, nil
 }
 
 // EnvRules contains validation functions for each environment variable

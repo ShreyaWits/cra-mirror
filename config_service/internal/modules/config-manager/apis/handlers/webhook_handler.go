@@ -4,6 +4,7 @@ import (
 	"log"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/utils"
+	"nps-config-service/pkg/observability"
 
 	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/services"
@@ -12,14 +13,19 @@ import (
 )
 
 type WebhookHandler struct {
-	Service services.IWebhookService
+	Service            services.IWebhookService
+	ObservabilityStack *observability.ObservabilityStack
 }
 
-func NewWebhookHandler(service services.IWebhookService) *WebhookHandler {
-	return &WebhookHandler{Service: service}
+func NewWebhookHandler(service services.IWebhookService, observabilityStack *observability.ObservabilityStack) *WebhookHandler {
+	return &WebhookHandler{Service: service, ObservabilityStack: observabilityStack}
 }
 
 func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
+	ctx := c.UserContext() // Get the context.
+	// Start a new trace span.
+	ctx, span := h.ObservabilityStack.TracerService.Start(ctx, "WebhookHandler.RegisterWebhook")
+	defer span.End()
 	configData, ok := c.Locals("contextData").(*dtos.RegisterWebhookRequest)
 	if !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(dtos.ApiResponseDto{
@@ -30,7 +36,7 @@ func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
 			},
 		})
 	}
-	res, err := h.Service.RegisterWebhookService(*configData)
+	res, err := h.Service.RegisterWebhookService(ctx, *configData)
 	if err != nil {
 		utils.SendError(c, int(err.StatusCode), err.ErrorCode, err.ErrorMessage)
 		return nil
@@ -41,9 +47,10 @@ func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
 }
 
 func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error {
+	ctx := c.UserContext() // Get the context.
 	env := c.Params("environment")
 	service := c.Params("service")
-	res, err := h.Service.GetWebhooks(env, service)
+	res, err := h.Service.GetWebhooks(ctx, env, service)
 	if err != nil {
 		log.Printf("Error retrieving webhooks for environment %s and service %s: %v", env, service, err)
 
@@ -58,6 +65,7 @@ func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error {
 }
 
 func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
+	ctx := c.UserContext() // Get the context.
 	env := c.Params("environment")
 	service := c.Params("service")
 
@@ -76,7 +84,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 		return nil
 	}
 
-	res, err := h.Service.DeleteWebhook(env, service, deleteReq.URL, deleteReq.Method)
+	res, err := h.Service.DeleteWebhook(ctx, env, service, deleteReq.URL, deleteReq.Method)
 	if err != nil {
 		log.Printf("Error deleting webhook for environment %s and service %s: %v", env, service, err)
 		utils.SendError(c, int(err.StatusCode), err.ErrorCode, err.ErrorMessage)
