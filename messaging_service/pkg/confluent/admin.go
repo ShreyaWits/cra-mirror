@@ -22,8 +22,9 @@ type AdminImpl struct {
 
 // DefaultTopicConfig returns a default configuration for a new topic
 func DefaultTopicConfig() map[string]string {
+	rnt := config.GetKafkaRetentionMs()
 	return map[string]string{
-		"retention.ms":                   fmt.Sprintf("%d", 7*24*time.Hour.Milliseconds()), // 7 days
+		"retention.ms":                   fmt.Sprintf("%d", int64(rnt)*time.Hour.Milliseconds()), // 7 days
 		"cleanup.policy":                 "delete",
 		"compression.type":               "producer",
 		"min.insync.replicas":            "1",

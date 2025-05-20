@@ -20,6 +20,10 @@ var (
 	validate  *validator.Validate
 )
 
+func GetKafkaRetentionMs() int {
+	return config.KafkaRetentionMs
+}
+
 func init() {
 	// Initialize validator
 	validate = validator.New()
