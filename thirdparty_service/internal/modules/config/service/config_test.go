@@ -18,15 +18,18 @@ func setupMockServer(handler http.HandlerFunc) *httptest.Server {
 	return server
 }
 
-// Helper function to create a ConfigServiceImpl with a mock HTTP client
-func newTestConfigService(serverURL string) *ConfigServiceImpl {
+// Helper function to create a ConfigServiceImpl with a custom HTTP client
+func newTestConfigService(serverURL string, client *http.Client) *ConfigServiceImpl {
+	if client == nil {
+		client = http.DefaultClient // Use default client if none is provided
+	}
 	return &ConfigServiceImpl{
 		Environment:           "test",
 		ServiceName:           "test-service",
 		ConfigServiceURL:      serverURL,
 		ConfigServiceUsername: "testuser",
 		ConfigServicePassword: "testpassword",
-		HttpClient:            http.DefaultClient, // Use default client for httptest
+		HttpClient:            client,
 	}
 }
 
@@ -72,7 +75,7 @@ func TestLoginToConfigService_Success(t *testing.T) {
 	})
 	defer server.Close()
 
-	cfgService := newTestConfigService(server.URL)
+	cfgService := newTestConfigService(server.URL, nil)
 
 	token, err := cfgService.LoginToConfigService()
 
@@ -90,13 +93,66 @@ func TestLoginToConfigService_Failure(t *testing.T) {
 	})
 	defer server.Close()
 
-	cfgService := newTestConfigService(server.URL)
+	cfgService := newTestConfigService(server.URL, nil)
 
 	token, err := cfgService.LoginToConfigService()
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "login failed: status code 401")
 	assert.Empty(t, token)
+}
+
+func TestLoginToConfigService_HttpClientError(t *testing.T) {
+	// Create a mock HTTP client that returns an error
+	mockClient := &http.Client{
+		Transport: &mockTransport{
+			Err: assert.AnError, // Simulate a network error
+		},
+	}
+
+	cfgService := newTestConfigService("http://localhost:8080", mockClient)
+
+	token, err := cfgService.LoginToConfigService()
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sending login request:")
+	assert.Empty(t, token)
+}
+
+func TestLoginToConfigService_NewRequestError(t *testing.T) {
+	cfgService := newTestConfigService("invalid url", nil) // Invalid URL to cause NewRequest error
+
+	token, err := cfgService.LoginToConfigService()
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sending login request:")
+	assert.Empty(t, token)
+}
+
+func TestLoginToConfigService_InvalidJsonResponse(t *testing.T) {
+	server := setupMockServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// Return invalid JSON
+		w.Write([]byte("invalid json"))
+	})
+	defer server.Close()
+
+	cfgService := newTestConfigService(server.URL, nil)
+
+	token, err := cfgService.LoginToConfigService()
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "decoding login response:")
+	assert.Empty(t, token)
+}
+
+// mockTransport is a mock http.RoundTripper that returns a predefined error
+type mockTransport struct {
+	Err error
+}
+
+func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return nil, m.Err
 }
 
 func TestFetchDynamicConfig_Success(t *testing.T) {
@@ -133,7 +189,7 @@ func TestFetchDynamicConfig_Success(t *testing.T) {
 	})
 	defer server.Close()
 
-	cfgService := newTestConfigService(server.URL)
+	cfgService := newTestConfigService(server.URL, nil)
 
 	config, err := cfgService.FetchDynamicConfig("mock-token")
 
@@ -142,6 +198,16 @@ func TestFetchDynamicConfig_Success(t *testing.T) {
 	assert.Equal(t, "localhost", config.HTTPListenAddress)
 	assert.Equal(t, 8080, config.HTTPListenPort)
 	// Add assertions for other fields as needed
+}
+
+func TestFetchDynamicConfig_NewRequestError(t *testing.T) {
+	cfgService := newTestConfigService("invalid url", nil) // Invalid URL to cause NewRequest error
+
+	config, err := cfgService.FetchDynamicConfig("mock-token")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sending config request:")
+	assert.Nil(t, config)
 }
 
 func TestFetchDynamicConfig_Failure(t *testing.T) {
@@ -153,12 +219,46 @@ func TestFetchDynamicConfig_Failure(t *testing.T) {
 	})
 	defer server.Close()
 
-	cfgService := newTestConfigService(server.URL)
+	cfgService := newTestConfigService(server.URL, nil)
 
 	config, err := cfgService.FetchDynamicConfig("mock-token")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "config fetch failed: status code 500")
+	assert.Nil(t, config)
+}
+
+func TestFetchDynamicConfig_HttpClientError(t *testing.T) {
+	// Create a mock HTTP client that returns an error
+	mockClient := &http.Client{
+		Transport: &mockTransport{
+			Err: assert.AnError, // Simulate a network error
+		},
+	}
+
+	cfgService := newTestConfigService("http://localhost:8080", mockClient)
+
+	config, err := cfgService.FetchDynamicConfig("mock-token")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sending config request:")
+	assert.Nil(t, config)
+}
+
+func TestFetchDynamicConfig_InvalidJsonResponse(t *testing.T) {
+	server := setupMockServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// Return invalid JSON
+		w.Write([]byte("invalid json"))
+	})
+	defer server.Close()
+
+	cfgService := newTestConfigService(server.URL, nil)
+
+	config, err := cfgService.FetchDynamicConfig("mock-token")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "decoding config response:")
 	assert.Nil(t, config)
 }
 
@@ -198,48 +298,617 @@ func TestValidateConfig_Success(t *testing.T) {
 func TestValidateConfig_Failure(t *testing.T) {
 	cfgService := &ConfigServiceImpl{} // Validator doesn't need other fields
 
-	// Test case with missing required fields
-	invalidConfig := dto.ConfigResponse{
-		// Missing HTTPListenAddress, GRPCListenAddress, DatabaseHost, etc.
-		HTTPListenPort: 8080, // Provide one field to show it's not just an empty struct
+	testCases := []struct {
+		name          string
+		config        dto.ConfigResponse
+		expectedField string
+	}{
+		{
+			name: "Missing HTTPListenAddress",
+			config: dto.ConfigResponse{
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "HTTPListenAddress",
+		},
+		{
+			name: "Missing HTTPListenPort",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "HTTPListenPort",
+		},
+		{
+			name: "Missing GRPCListenAddress",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "GRPCListenAddress",
+		},
+		{
+			name: "Missing GRPCListenPort",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "GRPCListenPort",
+		},
+		{
+			name: "Missing DatabaseHost",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "DatabaseHost",
+		},
+		{
+			name: "Missing DatabasePort",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "DatabasePort",
+		},
+		{
+			name: "Missing DatabaseUser",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "DatabaseUser",
+		},
+		{
+			name: "Missing DatabasePassword",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "DatabasePassword",
+		},
+		{
+			name: "Missing DatabaseName",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "DatabaseName",
+		},
+		{
+			name: "Missing RedisHost",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "RedisHost",
+		},
+		{
+			name: "Missing RedisPort",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "RedisPort",
+		},
+		{
+			name: "Missing TwilioAccountSID",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "TwilioAccountSID",
+		},
+		{
+			name: "Missing TwilioAuthToken",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "TwilioAuthToken",
+		},
+		{
+			name: "Missing TwilioFormNumber",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "TwilioFormNumber",
+		},
+		{
+			name: "Missing SendGridApiKey",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "SendGridApiKey",
+		},
+		{
+			name: "Missing SendGridFromEmail",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "SendGridFromEmail",
+		},
+		{
+			name: "Missing SendGridFromName",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "SendGridFromName",
+		},
+		{
+			name: "Missing SendWhatsAppMessageSID",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "SendWhatsAppMessageSID",
+		},
+		{
+			name: "Missing SendWhatsAppMessageToken",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "SendWhatsAppMessageToken",
+		},
+		{
+			name: "Missing SendWhatsAppMessageFromNumber",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				PushNotificationAccountCreds: "creds",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "SendWhatsAppMessageFromNumber",
+		},
+		{
+			name: "Missing PushNotificationAccountCreds",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationProjectID:    "project-id",
+			},
+			expectedField: "PushNotificationAccountCreds",
+		},
+		{
+			name: "Missing PushNotificationProjectID",
+			config: dto.ConfigResponse{
+				HTTPListenAddress: "localhost",
+				HTTPListenPort:    8080,
+				GRPCListenAddress: "localhost",
+				GRPCListenPort:    50051,
+				DatabaseHost:      "db.example.com",
+				DatabasePort:      5432,
+				DatabaseUser:      "user",
+				DatabasePassword:  "password",
+				DatabaseName:      "mydb",
+				RedisHost:         "redis.example.com",
+				RedisPort:         6379,
+				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				TwilioAuthToken:   "your_auth_token",
+				TwilioFormNumber:  "+15017122661",
+				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendGridFromEmail: "test@example.com",
+				SendGridFromName:  "Test User",
+				SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				SendWhatsAppMessageToken:      "your_auth_token",
+				SendWhatsAppMessageFromNumber: "+15017122661",
+				PushNotificationAccountCreds: "creds",
+			},
+			expectedField: "PushNotificationProjectID",
+		},
 	}
 
-	err := cfgService.ValidateConfig(invalidConfig)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := cfgService.ValidateConfig(tc.config)
 
-	assert.Error(t, err)
-	assert.IsType(t, validator.ValidationErrors{}, err)
-
-	// You can add more specific test cases for individual missing fields if needed
-	// For example:
-	// invalidConfigMissingDBHost := dto.ConfigResponse{
-	// 	HTTPListenAddress: "localhost",
-	// 	HTTPListenPort:    8080,
-	// 	GRPCListenAddress: "localhost",
-	// 	GRPCListenPort:    50051,
-	// 	// DatabaseHost is missing
-	// 	DatabasePort:      5432,
-	// 	DatabaseUser:      "user",
-	// 	DatabasePassword:  "password",
-	// 	DatabaseName:      "mydb",
-	// 	RedisHost:         "redis.example.com",
-	// 	RedisPort:         6379,
-	// 	TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-	// 	TwilioAuthToken:   "your_auth_token",
-	// 	TwilioFormNumber:  "+15017122661",
-	// 	SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-	// 	SendGridFromEmail: "test@example.com",
-	// 	SendGridFromName:  "Test User",
-	// 	SendWhatsAppMessageSID:        "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-	// 	SendWhatsAppMessageToken:      "your_auth_token",
-	// 	SendWhatsAppMessageFromNumber: "+15017122661",
-	// 	PushNotificationAccountCreds: "creds",
-	// 	PushNotificationProjectID:    "project-id",
-	// }
-	// err = cfgService.ValidateConfig(invalidConfigMissingDBHost)
-	// assert.Error(t, err)
-	// validationErrors, ok := err.(validator.ValidationErrors)
-	// assert.True(t, ok)
-	// assert.Len(t, validationErrors, 1) // Expecting one error for the missing field
-	// assert.Equal(t, "required", validationErrors[0].Tag())
-	// assert.Equal(t, "DatabaseHost", validationErrors[0].Field())
+			assert.Error(t, err)
+			validationErrors, ok := err.(validator.ValidationErrors)
+			assert.True(t, ok)
+			assert.Len(t, validationErrors, 1) // Expecting one error for the missing field
+			assert.Equal(t, "required", validationErrors[0].Tag())
+			assert.Equal(t, tc.expectedField, validationErrors[0].Field())
+		})
+	}
 }
