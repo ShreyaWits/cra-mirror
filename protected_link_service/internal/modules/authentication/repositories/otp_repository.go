@@ -93,8 +93,8 @@ func (r *OTPRepository) SendOtp(request apiDtos.GenerateUrlRequest, otp string, 
 
 	verificationID := uuid.New().String()
 	key := fmt.Sprintf("%s-%s", verificationID, request.UserID)
-	expiry := time.Minute
-
+	expiry, _ := time.ParseDuration(r.cfg.OtpExpiryDuration)
+	
 	if err := r.redisClient.Client.Set(r.ctx, key, payloadBytes, expiry).Err(); err != nil {
 		log.Printf("Failed to save to Redis: %v", err)
 		return nil, fmt.Errorf("failed to save OTP data in Redis: %w", err)
