@@ -29,7 +29,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		return nil, err
 	}
 
-	db, err := yugabytedb.ConnectDB(cfg.YugabyteHost,cfg.YugabyteName,cfg.YugabytePassWord, cfg.YugabytePort, cfg.YugabyteUser)
+	db, err := yugabytedb.ConnectDB(cfg.YugabyteHost, cfg.YugabyteName, cfg.YugabytePassWord, cfg.YugabytePort, cfg.YugabyteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -45,9 +45,6 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 	// Initialize Llama service
 	llamaService := services.NewLlamaService()
-	if err != nil {
-		return nil, err
-	}
 
 	// Initialize services
 	documentService := services.NewDocumentService(geminiService, llamaService, minioRepo, yugabyteRepo)

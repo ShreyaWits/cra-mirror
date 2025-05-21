@@ -4,16 +4,21 @@ import (
 	"context"
 	"log"
 
-	"Document-Processing/internal/services"
 	pb "Document-Processing/proto"
 )
 
-type DocumentHandler struct {
-	pb.UnimplementedDocumentProcessingServiceV1Server
-	documentService *services.DocumentService
+// DocumentServiceHandlerInterface defines the methods used by the DocumentHandler
+type DocumentServiceHandlerInterface interface {
+	ProcessBatchFilesV1(ctx context.Context, req *pb.BatchFileProcessingRequest) (*pb.BatchProcessingAck, error)
+	GetBatchStatusV1(ctx context.Context, req *pb.BatchStatusRequest) (*pb.BatchFileProcessingResponse, error)
 }
 
-func NewDocumentHandler(documentService *services.DocumentService) *DocumentHandler {
+type DocumentHandler struct {
+	pb.UnimplementedDocumentProcessingServiceV1Server
+	documentService DocumentServiceHandlerInterface
+}
+
+func NewDocumentHandler(documentService DocumentServiceHandlerInterface) *DocumentHandler {
 	return &DocumentHandler{
 		documentService: documentService,
 	}

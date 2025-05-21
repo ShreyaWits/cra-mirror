@@ -12,11 +12,30 @@ import (
 
 	"Document-Processing/internal/enums"
 	"Document-Processing/internal/models"
-	"Document-Processing/internal/repository"
 	pb "Document-Processing/proto"
 )
 
 // BatchProcessingState tracks the state of a batch processing job
+
+type GeminiServiceInterface interface {
+	ProcessImage(ctx context.Context, base64Image string, extractionFields []string, fileUrl string) (map[string]string, float32, error)
+	Close() error
+}
+
+type LlamaServiceInterface interface {
+	ProcessImage(ctx context.Context, base64Image string, extractionFields []string) (map[string]string, error)
+}
+
+type MinioRepositoryInterfaces interface {
+	StoreFile(ctx context.Context, data []byte, fileType string) (string, error)
+	DeleteFile(ctx context.Context, fileUrl string) error
+}
+
+type DocumentDataRepository interface {
+	CreateDocumentData(data *models.DocumentData) (*models.DocumentData, error)
+	GetDocumentDataByID(id string) (*models.DocumentData, error)
+}
+
 type BatchProcessingState struct {
 	mu             sync.RWMutex
 	Status         string
@@ -27,15 +46,20 @@ type BatchProcessingState struct {
 
 type DocumentService struct {
 	pb.UnimplementedDocumentProcessingServiceV1Server
-	geminiService *GeminiService
-	llamaService  *LlamaService
-	minioRepo     *repository.MinioRepository
-	yugabyteRepo  repository.DocumentDataRepository
+	geminiService GeminiServiceInterface
+	llamaService  LlamaServiceInterface
+	minioRepo     MinioRepositoryInterfaces
+	yugabyteRepo  DocumentDataRepository
 	batchStates   map[string]*BatchProcessingState
 	batchStatesMu sync.RWMutex
 }
 
-func NewDocumentService(geminiService *GeminiService, llamaService *LlamaService, minioRepo *repository.MinioRepository, yugabyteRepo repository.DocumentDataRepository) *DocumentService {
+func NewDocumentService(
+	geminiService GeminiServiceInterface,
+	llamaService LlamaServiceInterface,
+	minioRepo MinioRepositoryInterfaces,
+	yugabyteRepo DocumentDataRepository,
+) *DocumentService {
 	return &DocumentService{
 		geminiService: geminiService,
 		llamaService:  llamaService,
@@ -125,7 +149,11 @@ func (s *DocumentService) GetBatchStatusV1(ctx context.Context, req *pb.BatchSta
 
 	decodeErr := json.Unmarshal([]byte(data.Data), &decodeExtractedData)
 	if decodeErr != nil {
-		log.Fatal("Failed to decode JSON:", err)
+		log.Printf("Failed to decode JSON: %v", decodeErr)
+		return &pb.BatchFileProcessingResponse{
+			Success: false,
+			Message: "Internal error: Failed to decode processed data: " + decodeErr.Error(),
+		}, nil
 	}
 
 	// converting map to proto
@@ -264,7 +292,7 @@ func (s *DocumentService) processBatchInBackground(ctx context.Context, batchID 
 }
 
 // GeminiService returns the Gemini service instance
-func (s *DocumentService) GeminiService() *GeminiService {
+func (s *DocumentService) GeminiService() GeminiServiceInterface {
 	return s.geminiService
 }
 
@@ -319,7 +347,7 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 
 	// Validate base64 characters
 	for i, c := range base64Data {
-		if !isValidBase64Char(c) {
+		if !IsValidBase64Char(c) {
 			log.Printf("Invalid base64 character at position %d: %c (ASCII: %d)", i, c, c)
 			// Delete file from MinIO if base64 data is invalid
 			if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
@@ -381,8 +409,8 @@ func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessin
 	}, nil
 }
 
-// isValidBase64Char checks if a character is valid in base64 encoding
-func isValidBase64Char(c rune) bool {
+// IsValidBase64Char checks if a character is valid in base64 encoding
+func IsValidBase64Char(c rune) bool {
 	return (c >= 'A' && c <= 'Z') ||
 		(c >= 'a' && c <= 'z') ||
 		(c >= '0' && c <= '9') ||
@@ -395,4 +423,11 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func (s *DocumentService) GetBatchStateForTest(batchID string) (*BatchProcessingState, bool) {
+	s.batchStatesMu.RLock()
+	defer s.batchStatesMu.RUnlock()
+	state, ok := s.batchStates[batchID]
+	return state, ok
 }

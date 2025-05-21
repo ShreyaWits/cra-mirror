@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -18,57 +19,36 @@ type MinioRepository struct {
 }
 
 func NewMinioRepository(endpoint, accessKey, secretKey, bucketName string) (*MinioRepository, error) {
-	var client *minio.Client
-	var err error
-
-	// Retry MinIO client initialization
-	maxRetries := 10
-	retryDelay := 5 * time.Second
-
-	for i := 0; i < maxRetries; i++ {
-		// Initialize MinIO client
-		client, err = minio.New(endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-			Secure: false, // Use HTTP instead of HTTPS
-		})
-		if err == nil {
-			// Client initialized successfully, now check bucket existence
-			ctx := context.Background()
-			var exists bool
-			var bucketErr error
-
-			// Retry bucket existence check
-			for j := 0; j < maxRetries; j++ {
-				exists, bucketErr = client.BucketExists(ctx, bucketName)
-				if bucketErr == nil {
-					// Bucket check successful, proceed
-					if !exists {
-						bucketErr = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
-						if bucketErr != nil {
-							return nil, fmt.Errorf("failed to create bucket after retries: %v", bucketErr)
-						}
-					}
-					// Both client and bucket are ready
-					repo := &MinioRepository{
-						client:     client,
-						bucketName: bucketName,
-					}
-					return repo, nil
-				}
-
-				fmt.Printf("MinIO bucket existence check attempt %d failed: %v. Retrying in %s...\n", j+1, bucketErr, retryDelay)
-				time.Sleep(retryDelay)
-			}
-			// If bucket check failed after max retries
-			return nil, fmt.Errorf("failed to check bucket existence after %d retries: %v", maxRetries, bucketErr)
-		}
-
-		fmt.Printf("MinIO client initialization attempt %d failed: %v. Retrying in %s...\n", i+1, err, retryDelay)
-		time.Sleep(retryDelay)
+	// Initialize MinIO client
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: false, // Use HTTP instead of HTTPS
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create minio client: %v", err)
 	}
 
-	// If client initialization failed after max retries
-	return nil, fmt.Errorf("failed to create minio client after %d retries: %v", maxRetries, err)
+	// Create repository instance
+	repo := &MinioRepository{
+		client:     client,
+		bucketName: bucketName,
+	}
+
+	// Ensure bucket exists
+	ctx := context.Background()
+	exists, err := client.BucketExists(ctx, bucketName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check bucket existence: %v", err)
+	}
+
+	if !exists {
+		err = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create bucket: %v", err)
+		}
+	}
+
+	return repo, nil
 }
 
 // StoreFile stores a file in MinIO and returns its URL
@@ -104,25 +84,18 @@ func (r *MinioRepository) GetFile(ctx context.Context, fileName string) ([]byte,
 	}
 	defer object.Close()
 
-	// Read file content
-	fileInfo, err := object.Stat()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file info: %v", err)
-	}
-
-	buffer := make([]byte, fileInfo.Size)
-	_, err = object.Read(buffer)
+	data, err := io.ReadAll(object)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file content: %v", err)
 	}
 
-	return buffer, nil
+	return data, nil
 }
 
 // DeleteFile deletes a file from MinIO using its URL
+
 func (r *MinioRepository) DeleteFile(ctx context.Context, fileURL string) error {
 	// Extract the object name from the URL
-	// The URL format is typically: http://endpoint/bucket/object-name
 	parts := strings.Split(fileURL, "/")
 	if len(parts) < 4 {
 		return fmt.Errorf("invalid file URL format")
@@ -130,10 +103,16 @@ func (r *MinioRepository) DeleteFile(ctx context.Context, fileURL string) error 
 
 	// Get the last part of the URL path and strip query parameters
 	rawObjectName := parts[len(parts)-1]
-	objectName := strings.Split(rawObjectName, "?")[0] // ✅ This removes query params
+	objectName := strings.Split(rawObjectName, "?")[0]
+
+	// Check if the object exists
+	_, err := r.client.StatObject(ctx, r.bucketName, objectName, minio.StatObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("file does not exist: %v", err)
+	}
 
 	// Remove the file from MinIO
-	err := r.client.RemoveObject(ctx, r.bucketName, objectName, minio.RemoveObjectOptions{})
+	err = r.client.RemoveObject(ctx, r.bucketName, objectName, minio.RemoveObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to delete file from MinIO: %v", err)
 	}

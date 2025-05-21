@@ -1,7 +1,6 @@
 package services
 
 import (
-	"Document-Processing/internal/repository"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -13,13 +12,25 @@ import (
 	"google.golang.org/api/option"
 )
 
-type GeminiService struct {
-	client *genai.Client
-	model  *genai.GenerativeModel
-	minioRepo *repository.MinioRepository
+// GeminiModelInterface defines the interface for the Gemini model
+type GeminiModelInterface interface {
+	GenerateContent(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error)
 }
 
-func NewGeminiService(apiKey string, minioRepo *repository.MinioRepository) (*GeminiService, error) {
+// MinioRepositoryInterface defines the interface for MinIO operations
+type MinioRepositoryInterface interface {
+	StoreFile(ctx context.Context, fileData []byte, fileType string) (string, error)
+	GetFile(ctx context.Context, fileName string) ([]byte, error)
+	DeleteFile(ctx context.Context, fileUrl string) error
+}
+
+type GeminiService struct {
+	client    *genai.Client
+	model     GeminiModelInterface
+	minioRepo MinioRepositoryInterface
+}
+
+func NewGeminiService(apiKey string, minioRepo MinioRepositoryInterface) (*GeminiService, error) {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
@@ -28,8 +39,8 @@ func NewGeminiService(apiKey string, minioRepo *repository.MinioRepository) (*Ge
 
 	model := client.GenerativeModel("gemini-1.5-flash")
 	return &GeminiService{
-		client: client,
-		model:  model,
+		client:    client,
+		model:     model,
 		minioRepo: minioRepo,
 	}, nil
 }
@@ -148,6 +159,11 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 }
 
 func cleanAndValidateBase64(base64Str string) (string, string, error) {
+	// Handle empty input
+	if base64Str == "" {
+		return "", "", fmt.Errorf("empty input")
+	}
+
 	// Handle data URL format
 	if strings.HasPrefix(base64Str, "data:") {
 		parts := strings.SplitN(base64Str, ",", 2)

@@ -1,103 +1,150 @@
 package services
 
 import (
-    "Document-Processing/internal/utils"
-    "bytes"
-    "context"
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "time"
+	"Document-Processing/internal/utils"
+	"bytes"
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
 )
 
 type LlamaService struct {
-    modelName string
-    apiURL    string
-    client    *http.Client
+	modelName string
+	apiURL    string
+	client    *http.Client
 }
 
 func NewLlamaService() *LlamaService {
-    return &LlamaService{
-        modelName: "llama3.2-vision",
-        apiURL:    "http://localhost:11434/api/chat",
-        client:    &http.Client{Timeout: 2 * time.Minute},
-    }
+	return &LlamaService{
+		modelName: "llama3.2-vision",
+		apiURL:    "http://localhost:11434/api/chat",
+		client:    &http.Client{Timeout: 2 * time.Minute},
+	}
+}
+
+// NewLlamaServiceWithClient creates a new LlamaService with a custom HTTP client
+func NewLlamaServiceWithClient(client *http.Client) *LlamaService {
+	return &LlamaService{
+		modelName: "llama3.2-vision",
+		apiURL:    "http://localhost:11434/api/chat",
+		client:    client,
+	}
 }
 
 func (s *LlamaService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string) (map[string]string, error) {
-    fmt.Printf("Llama Process Start")
-    base64Data, _, err := cleanAndValidateBase64(base64Image)
-    if err != nil {
-        return nil, fmt.Errorf("base64 validation failed: %v", err)
-    }
+	fmt.Printf("Llama Process Start")
 
-    requestBody := map[string]interface{}{
-        "model": s.modelName,
-        "messages": []map[string]interface{}{
-            {
-                "role":    "user",
-                "content": utils.GetIdentityUserDetailsPrompt(extractionFields),
-                "images":  []string{base64Data},
-            },
-        },
-        "stream": false,
-    }
+	// Validate base64 data
+	if base64Image == "" {
+		return nil, fmt.Errorf("base64 validation failed: empty input")
+	}
 
-    bodyBytes, err := json.Marshal(requestBody)
-    if err != nil {
-        return nil, fmt.Errorf("failed to marshal request: %v", err)
-    }
+	// Handle data URL format
+	var base64Data string
+	if strings.HasPrefix(base64Image, "data:") {
+		parts := strings.SplitN(base64Image, ",", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("base64 validation failed: invalid data URL format")
+		}
+		base64Data = parts[1]
+	} else {
+		base64Data = base64Image
+	}
 
-    req, err := http.NewRequestWithContext(ctx, "POST", s.apiURL, bytes.NewBuffer(bodyBytes))
-    if err != nil {
-        return nil, fmt.Errorf("failed to create request: %v", err)
-    }
-    req.Header.Set("Content-Type", "application/json")
+	// Clean base64 string
+	base64Data = strings.TrimSpace(base64Data)
+	base64Data = strings.ReplaceAll(base64Data, "\n", "")
+	base64Data = strings.ReplaceAll(base64Data, "\r", "")
+	base64Data = strings.ReplaceAll(base64Data, " ", "")
 
-    resp, err := s.client.Do(req)
-    if err != nil {
-        return nil, fmt.Errorf("HTTP request failed: %v", err)
-    }
-    defer resp.Body.Close()
+	// Add padding if necessary
+	if mod := len(base64Data) % 4; mod != 0 {
+		base64Data += strings.Repeat("=", 4-mod)
+	}
 
-    if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-        return nil, fmt.Errorf("non-success HTTP status: %s", resp.Status)
-    }
+	// Validate base64 characters
+	for i, c := range base64Data {
+		if !IsValidBase64Char(c) {
+			return nil, fmt.Errorf("base64 validation failed: invalid character at position %d: %c", i, c)
+		}
+	}
 
-    responseData, _ := io.ReadAll(resp.Body)
+	// Try to decode base64 to validate
+	if _, err := base64.StdEncoding.DecodeString(base64Data); err != nil {
+		return nil, fmt.Errorf("base64 validation failed: %v", err)
+	}
 
-    var llamaResponse llamaResponse
-    dataParseErr := json.Unmarshal(responseData, &llamaResponse)
+	requestBody := map[string]interface{}{
+		"model": s.modelName,
+		"messages": []map[string]interface{}{
+			{
+				"role":    "user",
+				"content": utils.GetIdentityUserDetailsPrompt(extractionFields),
+				"images":  []string{base64Data},
+			},
+		},
+		"stream": false,
+	}
 
-    if dataParseErr != nil {
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %v", err)
+	}
 
-        return map[string]string{}, fmt.Errorf("failed to unmarshal JSON: %v", err)
-    }
+	req, err := http.NewRequestWithContext(ctx, "POST", s.apiURL, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
 
-    var result map[string]string
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %v", err)
+	}
+	defer resp.Body.Close()
 
-    parseErr := json.Unmarshal([]byte(llamaResponse.Message.Content), &result)
-    if parseErr != nil {
-        fmt.Println("Error:", err)
-        return nil, fmt.Errorf("failed to unmarshal JSON: %v", parseErr)
-    }
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("non-success HTTP status: %s", resp.Status)
+	}
 
-    fmt.Printf("Clean AI data : %s", result)
+	responseData, _ := io.ReadAll(resp.Body)
 
-    return result, nil
+	var llamaResponse llamaResponse
+	dataParseErr := json.Unmarshal(responseData, &llamaResponse)
+
+	if dataParseErr != nil {
+
+		return map[string]string{}, fmt.Errorf("failed to unmarshal JSON: %v", err)
+	}
+
+	var result map[string]string
+
+	parseErr := json.Unmarshal([]byte(llamaResponse.Message.Content), &result)
+	if parseErr != nil {
+		fmt.Println("Error:", err)
+		return nil, fmt.Errorf("failed to unmarshal JSON: %v", parseErr)
+	}
+
+	fmt.Printf("Clean AI data : %s", result)
+
+	return result, nil
 
 }
 
 type message struct {
-    Role    string `json:"role"`
-    Content string `json:"content"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 type llamaResponse struct {
-    Model      string  `json:"model"`
-    CreatedAt  string  `json:"created_at"`
-    Message    message `json:"message"`
-    DoneReason string  `json:"done_reason"`
-    Done       bool    `json:"done"`
+	Model      string  `json:"model"`
+	CreatedAt  string  `json:"created_at"`
+	Message    message `json:"message"`
+	DoneReason string  `json:"done_reason"`
+	Done       bool    `json:"done"`
 }
