@@ -1,0 +1,46 @@
+services:
+  cra-receipt-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cra-receipt-service
+    restart: always
+    networks:
+      - nps2.0
+    ports:
+      - "${REST_PORT}:${REST_PORT}"
+    environment:
+      - REST_PORT=${REST_PORT}
+      - IS_DOCKER=${IS_DOCKER}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USERNAME=${REDIS_USERNAME}
+      - RECEIPT_SERVICE_REDIS_TTL=${RECEIPT_SERVICE_REDIS_TTL}
+      - GRPC_PORT=${GRPC_PORT}
+
+
+  redis-service:
+    container_name: redis-service
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - user-redis:/data
+    environment:
+      - REDIS_PASSWORD=redis
+      - REDIS_USERNAME=redis
+    networks:
+      - nps2.0
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  user-redis:
+    driver: local
+
+networks:
+  nps2.0:

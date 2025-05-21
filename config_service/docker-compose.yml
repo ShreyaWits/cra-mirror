@@ -1,0 +1,33 @@
+services:
+  cra-config-service:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: cra-config-service
+
+      restart: always
+      ports:
+        - "${REST_PORT}:${REST_PORT}"
+      environment:
+        - REST_PORT=${REST_PORT}
+        - IS_DOCKER=${IS_DOCKER}
+
+        - YUGABYTE_DATABASE_HOST=${YUGABYTE_DATABASE_HOST}
+        - YUGABYTE_DATABASE_PORT=${YUGABYTE_DATABASE_PORT}
+        - YUGABYTE_DATABASE_USER=${YUGABYTE_DATABASE_USER}
+        - YUGABYTE_DATABASE_PASSWORD=${YUGABYTE_DATABASE_PASSWORD}
+        - CONFIG_SERVICE_YUGABYTE_DATABASE_NAME=${CONFIG_SERVICE_YUGABYTE_DATABASE_NAME}
+
+        - ETCD_SERVER_ENDPOINT=${ETCD_SERVER_ENDPOINT}
+        - TEMPORAL_SERVER_ENDPOINT=${TEMPORAL_SERVER_ENDPOINT}
+     
+  worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    restart: always
+    environment:
+      - IS_DOCKER=${IS_DOCKER}
+      - TEMPORAL_ENDPOINT=${TEMPORAL_ENDPOINT}
+  
+

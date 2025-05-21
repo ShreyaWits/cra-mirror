@@ -1,0 +1,679 @@
+﻿Encryption/Decryption Low-Level Design Document
+System Software: Database Encryption Service
+Version: 1.0
+Author:
+Date: April 14, 2025
+
+
+
+1. Introduction
+
+1.1 Purpose of the System Software
+The Database Encryption Service is a stateless, high-performance Go microservice built with Fiber. It is responsible for the encryption and decryption of sensitive user data. This service does not handle authentication, password-based encryption, or tracing; it is designed solely to generate encrypted data keys (EDEKs), perform encryption/decryption, and retrieve Key Encryption Keys (KEKs) from a KMS (Key Management System).
+
+1.2 Scope of the LLD Document
+This document outlines the detailed design and behavior of the encryption service, focusing on:
+Component architecture
+API specifications
+Key lifecycle and data flow
+System startup and initialization
+
+1.3 References
+API Specifications (OpenAPI 3.0)
+Go Fiber Documentation
+NIST SP 800-57 Part 1 Rev. 5 (Key Management Guidelines)
+
+
+
+
+2. System Architecture Overview
+2.1 Description
+The microservice provides REST endpoints over HTTPS to accept encryption and decryption requests. It follows a clear separation of concerns:
+EDEK generation (Encrypted DEK)
+Random KEK and DEK generation
+KEK storage in external KMS
+DEK encryption/decryption with KEK
+
+Authentication and token validation are handled externally in the user microservice.
+
+2.2 Architectural Style
+Type: Stateless Microservice
+Communication: REST over HTTPS
+Data Format: JSON
+
+2.3 Diagrams
+
+
+Encryption_HLD_Diagram.drawio
+
+
+Encryption_LLD_interface_Diagram.drawio
+
+
+Encryption_Decryprtion_Sequence_Diagram.drawio
+
+
+
+3. Component Designs
+
+3.1 Request Handler
+3.1.1 Overview
+Responsibilities:
+The Request Handler is responsible for accepting, validating, and routing requests for encryption and decryption services. It serves as the entry point for API calls and interacts with both the Encryption Engine and the Key Manager to handle encryption, decryption, and EDEK generation tasks.
+Accepts requests for encryption (/encrypt), decryption (/decrypt), and EDEK generation (/generate-edek).
+
+
+Validates the request parameters to ensure that all necessary information is provided.
+
+
+Dispatches the request to the appropriate internal component (Encryption Engine or Key Manager) based on the type of request.
+
+
+3.1.2 Interfaces
+Provided Interfaces:
+POST /encrypt: Accepts a request to encrypt data.
+
+
+POST /decrypt: Accepts a request to decrypt data.
+
+
+POST /generate-edek: Accepts a request to generate an Encrypted Data Encryption Key (EDEK).
+
+
+Required Interfaces:
+The Request Handler relies on:
+
+
+The Encryption Engine for encryption/decryption operations.
+
+
+The Key Manager for KEK retrieval and EDEK generation.
+
+
+3.1.3 Internal Design
+Sub-components or Key Functions:
+Function Name: HandleEncryptRequest
+
+
+Description: Processes incoming encryption requests and routes them to the Encryption Engine for data encryption.
+
+
+Parameters:
+
+
+ctx *fiber.Ctx: The context for the current HTTP request.
+
+
+Return Values: Returns a JSON response containing the encrypted data or an error message.
+
+
+Algorithm/Pseudocode:
+
+
+Parse the input request to extract the data to be encrypted.
+
+
+Validate the input data for correctness (e.g., check for required fields like data and contextID).
+
+
+Pass the validated data to the Encryption Engine for encryption.
+
+
+Return the encrypted data in the response.
+
+
+Data Structures Used:
+
+
+Request: { data, contextID }
+
+
+Response: { encryptedData, edek }
+
+
+Concurrency and Synchronization: The request handler uses Fiber’s concurrency model to handle multiple requests concurrently. Each request is processed independently.
+
+
+Error Handling:
+
+
+Returns a 400 error if the request data is invalid.
+
+
+Returns a 500 error if there is an issue with encryption.
+
+
+Performance Considerations: Optimized for handling multiple concurrent requests using Fiber’s lightweight concurrency model.
+
+
+Portability Considerations: The design is independent of the underlying platform and uses Fiber’s abstraction to ensure portability.
+
+
+Function Name: HandleDecryptRequest
+
+
+Description: Processes incoming decryption requests and routes them to the Encryption Engine for data decryption.
+
+
+Parameters:
+
+
+ctx *fiber.Ctx: The context for the current HTTP request.
+
+
+Return Values: Returns a JSON response containing the decrypted data or an error message.
+
+
+Algorithm/Pseudocode:
+
+
+Parse the input request to extract the encrypted data and EDEK.
+
+
+Validate the input data for correctness (e.g., check for required fields like edek and encryptedData).
+
+
+Pass the validated data to the Encryption Engine for decryption.
+
+
+Return the decrypted data in the response.
+
+
+Data Structures Used:
+
+
+Request: { edek, encryptedData }
+
+
+Response: { data }
+
+
+Concurrency and Synchronization: Handles each decryption request independently using Fiber’s concurrency model.
+
+
+Error Handling:
+
+
+Returns a 400 error if the request data is invalid.
+
+
+Returns a 500 error if there is an issue with decryption.
+
+
+Performance Considerations: Designed to efficiently handle concurrent decryption requests with minimal latency.
+
+
+Portability Considerations: Fiber ensures cross-platform compatibility and efficient handling of requests.
+
+
+Function Name: HandleGenerateEDEK
+
+
+Description: Processes requests to generate an Encrypted Data Encryption Key (EDEK) by encrypting a DEK with a KEK.
+
+
+Parameters:
+
+
+ctx *fiber.Ctx: The context for the current HTTP request.
+
+
+Return Values: Returns a JSON response containing the generated EDEK or an error message.
+
+
+Algorithm/Pseudocode:
+
+
+Parse the input request to extract the KEK ID.
+
+
+Validate the input data to ensure the KEK is valid and exists.
+
+
+Retrieve the KEK from the Key Manager.
+
+
+Generate random DEK.
+
+
+Use the Encryption Engine to encrypt the DEK with the KEK and generate an EDEK.
+
+
+Return the generated EDEK in the response.
+
+
+Data Structures Used:
+
+
+Request: { kekID }
+
+
+Response: { edek }
+
+
+Concurrency and Synchronization: Independent handling of requests with Fiber’s concurrent processing.
+
+
+Error Handling:
+
+
+Returns a 400 error if the KEK is not found or if the input data is invalid.
+
+
+Returns a 500 error if there is an issue with EDEK generation.
+
+
+Performance Considerations: Designed to handle multiple EDEK generation requests efficiently.
+
+
+Portability Considerations: Fiber ensures cross-platform portability and minimal resource usage during EDEK generation.
+
+
+3.1.4 Notes
+Stateless: The Request Handler does not store any state between requests; all information is passed through the request and response.
+
+
+Structured Error Handling: Errors are managed with structured error codes and messages to ensure consistent response formatting.
+
+
+Fiber’s Concurrency Model: The handler leverages Fiber’s asynchronous and non-blocking I/O model to handle multiple requests concurrently, ensuring high throughput and low latency for API calls.
+
+
+
+3.2 Key Manager
+3.2.1 Overview
+Responsibilities:
+The Key Manager is responsible for handling the lifecycle of Key Encryption Keys (KEKs) within the system. Its duties include:
+Generating KEKs using secure random functions.
+
+
+Storing KEKs securely in an external Key Management System (KMS).
+
+
+Retrieving KEKs from the KMS when needed for encryption and decryption operations.
+
+
+3.2.2 Interfaces
+Provided Interfaces:
+GenerateKEK() []byte: This function generates a random Key Encryption Key (KEK).
+
+
+GenerateEDEK(kek []byte, dek string) string: This function generates an Encrypted DEK (EDEK) by encrypting a Data Encryption Key (DEK) with the provided KEK.
+
+
+StoreKEKToKMS(kekID string, kek []byte, role string): This function stores a KEK in the KMS with an associated ID and role (e.g., Admin, User, Organization).
+
+
+RetrieveKEKFromKMS(kekID string, role string) []byte: This function retrieves the KEK from the KMS using the KEK ID and role.
+
+
+Required Interfaces:
+Interaction with the external KMS for storing and retrieving KEKs securely.
+
+
+Secure random number generation for creating KEKs, DEKs.
+
+
+3.2.3 Internal Design
+Sub-components or Key Functions:
+Function Name: GenerateKEK
+
+
+Description: Generates a random Encryption Key (KEK) using a secure random number generator.
+
+
+Parameters: None
+
+
+Return Values: Returns the generated KEK as a byte array.
+
+
+Algorithm/Pseudocode:
+
+
+Use a cryptographically secure random number generator.
+
+
+Generate a KEK of suitable size (e.g., 256 bits).
+
+
+Data Structures Used:
+
+
+KEK: [byte array]
+
+
+Concurrency and Synchronization: The KEK generation is thread-safe using secure random generation mechanisms.
+
+
+Error Handling: Returns an error if random number generation fails.
+
+
+Performance Considerations: Optimized to use hardware-accelerated random number generation when available.
+
+
+Portability Considerations: Uses Go’s built-in secure random number generation, which is portable across platforms.
+
+
+Function Name: GenerateEDEK
+
+
+Description: Encrypts a Data Encryption Key (DEK) using a provided KEK to generate an Encrypted DEK (EDEK).
+
+
+Parameters:
+kek []byte: The Key Encryption Key (KEK) used for encryption.
+
+
+Return Values: Returns the generated Encrypted DEK (EDEK) as a string.
+
+
+Algorithm/Pseudocode:
+Encrypt the DEK using the provided KEK.
+Return the resulting Encrypted DEK (EDEK).
+
+
+Data Structures Used:
+EDEK: { encryptedKey, iv, algorithm }
+
+
+Concurrency and Synchronization: This operation is designed to be thread-safe, as each encryption operation is independent.
+
+
+Error Handling: Returns an error if the encryption fails or if invalid KEK is provided.
+
+
+Performance Considerations: AES-GCM encryption is fast and efficient for EDEK generation.
+
+
+Portability Considerations: AES encryption is platform-independent, ensuring cross-platform compatibility.
+
+
+Function Name: StoreKEKToKMS
+
+
+Description: Stores a KEK in the external Key Management System (KMS).
+
+
+Parameters:
+kekID string: The unique identifier for the KEK.
+kek []byte: The Key Encryption Key to store.
+role string: The role (e.g., “User”, “Admin”, “Org”) that is associated with the KEK.
+
+
+Return Values: None (throws error if unable to store KEK).
+
+
+Algorithm/Pseudocode:
+Authenticate and establish a connection to the KMS.
+Store the KEK in the KMS associated with the provided kekID and role.
+
+
+Data Structures Used:
+KMS: { kekID, kek, role }
+
+
+Concurrency and Synchronization: This function operates independently of other requests but requires secure communication with the KMS.
+
+
+Error Handling: Handles KMS access issues and throws errors if storage fails.
+
+
+Performance Considerations: KMS interactions are generally slower than in-memory operations, but this is mitigated by the necessity of using secure storage.
+
+
+Portability Considerations: The function is designed to be compatible with any KMS that follows standard API protocols (e.g., AWS KMS, Azure Key Vault).
+
+
+Function Name: RetrieveKEKFromKMS
+
+
+Description: Retrieves a KEK from the external KMS using the provided KEK ID and role.
+
+
+Parameters:
+kekID string: The unique identifier for the KEK.
+role string: The role (e.g., “User”, “Admin”, “Org”) associated with the KEK.
+
+
+Return Values: Returns the KEK as a byte array.
+
+
+Algorithm/Pseudocode:
+Authenticate and establish a connection to the KMS.
+Retrieve the KEK from the KMS based on kekID and role.
+
+
+Data Structures Used:
+KMS: { kekID, kek, role }
+
+
+Concurrency and Synchronization: KMS retrieval is done in isolation per request, with secure connections ensuring safe data retrieval.
+
+
+Error Handling: Errors will be raised if the KEK is not found or there is an issue with KMS access.
+
+
+Performance Considerations: KMS retrieval time is dependent on network latency and KMS response times.
+
+
+Portability Considerations: The retrieval process depends on the specific KMS but is designed to be portable across different KMS providers.
+
+
+3.2.4 KEK Storage
+KEKs are generated using a secure random number generator and stored securely in the KMS.
+
+
+The KMS ensures that KEKs are encrypted and stored in a secure manner, ensuring confidentiality and integrity.
+
+
+KEKs are retrieved based on their unique kekID and role, allowing role-based access control.
+
+
+3.2.5 Performance Considerations
+KEK generation is designed to be fast using hardware-accelerated random number generation (if available).
+
+
+Storing and retrieving KEKs from KMS is slower due to network communication, but this is necessary for secure key management.
+
+
+3.2.6 Portability Considerations
+The Key Manager is designed to work with any KMS that follows standard API protocols, making it portable across different cloud environments and on-premises KMS solutions.
+
+
+3.3 Encryption Engine
+3.3.1 Overview
+Responsibilities:
+The Encryption Engine is responsible for performing encryption and decryption operations. Its main duties include:
+Generating Data Encryption Keys (DEKs)
+
+
+Encrypting DEKs with Key Encryption Keys (KEKs) to create Encrypted DEKs (EDEKs)
+
+
+Using DEKs to encrypt and decrypt data payloads
+
+
+Decrypting the data payloads when requested by the user
+
+
+3.3.2 Interfaces
+Provided Interfaces:
+Encrypt(data string, contextID string) (edek, encryptedData): This function accepts data and a context ID, and returns the encrypted DEK (EDEK) along with the encrypted payload.
+
+
+Decrypt(edek string, encryptedData string, contextID string) (data): This function accepts an EDEK, the encrypted payload, and a context ID, and returns the decrypted data.
+
+
+Required Interfaces:
+GenerateDEK() []byte: This is a function used internally to generate the Data Encryption Key (DEK) which will be encrypted by the KEK.
+
+
+RetrieveKEK(kekID string) []byte: This is a required interface to retrieve the Key Encryption Key (KEK) from the Key Manager or KMS.
+
+
+3.3.3 Internal Design
+Sub-components or Key Functions:
+Function Name: GenerateEDEK
+
+
+Description: Generates a random Data Encryption Key (DEK) using a secure random number generator.
+
+
+Parameters: None
+
+
+Return Values: Returns the EDEK as a string.
+
+
+Algorithm/Pseudocode:
+Use a cryptographically secure random number generator.
+Generate a DEK of suitable size (e.g., 256 bits for AES).
+Generate a KEK Using GenerateKEK
+Generate EDEK by encrypting DEK with KEK 
+
+
+Data Structures Used: DEK: [byte array]
+
+
+Concurrency and Synchronization: The function is designed to be thread-safe by using proper synchronization mechanisms (if applicable) in a multithreaded environment.
+
+
+Error Handling: Returns an error if random number generation fails.
+
+
+Performance Considerations: Designed to be fast by utilizing hardware-accelerated random number generation (if available).
+
+
+Portability Considerations: Should work across different platforms, relying on Go’s standard libraries for random number generation.
+
+
+Function Name: Encrypt
+
+
+Description: Encrypts data using the DEK and returns the encrypted data and the associated Encrypted DEK (EDEK).Supports context-aware encryption strategies based on the type key present in the input.
+
+
+Parameters:
+edek string: The Encrypted Data Encryption Key (EDEK).
+data map[string]interface{}:  There will be a type key that will define the type of encryption.
+contextID string: A unique identifier for the encryption operation, used for logging and tracking.
+
+
+Return Values: Returns the Encrypted Data (encryptedData)
+
+
+Algorithm/Pseudocode:
+Retrieve the KEK using RetrieveKEK(kekID).
+Decrypt the EDEK using the KEK to get the DEK.
+Use the DEK to decrypt the data.
+Return the Encrypted data.
+
+
+Data Structures Used:
+EDEK: { encryptedKey, iv, algorithm }
+
+
+Concurrency and Synchronization: The encryption process is handled independently for each request, using Fiber’s concurrency model.
+
+
+Error Handling: Errors such as invalid key, encryption failure, or padding errors will be caught and handled gracefully.
+
+
+Performance Considerations: AES-256-GCM is chosen for its security and performance in both encryption and authentication.
+
+
+Portability Considerations: AES-256-GCM encryption should be supported by Go’s crypto library across platforms.
+
+
+Function Name: Decrypt
+
+
+Description: Decrypts the encrypted data using the DEK obtained from the EDEK and returns the original data.
+
+
+Parameters:
+edek string: The Encrypted Data Encryption Key (EDEK).
+encryptedData string: The data to be decrypted.
+contextID string: A unique identifier for the decryption operation.
+
+
+Return Values: Returns the decrypted data in its original format.
+
+
+Algorithm/Pseudocode:
+Extract the type for encryption prefix from the encrypted field
+Retrieve the KEK using RetrieveKEK(kekID).
+Decrypt the EDEK using the KEK to get the DEK.
+Use the DEK to decrypt the data.
+Return the decrypted data.
+
+
+Data Structures Used:
+EDEK: { encryptedKey, iv, algorithm }
+
+
+Concurrency and Synchronization: Each decryption request is processed independently, allowing parallel execution.
+
+
+Error Handling: Decryption errors, such as mismatched keys or corrupted data, are caught and an appropriate error is returned.
+
+
+Performance Considerations: Optimized for speed using AES-256-GCM, which is efficient in both encryption and authentication processes.
+
+
+Portability Considerations: The function uses Go’s standard libraries, ensuring compatibility across platforms.
+
+
+3.3.4 Cryptographic Algorithm
+AES-256-GCM is used for both encryption and authentication, providing confidentiality and data integrity.
+
+
+EDEK structure:
+encryptedKey: The encrypted DEK.
+iv: Initialization vector used for encryption.
+algorithm: Algorithm type (AES-256-GCM).
+
+
+3.3.5 Performance Considerations
+AES-256-GCM is chosen due to its balance between security and performance, particularly its support for authenticated encryption, which ensures both confidentiality and data integrity.
+
+
+Encryption and decryption operations are designed to be fast, leveraging parallel execution when possible.
+
+
+3.3.6 Portability Considerations
+The encryption engine utilizes Go’s standard libraries for cryptographic operations, which are platform-independent and ensure the service is portable across various environments.
+
+
+
+
+4. System Initialization
+
+4.1 Steps
+Load environment configuration
+Initialize Fiber server
+Initialize logger (console or file-based)
+Register routes: `/encrypt`, `/decrypt`
+Validate KMS connection
+
+4.2 Initialization is lightweight
+No state restoration
+Crypto warm-up for AES module (optional)
+
+4.3 Diagram
+
+
+Encryption_system_Initialization.drawio 
+
+
+
+5. Appendices
+5.1 Glossary
+DEK: Data Encryption Key
+KEK: Key Encryption Key
+EDEK: Encrypted DEK
+KMS: Key Management System
+AES-GCM: Advanced Encryption Standard - Galois/Counter Mode
+
+

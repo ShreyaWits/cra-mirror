@@ -1,0 +1,209 @@
+{
+	"info": {
+		"_postman_id": "7101617d-d9d8-4a1a-a1c6-ae50cb139f83",
+		"name": "config-service Copy",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "41698535",
+		"_collection_link": "https://protean-nps.postman.co/workspace/Team-Workspace~7edb3a55-f06d-4326-831e-6be87efdcd2d/collection/41698535-7101617d-d9d8-4a1a-a1c6-ae50cb139f83?action=share&source=collection_link&creator=41698535"
+	},
+	"item": [
+		{
+			"name": "webhooks",
+			"item": [
+				{
+					"name": "register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"url\":\"locahost:5050\",\n    \"environment\":\"dev\",\n    \"serviceName\": \"withdrawal\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{config-url}}/config/webhook",
+							"host": [
+								"{{config-url}}"
+							],
+							"path": [
+								"config",
+								"webhook"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "get all webhook",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{config-url}}/configs/webhook/dev/withdrawal",
+							"host": [
+								"{{config-url}}"
+							],
+							"path": [
+								"configs",
+								"webhook",
+								"dev",
+								"withdrawal"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin-login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var data = pm.response.json()",
+							"if (!data) return",
+							"if (data[\"token\"]){",
+							"    pm.globals.set(\"user_access_token\", data.data[\"access_token\"]);",
+							"    pm.globals.set(\"user_refresh_token\", data.data[\"refresh_token\"]);",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"qwertyasdfgh\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{config-url}}/admin/login",
+					"host": [
+						"{{config-url}}"
+					],
+					"path": [
+						"admin",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send-config",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{user_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"db_url\": \"postgres://user2:pass2@localhost:5432/db\",\n    \"retry_count\": 20,\n    \"timeout\": 2000,\n    \"domain\":\"admin\",\n    \"name\":\"config\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{app_url}}/develop/config",
+					"host": [
+						"{{app_url}}"
+					],
+					"path": [
+						"develop",
+						"config"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get-config",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{user_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{app_url}}/develop/config",
+					"host": [
+						"{{app_url}}"
+					],
+					"path": [
+						"develop",
+						"config"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get-confiig-by-key",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{user_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{app_url}}/dev/config/name",
+					"host": [
+						"{{app_url}}"
+					],
+					"path": [
+						"dev",
+						"config",
+						"name"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  cra-caching-service:
+    build: .
+    container_name: caching-service
+    restart: always
+    image: caching-service
+    ports:
+      - ${REST_PORT}:8001
+      - ${GRPC_PORT}:50051
+    environment:
+      - OTEL_COLLECTOR_GRPC_ENDPOINT=${OTEL_COLLECTOR_GRPC_ENDPOINT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+      - SERVICE_NAME=${SERVICE_NAME}
+      - ENVIRONMENT=${ENVIRONMENT}

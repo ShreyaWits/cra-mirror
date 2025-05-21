@@ -1,0 +1,19 @@
+services:
+  cra-receipt-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cra-receipt-service
+    restart: always
+    ports:
+      - "${REST_PORT}:${REST_PORT}"
+    environment:
+      - REST_PORT=${REST_PORT}
+      - IS_DOCKER=${IS_DOCKER}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USERNAME=${REDIS_USERNAME}
+      - RECEIPT_SERVICE_REDIS_TTL=${RECEIPT_SERVICE_REDIS_TTL}
+      - GRPC_PORT=${GRPC_PORT}
+
+

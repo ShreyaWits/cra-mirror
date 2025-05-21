@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "protected_link/pkg/grpc/proto";
+
+service AuthService {
+  rpc SendOTPV1 (SendOTPRequestV1) returns (SendOTPResponseV1);
+  rpc VerifyOTPV1 (VerifyOTPRequestV1) returns (VerifyOTPResponseV1);
+}
+service LinkService {
+  rpc SaveGeneratedLinkV1 (GenerateUrlRequestV1) returns (GenerateUrlResponseV1);
+  rpc GetExtractDataV1 (GetExtractDataRequestV1) returns (GetExtractDataResponseV1);
+  rpc DeleteGeneratedLinkV1 (DeleteGeneratedLinkRequestV1) returns (DeleteGeneratedLinkResponseV1);
+}
+
+message GenerateUrlRequestV1 {
+  string user_id        = 1;
+  string name           = 2;
+  string request_type   = 3;
+  string model_type     = 4;
+  bool   otp_required   = 5;
+  string expire_in      = 6;
+  string email          = 7;
+  string phone          = 8;
+  string channel_type   = 9;
+  map<string, string> data = 10;
+}
+
+message GenerateUrlResponseV1 {
+  bool success = 1;
+  string message = 2;
+  ProtectedLinkResponse data = 3;
+  map<string, string> error = 4;
+}
+message ProtectedLinkResponse {
+  string url = 1;
+}
+
+message GetExtractDataRequestV1 {
+  string token = 1;
+}
+
+message GetExtractDataResponseV1 {
+  bool success = 1;
+  string message = 2;
+  map<string, string> data = 9;
+  string error = 4;
+}
+
+message DeleteGeneratedLinkRequestV1 {
+  string token = 1;
+}
+
+message DeleteGeneratedLinkResponseV1 {
+  bool success = 1;
+  string message = 2;
+  ProtectedLinkResponse data = 3;
+  string error = 4;
+}
+
+message SendOTPRequestV1 {
+  string user_id = 1;
+  string name = 2;
+  string request_type = 3;
+  bool  otp_required = 4;
+  string expire_in = 5;
+  string email = 6;
+  string phone = 7;
+  string channel_type = 8;
+  string data = 9;
+}
+
+message SendOTPResponseV1 {
+  bool success = 1;
+  string message = 2;
+  VerificationResponse data = 3;
+  string error = 4;
+}
+
+message VerificationResponse {
+  string verification_id = 1;
+}
+
+message VerifyOTPRequestV1 {
+  string user_id = 1;
+  string otp = 2;
+  string verification_id = 3;
+}
+
+message VerifyOTPResponseV1 {
+  bool success = 1;
+  string message = 2;
+  map<string, string> data = 3;
+  map<string, string> error = 4;  
+}
+
+message ErrorResponse {
+  bool Success = 1;
+  string Message = 2;
+  string ErrorCode= 3;
+
+}
