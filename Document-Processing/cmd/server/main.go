@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,12 +13,28 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func main() {
+func startServer(cfg *config.Config) (*di.Container, error) {
+	container, err := di.NewContainer(cfg)
+	if err != nil {
+		return nil, err
+	}
 
+	// Start server in a goroutine
+	go func() {
+		if err := container.Server.Start(); err != nil {
+			log.Printf("Server error: %v", err)
+		}
+	}()
+
+	return container, nil
+}
+
+func main() {
 	err := godotenv.Load()
-	if err != nil{
+	if err != nil {
 		log.Print("Failed to get .env")
 	}
+
 	// Load environment variables
 	token := os.Getenv("JWT_TOKEN")
 
@@ -31,34 +48,64 @@ func main() {
 		log.Fatalf("Config validation failed: %v", err)
 	}
 
-	log.Printf("Config initialized: %+v\n", cfg)
+	// Set initial config
+	config.SetCurrentConfig(cfg)
 
-	// Initialize application container
-	container, err := di.NewContainer(cfg)
+	// Start initial server
+	container, err := startServer(cfg)
 	if err != nil {
 		log.Fatalf("Failed to initialize container: %v", err)
 	}
+
+	// Set up config webhook endpoint
+	http.HandleFunc("/config/webhook", config.HandleConfigWebhook)
+	go func() {
+		if err := http.ListenAndServe(":8081", nil); err != nil {
+			log.Printf("Webhook server error: %v", err)
+		}
+	}()
 
 	// Set up graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Start server in a goroutine
-	go func() {
-		if err := container.Server.Start(); err != nil {
-			log.Printf("Server error: %v", err)
-			sigChan <- syscall.SIGTERM // Trigger shutdown on error
+	// Listen for config changes
+	configChangeChan := config.GetConfigChangeChan()
+
+	for {
+		select {
+		case <-sigChan:
+			log.Println("Received shutdown signal")
+			if err := container.Close(); err != nil {
+				log.Printf("Error during cleanup: %v", err)
+			}
+			log.Println("Server shutdown complete")
+			return
+
+		case <-configChangeChan:
+			log.Println("Received config change notification")
+
+			// Get new config
+			newCfg := config.GetCurrentConfig()
+			if newCfg == nil {
+				log.Println("No new config available")
+				continue
+			}
+
+			// Close existing container
+			if err := container.Close(); err != nil {
+				log.Printf("Error closing existing container: %v", err)
+			}
+
+			// Start new server with new config
+			newContainer, err := startServer(newCfg)
+			if err != nil {
+				log.Printf("Failed to start new server: %v", err)
+				continue
+			}
+
+			container = newContainer
+			log.Println("Server restarted with new configuration")
 		}
-	}()
-
-	// Wait for shutdown signal
-	<-sigChan
-	log.Println("Received shutdown signal")
-
-	// Cleanup resources
-	if err := container.Close(); err != nil {
-		log.Printf("Error during cleanup: %v", err)
 	}
-
-	log.Println("Server shutdown complete")
 }
