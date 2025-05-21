@@ -1,0 +1,2826 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">Document-Processing/cmd/server/main.go (0.0%)</option>
+				
+				<option value="file1">Document-Processing/internal/config/config.go (0.0%)</option>
+				
+				<option value="file2">Document-Processing/internal/di/container.go (0.0%)</option>
+				
+				<option value="file3">Document-Processing/internal/grpc/server.go (0.0%)</option>
+				
+				<option value="file4">Document-Processing/internal/handlers/document_handler.go (100.0%)</option>
+				
+				<option value="file5">Document-Processing/internal/handlers/health_handler.go (100.0%)</option>
+				
+				<option value="file6">Document-Processing/internal/repository/minio_repository.go (78.6%)</option>
+				
+				<option value="file7">Document-Processing/internal/repository/yugabyte_repository.go (100.0%)</option>
+				
+				<option value="file8">Document-Processing/internal/services/document_service.go (82.1%)</option>
+				
+				<option value="file9">Document-Processing/internal/services/gemini_service.go (77.0%)</option>
+				
+				<option value="file10">Document-Processing/internal/services/llama_service.go (89.8%)</option>
+				
+				<option value="file11">Document-Processing/internal/utils/utils.go (84.8%)</option>
+				
+				<option value="file12">Document-Processing/pkg/yugabytedb/yugabyte_init.go (0.0%)</option>
+				
+				<option value="file13">Document-Processing/proto/service.pb.go (0.0%)</option>
+				
+				<option value="file14">Document-Processing/proto/service_grpc.pb.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">//go:build !test
+// build +test
+package main
+
+import (
+        "log"
+        "net/http"
+        "os"
+        "os/signal"
+        "syscall"
+
+        "Document-Processing/internal/config"
+        "Document-Processing/internal/di"
+
+        "github.com/joho/godotenv"
+)
+
+func startServer(cfg *config.Config) (*di.Container, error) <span class="cov0" title="0">{
+        container, err := di.NewContainer(cfg)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Start server in a goroutine
+        <span class="cov0" title="0">go func() </span><span class="cov0" title="0">{
+                if err := container.Server.Start(); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Server error: %v", err)
+                }</span>
+        }()
+
+        <span class="cov0" title="0">return container, nil</span>
+}
+
+func main() <span class="cov0" title="0">{
+        err := godotenv.Load()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Print("Failed to get .env")
+        }</span>
+
+        // Load environment variables
+        <span class="cov0" title="0">token := os.Getenv("JWT_TOKEN")
+
+        rawData, err := config.LoadConfigFromAPI(token)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to fetch config from API: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">cfg, err := config.NewConfig(rawData)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Config validation failed: %v", err)
+        }</span>
+
+        // Set initial config
+        <span class="cov0" title="0">config.SetCurrentConfig(cfg)
+
+        // Start initial server
+        container, err := startServer(cfg)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to initialize container: %v", err)
+        }</span>
+
+        // Set up config webhook endpoint
+        <span class="cov0" title="0">http.HandleFunc("/config/webhook", config.HandleConfigWebhook)
+        go func() </span><span class="cov0" title="0">{
+                if err := http.ListenAndServe(":8081", nil); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Webhook server error: %v", err)
+                }</span>
+        }()
+
+        // Set up graceful shutdown
+        <span class="cov0" title="0">sigChan := make(chan os.Signal, 1)
+        signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+        // Listen for config changes
+        configChangeChan := config.GetConfigChangeChan()
+
+        for </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-sigChan:<span class="cov0" title="0">
+                        log.Println("Received shutdown signal")
+                        if err := container.Close(); err != nil </span><span class="cov0" title="0">{
+                                log.Printf("Error during cleanup: %v", err)
+                        }</span>
+                        <span class="cov0" title="0">log.Println("Server shutdown complete")
+                        return</span>
+
+                case &lt;-configChangeChan:<span class="cov0" title="0">
+                        log.Println("Received config change notification")
+
+                        // Get new config
+                        newCfg := config.GetCurrentConfig()
+                        if newCfg == nil </span><span class="cov0" title="0">{
+                                log.Println("No new config available")
+                                continue</span>
+                        }
+
+                        // Close existing container
+                        <span class="cov0" title="0">if err := container.Close(); err != nil </span><span class="cov0" title="0">{
+                                log.Printf("Error closing existing container: %v", err)
+                        }</span>
+
+                        // Start new server with new config
+                        <span class="cov0" title="0">newContainer, err := startServer(newCfg)
+                        if err != nil </span><span class="cov0" title="0">{
+                                log.Printf("Failed to start new server: %v", err)
+                                continue</span>
+                        }
+
+                        <span class="cov0" title="0">container = newContainer
+                        log.Println("Server restarted with new configuration")</span>
+                }
+        }
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">//go:build !test
+// build +test
+package config
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        "io"
+        "log"
+        "net/http"
+        "os"
+        "strings"
+        "sync"
+)
+
+type Config struct {
+        ServerPort       int
+        MinioEndpoint    string
+        MinioAccessKey   string
+        MinioSecretKey   string
+        MinioBucketName  string
+        GeminiAPIKey     string
+        YugabyteHost     string
+        YugabyteUser     string
+        YugabytePassWord string
+        YugabyteName     string
+        YugabytePort     string
+}
+
+type ConfigResponse struct {
+        StatusCode int               `json:"status_code"`
+        Message    string            `json:"message"`
+        Data       map[string]string `json:"data"`
+}
+
+type ConfigWebhookData struct {
+        Environment string            `json:"environment"`
+        Method      string            `json:"method"`
+        ServiceName string            `json:"serviceName"`
+        Values      map[string]string `json:"values"`
+}
+
+var (
+        configChangeChan = make(chan struct{})
+        configMutex      sync.RWMutex
+        currentConfig    *Config
+)
+
+// GetConfigChangeChan returns the channel that signals config changes
+func GetConfigChangeChan() &lt;-chan struct{} <span class="cov0" title="0">{
+        return configChangeChan
+}</span>
+
+// SetCurrentConfig sets the current config and notifies listeners
+func SetCurrentConfig(cfg *Config) <span class="cov0" title="0">{
+        configMutex.Lock()
+        defer configMutex.Unlock()
+        currentConfig = cfg
+        select </span>{
+        case configChangeChan &lt;- struct{}{}:<span class="cov0" title="0"></span>
+        default:<span class="cov0" title="0"></span>
+                // Channel is full, which means a notification is already pending
+        }
+}
+
+// GetCurrentConfig returns the current config
+func GetCurrentConfig() *Config <span class="cov0" title="0">{
+        configMutex.RLock()
+        defer configMutex.RUnlock()
+        return currentConfig
+}</span>
+
+// HandleConfigWebhook processes incoming webhook requests for config updates
+func HandleConfigWebhook(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        if r.Method != http.MethodPost </span><span class="cov0" title="0">{
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+
+        <span class="cov0" title="0">var webhookData ConfigWebhookData
+        if err := json.NewDecoder(r.Body).Decode(&amp;webhookData); err != nil </span><span class="cov0" title="0">{
+                http.Error(w, "Invalid request body", http.StatusBadRequest)
+                return
+        }</span>
+
+        // Validate environment matches
+        <span class="cov0" title="0">if webhookData.Environment != os.Getenv("ENVIRONMENT") </span><span class="cov0" title="0">{
+                http.Error(w, "Environment mismatch", http.StatusBadRequest)
+                return
+        }</span>
+
+        // Create new config from webhook data
+        <span class="cov0" title="0">newConfig, err := NewConfig(webhookData.Values)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, fmt.Sprintf("Invalid config data: %v", err), http.StatusBadRequest)
+                return
+        }</span>
+
+        // Update current config and notify listeners
+        <span class="cov0" title="0">SetCurrentConfig(newConfig)
+
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(map[string]string{"status": "Config updated successfully"})</span>
+}
+
+// LoadConfigFromAPI fetches config from the remote config service
+func LoadConfigFromAPI(token string) (map[string]string, error) <span class="cov0" title="0">{
+        client := &amp;http.Client{}
+        api := fmt.Sprintf("%s/%s/document-processing", strings.TrimRight(os.Getenv("CONFIG_API"), "/"), os.Getenv("ENVIRONMENT"))
+        log.Println(api)
+        req, err := http.NewRequest("GET", api, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">req.Header.Add("Authorization", "Bearer "+token)
+
+        resp, err := client.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer resp.Body.Close()
+
+        body, err := io.ReadAll(resp.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">var configResp ConfigResponse
+        if err := json.Unmarshal(body, &amp;configResp); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return configResp.Data, nil</span>
+}
+
+// NewConfig validates and constructs Config from raw API data
+func NewConfig(data map[string]string) (*Config, error) <span class="cov0" title="0">{
+        requiredKeys := []string{
+                "MINIO_ENDPOINT",
+                "MINIO_ACCESS_KEY",
+                "MINIO_SECRET_KEY",
+                "MINIO_BUCKET_NAME",
+                "GEMINI_API_KEY",
+                "SERVER_PORT",
+                "YUGABYTE_HOST",
+                "YUGABYTE_USER",
+                "YUGABYTE_PASSWORD",
+                "YUGABYTE_NAME",
+                "YUGABYTE_PORT",
+        }
+
+        // Check all required keys
+        for _, key := range requiredKeys </span><span class="cov0" title="0">{
+                if data[key] == "" </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("missing required config key: %s", key)
+                }</span>
+        }
+
+        // Parse SERVER_PORT to int
+        <span class="cov0" title="0">var port int
+        _, err := fmt.Sscanf(data["SERVER_PORT"], "%d", &amp;port)
+        if err != nil || port &lt;= 0 </span><span class="cov0" title="0">{
+                return nil, errors.New("invalid SERVER_PORT value")
+        }</span>
+
+        <span class="cov0" title="0">return &amp;Config{
+                ServerPort:       port,
+                MinioEndpoint:    data["MINIO_ENDPOINT"],
+                MinioAccessKey:   data["MINIO_ACCESS_KEY"],
+                MinioSecretKey:   data["MINIO_SECRET_KEY"],
+                MinioBucketName:  data["MINIO_BUCKET_NAME"],
+                GeminiAPIKey:     data["GEMINI_API_KEY"],
+                YugabyteHost:     data["YUGABYTE_HOST"],
+                YugabyteUser:     data["YUGABYTE_USER"],
+                YugabytePassWord: data["YUGABYTE_PASSWORD"],
+                YugabyteName:     data["YUGABYTE_NAME"],
+                YugabytePort:     data["YUGABYTE_PORT"],
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">//go:build !test
+// build +test
+package di
+
+import (
+        "Document-Processing/internal/config"
+        "Document-Processing/internal/grpc"
+        "Document-Processing/internal/handlers"
+        "Document-Processing/internal/repository"
+        "Document-Processing/internal/services"
+        "Document-Processing/pkg/yugabytedb"
+        "log"
+)
+
+type Container struct {
+        Config          *config.Config
+        Server          *grpc.Server
+        DocumentService *services.DocumentService
+        HealthHandler   *handlers.HealthHandler
+}
+
+func NewContainer(cfg *config.Config) (*Container, error) <span class="cov0" title="0">{
+        // Initialize MinIO repository
+        minioRepo, err := repository.NewMinioRepository(
+                cfg.MinioEndpoint,
+                cfg.MinioAccessKey,
+                cfg.MinioSecretKey,
+                cfg.MinioBucketName,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">db, err := yugabytedb.ConnectDB(cfg.YugabyteHost, cfg.YugabyteName, cfg.YugabytePassWord, cfg.YugabytePort, cfg.YugabyteUser)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // DB yugabyte connection
+        <span class="cov0" title="0">yugabyteRepo := repository.NewDocumentDataRepository(db)
+
+        // Initialize Gemini service
+        geminiService, err := services.NewGeminiService(cfg.GeminiAPIKey, minioRepo)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Initialize Llama service
+        <span class="cov0" title="0">llamaService := services.NewLlamaService()
+
+        // Initialize services
+        documentService := services.NewDocumentService(geminiService, llamaService, minioRepo, yugabyteRepo)
+
+        // Initialize handlers
+        healthHandler := handlers.NewHealthHandler()
+
+        // Initialize server
+        server := grpc.NewServer(cfg.ServerPort)
+        server.RegisterServices(documentService, healthHandler)
+
+        return &amp;Container{
+                Config:          cfg,
+                Server:          server,
+                DocumentService: documentService,
+                HealthHandler:   healthHandler,
+        }, nil</span>
+}
+
+// Close closes all resources in the container
+func (c *Container) Close() error <span class="cov0" title="0">{
+        if c.DocumentService != nil &amp;&amp; c.DocumentService.GeminiService() != nil </span><span class="cov0" title="0">{
+                if err := c.DocumentService.GeminiService().Close(); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Error closing Gemini service: %v", err)
+                }</span>
+        }
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">//go:build !test
+// build +test
+package grpc
+
+import (
+        "fmt"
+        "log"
+        "net"
+        "os"
+        "os/signal"
+        "syscall"
+
+        pb "Document-Processing/proto"
+
+        "google.golang.org/grpc"
+        "google.golang.org/grpc/reflection"
+)
+
+type Server struct {
+        grpcServer *grpc.Server
+        port       int
+}
+
+func NewServer(port int) *Server <span class="cov0" title="0">{
+        // Create a new gRPC server with default options
+        server := grpc.NewServer()
+
+        // Enable reflection for tools like grpcurl
+        reflection.Register(server)
+
+        return &amp;Server{
+                grpcServer: server,
+                port:       port,
+        }
+}</span>
+
+func (s *Server) Start() error <span class="cov0" title="0">{
+        // Create TCP listener
+        addr := fmt.Sprintf(":%d", s.port)
+        log.Printf("Attempting to listen on %s", addr)
+
+        lis, err := net.Listen("tcp", addr)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to listen on %s: %v", addr, err)
+        }</span>
+
+        // Set up graceful shutdown
+        <span class="cov0" title="0">go func() </span><span class="cov0" title="0">{
+                sigChan := make(chan os.Signal, 1)
+                signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+                &lt;-sigChan
+                log.Println("Received shutdown signal")
+                s.Stop()
+        }</span>()
+
+        <span class="cov0" title="0">log.Printf("Starting gRPC server on %s", addr)
+
+        // Start serving
+        if err := s.grpcServer.Serve(lis); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to serve on %s: %v", addr, err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (s *Server) Stop() <span class="cov0" title="0">{
+        if s.grpcServer != nil </span><span class="cov0" title="0">{
+                log.Println("Stopping gRPC server gracefully")
+                s.grpcServer.GracefulStop()
+        }</span>
+}
+
+func (s *Server) RegisterServices(documentService pb.DocumentProcessingServiceV1Server, healthHandler pb.HealthServiceServer) <span class="cov0" title="0">{
+        // Register document processing service
+        pb.RegisterDocumentProcessingServiceV1Server(s.grpcServer, documentService)
+        
+        // Log server info
+        log.Printf("Server is ready to accept connections on port %d", s.port)
+
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package handlers
+
+import (
+        "context"
+        "log"
+
+        pb "Document-Processing/proto"
+)
+
+// DocumentServiceHandlerInterface defines the methods used by the DocumentHandler
+type DocumentServiceHandlerInterface interface {
+        ProcessBatchFilesV1(ctx context.Context, req *pb.BatchFileProcessingRequest) (*pb.BatchProcessingAck, error)
+        GetBatchStatusV1(ctx context.Context, req *pb.BatchStatusRequest) (*pb.BatchFileProcessingResponse, error)
+}
+
+type DocumentHandler struct {
+        pb.UnimplementedDocumentProcessingServiceV1Server
+        documentService DocumentServiceHandlerInterface
+}
+
+func NewDocumentHandler(documentService DocumentServiceHandlerInterface) *DocumentHandler <span class="cov8" title="1">{
+        return &amp;DocumentHandler{
+                documentService: documentService,
+        }
+}</span>
+
+// ProcessBatchFiles initiates batch processing and returns immediately with a batch ID
+func (h *DocumentHandler) ProcessBatchFilesV1(ctx context.Context, req *pb.BatchFileProcessingRequest) (*pb.BatchProcessingAck, error) <span class="cov8" title="1">{
+        log.Printf("Processing batch request with %d files", len(req.Files))
+        return h.documentService.ProcessBatchFilesV1(ctx, req)
+}</span>
+
+// GetBatchStatus returns the current status of a batch processing job
+func (h *DocumentHandler) GetBatchStatusV1(ctx context.Context, req *pb.BatchStatusRequest) (*pb.BatchFileProcessingResponse, error) <span class="cov8" title="1">{
+        log.Printf("Getting status for batch: %s", req.BatchId)
+        return h.documentService.GetBatchStatusV1(ctx, req)
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package handlers
+
+import (
+        "context"
+        "fmt"
+        "log"
+
+        pb "Document-Processing/proto"
+)
+
+type HealthHandler struct {
+        pb.UnimplementedHealthServiceServer
+}
+
+func NewHealthHandler() *HealthHandler <span class="cov8" title="1">{
+        return &amp;HealthHandler{}
+}</span>
+
+func (h *HealthHandler) Check(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) <span class="cov8" title="1">{
+        // Log the health check request
+        log.Printf("Health check requested for service: %s", req.Service)
+
+        // Check if the requested service is valid
+        if req.Service == "" </span><span class="cov8" title="1">{
+                return &amp;pb.HealthCheckResponse{
+                        Status: pb.HealthCheckResponse_UNKNOWN,
+                }, fmt.Errorf("service name is required")
+        }</span>
+
+        // For now, we only support the document processing service
+        <span class="cov8" title="1">if req.Service != "documentprocessing.DocumentProcessingService" </span><span class="cov8" title="1">{
+                return &amp;pb.HealthCheckResponse{
+                        Status: pb.HealthCheckResponse_NOT_SERVING,
+                }, fmt.Errorf("unsupported service: %s", req.Service)
+        }</span>
+
+        // Return serving status
+        <span class="cov8" title="1">return &amp;pb.HealthCheckResponse{
+                Status: pb.HealthCheckResponse_SERVING,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package repository
+
+import (
+        "bytes"
+        "context"
+        "fmt"
+        "io"
+        "strings"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/minio/minio-go/v7"
+        "github.com/minio/minio-go/v7/pkg/credentials"
+)
+
+type MinioRepository struct {
+        client     *minio.Client
+        bucketName string
+}
+
+func NewMinioRepository(endpoint, accessKey, secretKey, bucketName string) (*MinioRepository, error) <span class="cov8" title="1">{
+        // Initialize MinIO client
+        client, err := minio.New(endpoint, &amp;minio.Options{
+                Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+                Secure: false, // Use HTTP instead of HTTPS
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create minio client: %v", err)
+        }</span>
+
+        // Create repository instance
+        <span class="cov8" title="1">repo := &amp;MinioRepository{
+                client:     client,
+                bucketName: bucketName,
+        }
+
+        // Ensure bucket exists
+        ctx := context.Background()
+        exists, err := client.BucketExists(ctx, bucketName)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to check bucket existence: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">if !exists </span><span class="cov0" title="0">{
+                err = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to create bucket: %v", err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return repo, nil</span>
+}
+
+// StoreFile stores a file in MinIO and returns its URL
+func (r *MinioRepository) StoreFile(ctx context.Context, fileData []byte, fileType string) (string, error) <span class="cov8" title="1">{
+        // Generate unique file name
+        fileName := fmt.Sprintf("%s-%s", uuid.New().String(), time.Now().Format("20060102150405"))
+
+        // Create a reader from the file data
+        reader := bytes.NewReader(fileData)
+
+        // Upload file to MinIO
+        _, err := r.client.PutObject(ctx, r.bucketName, fileName, reader, int64(len(fileData)), minio.PutObjectOptions{
+                ContentType: fileType,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("failed to upload file: %v", err)
+        }</span>
+
+        // Generate presigned URL (valid for 7 days)
+        <span class="cov8" title="1">url, err := r.client.PresignedGetObject(ctx, r.bucketName, fileName, time.Hour*24*7, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("failed to generate presigned URL: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">return url.String(), nil</span>
+}
+
+// GetFile retrieves a file from MinIO
+func (r *MinioRepository) GetFile(ctx context.Context, fileName string) ([]byte, error) <span class="cov8" title="1">{
+        object, err := r.client.GetObject(ctx, r.bucketName, fileName, minio.GetObjectOptions{})
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get file: %v", err)
+        }</span>
+        <span class="cov8" title="1">defer object.Close()
+
+        data, err := io.ReadAll(object)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to read file content: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">return data, nil</span>
+}
+
+// DeleteFile deletes a file from MinIO using its URL
+
+func (r *MinioRepository) DeleteFile(ctx context.Context, fileURL string) error <span class="cov8" title="1">{
+        // Extract the object name from the URL
+        parts := strings.Split(fileURL, "/")
+        if len(parts) &lt; 4 </span><span class="cov8" title="1">{
+                return fmt.Errorf("invalid file URL format")
+        }</span>
+
+        // Get the last part of the URL path and strip query parameters
+        <span class="cov8" title="1">rawObjectName := parts[len(parts)-1]
+        objectName := strings.Split(rawObjectName, "?")[0]
+
+        // Check if the object exists
+        _, err := r.client.StatObject(ctx, r.bucketName, objectName, minio.StatObjectOptions{})
+        if err != nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("file does not exist: %v", err)
+        }</span>
+
+        // Remove the file from MinIO
+        <span class="cov8" title="1">err = r.client.RemoveObject(ctx, r.bucketName, objectName, minio.RemoveObjectOptions{})
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to delete file from MinIO: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package repository
+
+import (
+        "Document-Processing/internal/models"
+
+        "gorm.io/gorm"
+)
+
+type DocumentDataRepository interface {
+        CreateDocumentData(data *models.DocumentData) (*models.DocumentData, error)
+        GetDocumentDataByID(id string) (*models.DocumentData, error)
+}
+
+type documentDataRepository struct {
+        db *gorm.DB
+}
+
+func NewDocumentDataRepository(db *gorm.DB) DocumentDataRepository <span class="cov8" title="1">{
+        return &amp;documentDataRepository{db: db}
+}</span>
+
+func (r *documentDataRepository) CreateDocumentData(data *models.DocumentData) (*models.DocumentData, error) <span class="cov8" title="1">{
+        result := r.db.Create(data)
+        if result.Error != nil </span><span class="cov8" title="1">{
+                return nil, result.Error
+        }</span>
+        <span class="cov8" title="1">return data, nil</span>
+}
+
+func (r *documentDataRepository) GetDocumentDataByID(id string) (*models.DocumentData, error) <span class="cov8" title="1">{
+        var document models.DocumentData
+        result := r.db.First(&amp;document, "Batch_id = ?", id)
+        if result.Error != nil </span><span class="cov8" title="1">{
+                return nil, result.Error
+        }</span>
+        <span class="cov8" title="1">return &amp;document, nil</span>
+}</pre>
+		
+		<pre class="file" id="file8" style="display: none">package services
+
+import (
+        "context"
+        "encoding/base64"
+        "encoding/json"
+        "fmt"
+        "log"
+        "strings"
+        "sync"
+        "time"
+
+        "Document-Processing/internal/enums"
+        "Document-Processing/internal/models"
+        pb "Document-Processing/proto"
+)
+
+// BatchProcessingState tracks the state of a batch processing job
+
+type GeminiServiceInterface interface {
+        ProcessImage(ctx context.Context, base64Image string, extractionFields []string, fileUrl string) (map[string]string, float32, error)
+        Close() error
+}
+
+type LlamaServiceInterface interface {
+        ProcessImage(ctx context.Context, base64Image string, extractionFields []string) (map[string]string, error)
+}
+
+type MinioRepositoryInterfaces interface {
+        StoreFile(ctx context.Context, data []byte, fileType string) (string, error)
+        DeleteFile(ctx context.Context, fileUrl string) error
+}
+
+type DocumentDataRepository interface {
+        CreateDocumentData(data *models.DocumentData) (*models.DocumentData, error)
+        GetDocumentDataByID(id string) (*models.DocumentData, error)
+}
+
+type BatchProcessingState struct {
+        mu             sync.RWMutex
+        Status         string
+        Message        string
+        Error          error
+        ProcessedFiles []*pb.ProcessedFileData
+}
+
+type DocumentService struct {
+        pb.UnimplementedDocumentProcessingServiceV1Server
+        geminiService GeminiServiceInterface
+        llamaService  LlamaServiceInterface
+        minioRepo     MinioRepositoryInterfaces
+        yugabyteRepo  DocumentDataRepository
+        batchStates   map[string]*BatchProcessingState
+        batchStatesMu sync.RWMutex
+}
+
+func NewDocumentService(
+        geminiService GeminiServiceInterface,
+        llamaService LlamaServiceInterface,
+        minioRepo MinioRepositoryInterfaces,
+        yugabyteRepo DocumentDataRepository,
+) *DocumentService <span class="cov8" title="1">{
+        return &amp;DocumentService{
+                geminiService: geminiService,
+                llamaService:  llamaService,
+                minioRepo:     minioRepo,
+                yugabyteRepo:  yugabyteRepo,
+                batchStates:   make(map[string]*BatchProcessingState),
+        }
+}</span>
+
+// ProcessBatchFilesV1 initiates batch processing and returns immediately with a batch ID
+func (s *DocumentService) ProcessBatchFilesV1(ctx context.Context, req *pb.BatchFileProcessingRequest) (*pb.BatchProcessingAck, error) <span class="cov8" title="1">{
+        log.Printf("ProcessBatchFilesV1 called with %d files", len(req.Files))
+
+        if len(req.Files) == 0 </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("no files provided in request")
+        }</span>
+
+        // Use provided batch_id or generate one if not provided
+        <span class="cov8" title="1">batchID := req.BatchId
+        if batchID == "" </span><span class="cov8" title="1">{
+                batchID = fmt.Sprintf("batch-%d", time.Now().UnixNano())
+        }</span>
+
+        // Store all files in Minio and collect their URLs
+        <span class="cov8" title="1">var fileURLs []string
+        for _, fileReq := range req.Files </span><span class="cov8" title="1">{
+                if fileReq.File == nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">fileData, err := base64.StdEncoding.DecodeString(fileReq.File.Base64File)
+                if err != nil </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("failed to decode base64 data: %v", err)
+                }</span>
+
+                <span class="cov8" title="1">fileURL, err := s.minioRepo.StoreFile(ctx, fileData, fileReq.File.FileType)
+                if err != nil </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("failed to store file in Minio: %v", err)
+                }</span>
+
+                <span class="cov8" title="1">fileURLs = append(fileURLs, fileURL)</span>
+        }
+
+        // Create and store the batch state
+        <span class="cov8" title="1">batchState := &amp;BatchProcessingState{
+                Status:  "ACCEPTED",
+                Message: "Batch processing accepted",
+        }
+
+        s.batchStatesMu.Lock()
+        s.batchStates[batchID] = batchState
+        s.batchStatesMu.Unlock()
+
+        // Start processing in the background
+        go s.processBatchInBackground(ctx, batchID, req, fileURLs)
+
+        return &amp;pb.BatchProcessingAck{
+                BatchId:  batchID,
+                Status:   "ACCEPTED",
+                Message:  "Batch processing started",
+                FileUrls: fileURLs,
+        }, nil</span>
+}
+
+// GetBatchStatusV1 returns the current status of a batch processing job
+func (s *DocumentService) GetBatchStatusV1(ctx context.Context, req *pb.BatchStatusRequest) (*pb.BatchFileProcessingResponse, error) <span class="cov8" title="1">{
+        data, err := s.yugabyteRepo.GetDocumentDataByID(req.BatchId)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("Error retrieving batch data for ID %s: %v", req.BatchId, err)
+                return &amp;pb.BatchFileProcessingResponse{
+                        Success: false,
+                        Message: "Failed to retrieve batch data.",
+                }, nil
+        }</span>
+
+        <span class="cov8" title="1">if data == nil </span><span class="cov8" title="1">{
+                log.Printf("No batch data found or still processing for ID %s", req.BatchId)
+                return &amp;pb.BatchFileProcessingResponse{
+                        Success: false,
+                        Message: "Document is currently being processed.",
+                }, nil
+        }</span>
+
+        // decoding JSON
+
+        <span class="cov8" title="1">var decodeExtractedData []map[string]interface{}
+
+        decodeErr := json.Unmarshal([]byte(data.Data), &amp;decodeExtractedData)
+        if decodeErr != nil </span><span class="cov8" title="1">{
+                log.Printf("Failed to decode JSON: %v", decodeErr)
+                return &amp;pb.BatchFileProcessingResponse{
+                        Success: false,
+                        Message: "Internal error: Failed to decode processed data: " + decodeErr.Error(),
+                }, nil
+        }</span>
+
+        // converting map to proto
+
+        <span class="cov8" title="1">var processedFiles []*pb.ProcessedFileData
+
+        for _, item := range decodeExtractedData </span><span class="cov8" title="1">{
+                processedFile := &amp;pb.ProcessedFileData{
+                        FileId:     item["file_id"].(string),
+                        FileUrl:    item["file_url"].(string),
+                        Confidence: float32(item["confidence"].(float64)),
+                }
+                // Handle extracted_data: Convert it to map[string]string
+                extractedData := map[string]string{}
+                if extractedDataRaw, ok := item["extracted_data"].(map[string]interface{}); ok </span><span class="cov8" title="1">{
+                        for key, value := range extractedDataRaw </span><span class="cov8" title="1">{
+                                extractedData[key] = value.(string)
+                        }</span>
+                }
+                <span class="cov8" title="1">processedFile.ExtractedData = extractedData
+
+                // Step 3: Append the converted proto message to the list
+                processedFiles = append(processedFiles, processedFile)</span>
+        }
+
+        <span class="cov8" title="1">return &amp;pb.BatchFileProcessingResponse{
+                Success:        data.Status == "COMPLETED",
+                Message:        data.Message,
+                ProcessedFiles: processedFiles,
+                CreatedAt:      data.CreatedAt.Format(time.RFC3339),
+        }, nil</span>
+}
+
+// processBatchInBackground handles the actual file processing
+func (s *DocumentService) processBatchInBackground(ctx context.Context, batchID string, req *pb.BatchFileProcessingRequest, fileURLs []string) <span class="cov8" title="1">{
+        s.batchStatesMu.RLock()
+        batchState := s.batchStates[batchID]
+        s.batchStatesMu.RUnlock()
+
+        batchState.mu.Lock()
+        batchState.Status = "PROCESSING"
+        batchState.Message = "Processing files"
+        batchState.mu.Unlock()
+
+        // Create a new context with a longer timeout for the entire batch
+        batchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+        defer cancel()
+
+        var wg sync.WaitGroup
+        errChan := make(chan error, len(req.Files))
+        processedFileChan := make(chan *pb.ProcessedFileData, len(req.Files))
+
+        for i, fileReq := range req.Files </span><span class="cov8" title="1">{
+                wg.Add(1)
+                go func(fileReq *pb.FileProcessingRequest, index int) </span><span class="cov8" title="1">{
+                        defer wg.Done()
+                        log.Printf("Starting to process file %d with type: %s", index, fileReq.File.FileType)
+
+                        // Create a new context for each file with a timeout
+                        fileCtx, fileCancel := context.WithTimeout(batchCtx, 2*time.Minute)
+                        defer fileCancel()
+
+                        processedFile, err := s.processFile(fileCtx, fileReq, req.Classifier, fileURLs[index])
+                        if err != nil </span><span class="cov8" title="1">{
+                                log.Printf("Error processing file %d: %v", index, err)
+                                errChan &lt;- err
+                                return
+                        }</span>
+
+                        <span class="cov8" title="1">processedFileChan &lt;- processedFile
+                        log.Printf("Successfully processed file %d", index)</span>
+                }(fileReq, i)
+        }
+
+        // Wait for all goroutines to finish
+        <span class="cov8" title="1">wg.Wait()
+        close(errChan)
+        close(processedFileChan)
+
+        // Collect results
+        var errors []error
+        for err := range errChan </span><span class="cov8" title="1">{
+                errors = append(errors, err)
+        }</span>
+
+        <span class="cov8" title="1">var processedFiles []*pb.ProcessedFileData
+        for file := range processedFileChan </span><span class="cov8" title="1">{
+                processedFiles = append(processedFiles, file)
+        }</span>
+
+        <span class="cov8" title="1">batchState.mu.Lock()
+        if len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                batchState.Status = "FAILED"
+                batchState.Message = fmt.Sprintf("Error processing files: %v", errors[0])
+                batchState.Error = errors[0]
+        }</span> else<span class="cov8" title="1"> {
+                batchState.Status = "COMPLETED"
+                batchState.Message = "All files processed successfully"
+                batchState.ProcessedFiles = processedFiles
+        }</span>
+
+        <span class="cov8" title="1">var extracted_data []map[string]interface{}
+        for _, f := range processedFiles </span><span class="cov8" title="1">{
+                item := map[string]interface{}{
+                        "file_id":        f.FileId,
+                        "file_url":       f.FileUrl,
+                        "extracted_data": f.ExtractedData,
+                        "confidence":     f.Confidence,
+                }
+                extracted_data = append(extracted_data, item)
+        }</span>
+
+        <span class="cov8" title="1">jsonBytes, jsonBytesErr := json.Marshal(extracted_data) // Use json.MarshalIndent for pretty format
+        if jsonBytesErr != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to encode JSON: %v", jsonBytesErr)
+        }</span>
+
+        <span class="cov8" title="1">extractedData := &amp;models.DocumentData{
+                Batch_id:  batchID,
+                Data:      string(jsonBytes),
+                Status:    batchState.Status,
+                Message:   batchState.Message,
+                CreatedAt: time.Now(),
+        }
+
+        _, err := s.yugabyteRepo.CreateDocumentData(extractedData)
+
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error saving processed data to DB: %v", err)
+                batchState.Error = fmt.Errorf("failed to save processed data to DB: %v", err)
+        }</span> else<span class="cov8" title="1"> {
+                log.Printf("Processed data saved to DB successfully")
+        }</span>
+
+        <span class="cov8" title="1">batchState.mu.Unlock()</span>
+}
+
+// GeminiService returns the Gemini service instance
+func (s *DocumentService) GeminiService() GeminiServiceInterface <span class="cov0" title="0">{
+        return s.geminiService
+}</span>
+
+func (s *DocumentService) processFile(ctx context.Context, req *pb.FileProcessingRequest, classifier string, fileUrl string) (*pb.ProcessedFileData, error) <span class="cov8" title="1">{
+        base64Data := req.File.Base64File
+        mimeType := req.File.FileType
+
+        log.Printf("Received base64 data length: %d", len(base64Data))
+        log.Printf("Received MIME type: %s", mimeType)
+
+        // Handle data URL format first
+        if strings.HasPrefix(base64Data, "data:") </span><span class="cov0" title="0">{
+                parts := strings.SplitN(base64Data, ",", 2)
+                if len(parts) != 2 </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("invalid data URL format: %s", req.File.Base64File)
+                }</span>
+                <span class="cov0" title="0">mimeParts := strings.Split(parts[0], ";")
+                if len(mimeParts) &gt; 0 </span><span class="cov0" title="0">{
+                        mimeType = strings.TrimPrefix(mimeParts[0], "data:")
+                }</span>
+                <span class="cov0" title="0">base64Data = parts[1]
+                log.Printf("Extracted base64 data from data URL, new length: %d", len(base64Data))</span>
+        }
+
+        // Clean base64 string before decoding
+        <span class="cov8" title="1">base64Data = strings.TrimSpace(base64Data)
+        base64Data = strings.ReplaceAll(base64Data, "\n", "")
+        base64Data = strings.ReplaceAll(base64Data, "\r", "")
+        base64Data = strings.ReplaceAll(base64Data, " ", "")
+
+        // Add padding if necessary
+        if mod := len(base64Data) % 4; mod != 0 </span><span class="cov0" title="0">{
+                base64Data += strings.Repeat("=", 4-mod)
+        }</span>
+
+        <span class="cov8" title="1">log.Printf("Cleaned base64 data length: %d", len(base64Data))
+
+        if len(base64Data) == 0 </span><span class="cov8" title="1">{
+                // Delete file from MinIO if base64 data is empty
+                if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Failed to delete file from MinIO: %v", err)
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("empty base64 data")</span>
+        }
+
+        // Log first few characters for debugging
+        <span class="cov8" title="1">if len(base64Data) &gt; 100 </span><span class="cov0" title="0">{
+                log.Printf("First 100 chars of base64: %s", base64Data[:100])
+        }</span> else<span class="cov8" title="1"> {
+                log.Printf("Base64 data: %s", base64Data)
+        }</span>
+
+        // Validate base64 characters
+        <span class="cov8" title="1">for i, c := range base64Data </span><span class="cov8" title="1">{
+                if !IsValidBase64Char(c) </span><span class="cov0" title="0">{
+                        log.Printf("Invalid base64 character at position %d: %c (ASCII: %d)", i, c, c)
+                        // Delete file from MinIO if base64 data is invalid
+                        if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil </span><span class="cov0" title="0">{
+                                log.Printf("Failed to delete file from MinIO: %v", err)
+                        }</span>
+                        <span class="cov0" title="0">return nil, fmt.Errorf("invalid base64 character at position %d: %c", i, c)</span>
+                }
+        }
+
+        // Decode base64
+        <span class="cov8" title="1">fileData, err := base64.StdEncoding.DecodeString(base64Data)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Base64 decoding failed. Error: %v", err)
+                log.Printf("Base64 data length: %d", len(base64Data))
+                if len(base64Data) &gt; 100 </span><span class="cov0" title="0">{
+                        log.Printf("First 100 chars: %s", base64Data[:100])
+                }</span>
+                // Delete file from MinIO if base64 decoding fails
+                <span class="cov0" title="0">if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Failed to delete file from MinIO: %v", err)
+                }</span>
+                <span class="cov0" title="0">return nil, fmt.Errorf("failed to decode base64 data: %v (input length: %d)", err, len(base64Data))</span>
+        }
+
+        <span class="cov8" title="1">log.Printf("Successfully decoded base64, file size: %d bytes", len(fileData))
+
+        var extractedData map[string]string
+        var confidence float32
+
+        // Llama Doc Processing AI
+        if classifier == string(enums.ClassifierLlama) </span><span class="cov8" title="1">{
+                extractedData, err = s.llamaService.ProcessImage(ctx, base64Data, req.ExtractionFields)
+                if err != nil </span><span class="cov8" title="1">{
+                        // Delete file from MinIO if Llama processing fails
+                        if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil </span><span class="cov0" title="0">{
+                                log.Printf("Failed to delete file from MinIO: %v", err)
+                        }</span>
+                        <span class="cov8" title="1">return nil, fmt.Errorf("failed to process with LLaMA: %v", err)</span>
+                }
+                // LLaMA doesn't provide confidence scores, so we'll use a default value
+                <span class="cov0" title="0">confidence = 100.0</span>
+        } else<span class="cov8" title="1"> {
+                // Gemini Doc Processing AI
+                extractedData, confidence, err = s.geminiService.ProcessImage(ctx, base64Data, req.ExtractionFields, fileUrl)
+                if err != nil </span><span class="cov8" title="1">{
+                        // Delete file from MinIO if Gemini processing fails
+                        // if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
+                        //         log.Printf("Failed to delete file from MinIO: %v", err)
+                        // }
+                        return nil, fmt.Errorf("failed to process with Gemini: %v", err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return &amp;pb.ProcessedFileData{
+                FileId:        fmt.Sprintf("file-%d", time.Now().UnixNano()),
+                FileUrl:       fileUrl,
+                ExtractedData: extractedData,
+                Confidence:    confidence,
+        }, nil</span>
+}
+
+// IsValidBase64Char checks if a character is valid in base64 encoding
+func IsValidBase64Char(c rune) bool <span class="cov8" title="1">{
+        return (c &gt;= 'A' &amp;&amp; c &lt;= 'Z') ||
+                (c &gt;= 'a' &amp;&amp; c &lt;= 'z') ||
+                (c &gt;= '0' &amp;&amp; c &lt;= '9') ||
+                c == '+' || c == '/' || c == '='
+}</span>
+
+// Helper function to get minimum of two integers
+func min(a, b int) int <span class="cov8" title="1">{
+        if a &lt; b </span><span class="cov0" title="0">{
+                return a
+        }</span>
+        <span class="cov8" title="1">return b</span>
+}
+
+func (s *DocumentService) GetBatchStateForTest(batchID string) (*BatchProcessingState, bool) <span class="cov8" title="1">{
+        s.batchStatesMu.RLock()
+        defer s.batchStatesMu.RUnlock()
+        state, ok := s.batchStates[batchID]
+        return state, ok
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package services
+
+import (
+        "context"
+        "encoding/base64"
+        "encoding/json"
+        "fmt"
+        "strings"
+        "time"
+
+        "github.com/google/generative-ai-go/genai"
+        "google.golang.org/api/option"
+)
+
+// GeminiModelInterface defines the interface for the Gemini model
+type GeminiModelInterface interface {
+        GenerateContent(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error)
+}
+
+// MinioRepositoryInterface defines the interface for MinIO operations
+type MinioRepositoryInterface interface {
+        StoreFile(ctx context.Context, fileData []byte, fileType string) (string, error)
+        GetFile(ctx context.Context, fileName string) ([]byte, error)
+        DeleteFile(ctx context.Context, fileUrl string) error
+}
+
+type GeminiService struct {
+        client    *genai.Client
+        model     GeminiModelInterface
+        minioRepo MinioRepositoryInterface
+}
+
+func NewGeminiService(apiKey string, minioRepo MinioRepositoryInterface) (*GeminiService, error) <span class="cov8" title="1">{
+        ctx := context.Background()
+        client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create Gemini client: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">model := client.GenerativeModel("gemini-1.5-flash")
+        return &amp;GeminiService{
+                client:    client,
+                model:     model,
+                minioRepo: minioRepo,
+        }, nil</span>
+}
+
+func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string, fileUrl string) (map[string]string, float32, error) <span class="cov8" title="1">{
+        // Step 1: Clean and validate base64 string
+        base64Data, mimeType, err := cleanAndValidateBase64(base64Image)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, 0, fmt.Errorf("base64 validation failed: %v", err)
+        }</span>
+
+        // Log base64 data details for debugging
+        <span class="cov8" title="1">fmt.Printf("Processing image with base64 length: %d, MIME type: %s\n", len(base64Data), mimeType)
+
+        // Step 2: Decode base64 image
+        imageData, err := base64.StdEncoding.DecodeString(base64Data)
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Printf("Base64 decoding failed: %v\n", err)
+                fmt.Printf("Base64 data length: %d\n", len(base64Data))
+                fmt.Printf("First 100 chars: %s\n", base64Data[:min(100, len(base64Data))])
+                return nil, 0, fmt.Errorf("base64 decoding failed: %v (input length: %d)", err, len(base64Data))
+        }</span>
+
+        <span class="cov8" title="1">fmt.Printf("Successfully decoded image, size: %d bytes\n", len(imageData))
+
+        // Step 3: Create image data for Gemini
+        img := genai.ImageData(mimeType, imageData)
+
+        // Step 4: Create extraction prompt
+        prompt := fmt.Sprintf(`Extract these fields from the document: %s. 
+                Return ONLY valid JSON with these exact field names and an overall confidence score.
+                If a field is missing, use empty string.
+                Example: {"data":{"name":"John Doe","email":"john@example.com"},"confidence":0.95}`,
+                strings.Join(extractionFields, ", "))
+
+        // Step 5: Call Gemini with retry logic and exponential backoff
+        var resp *genai.GenerateContentResponse
+        maxRetries := 2
+        baseDelay := 1 * time.Second
+
+        for i := 0; i &lt; maxRetries; i++ </span><span class="cov8" title="1">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        return nil, 0, fmt.Errorf("context canceled while processing with Gemini: %v", ctx.Err())</span>
+                default:<span class="cov8" title="1">
+                        // Create a new context with timeout for this attempt
+                        attemptCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+                        resp, err = s.model.GenerateContent(attemptCtx, img, genai.Text(prompt))
+                        cancel()
+
+                        if err == nil </span><span class="cov8" title="1">{
+                                break</span>
+                        }
+
+                        <span class="cov0" title="0">fmt.Printf("Gemini API attempt %d failed: %v\n", i+1, err)
+
+                        if i &lt; maxRetries-1 </span><span class="cov0" title="0">{
+                                // Calculate delay with exponential backoff
+                                delay := baseDelay * time.Duration(1&lt;&lt;uint(i))
+                                fmt.Printf("Retrying in %v...\n", delay)
+                                select </span>{
+                                case &lt;-ctx.Done():<span class="cov0" title="0">
+                                        return nil, 0, fmt.Errorf("context canceled while waiting to retry: %v", ctx.Err())</span>
+                                case &lt;-time.After(delay):<span class="cov0" title="0">
+                                        continue</span>
+                                }
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("Failed to delete file from MinIO: %v", err)
+                }</span>
+                <span class="cov0" title="0">return nil, 0, fmt.Errorf("gemini API failed after %d retries: %v", maxRetries, err)</span>
+        }
+
+        // Step 6: Parse response
+        <span class="cov8" title="1">if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 </span><span class="cov0" title="0">{
+                return nil, 0, fmt.Errorf("empty response from Gemini")
+        }</span>
+
+        <span class="cov8" title="1">var responseText string
+        for _, part := range resp.Candidates[0].Content.Parts </span><span class="cov8" title="1">{
+                if textPart, ok := part.(genai.Text); ok </span><span class="cov8" title="1">{
+                        responseText += string(textPart)
+                }</span>
+        }
+
+        // Clean JSON response
+        <span class="cov8" title="1">responseText = strings.TrimSpace(responseText)
+        responseText = strings.TrimPrefix(responseText, "```json")
+        responseText = strings.TrimSuffix(responseText, "```")
+        responseText = strings.TrimSpace(responseText)
+
+        fmt.Printf("Gemini response: %s\n", responseText)
+
+        // Parse JSON
+        type Response struct {
+                Data       map[string]string `json:"data"`
+                Confidence float32           `json:"confidence"`
+        }
+        var response Response
+        if err := json.Unmarshal([]byte(responseText), &amp;response); err != nil </span><span class="cov0" title="0">{
+                return nil, 0, fmt.Errorf("failed to parse Gemini response: %v\nResponse: %s", err, responseText)
+        }</span>
+
+        // Ensure all requested fields are present
+        <span class="cov8" title="1">for _, field := range extractionFields </span><span class="cov8" title="1">{
+                if _, exists := response.Data[field]; !exists </span><span class="cov0" title="0">{
+                        response.Data[field] = ""
+                }</span>
+        }
+
+        <span class="cov8" title="1">return response.Data, response.Confidence * 100, nil</span> // Convert to percentage
+}
+
+func cleanAndValidateBase64(base64Str string) (string, string, error) <span class="cov8" title="1">{
+        // Handle empty input
+        if base64Str == "" </span><span class="cov8" title="1">{
+                return "", "", fmt.Errorf("empty input")
+        }</span>
+
+        // Handle data URL format
+        <span class="cov8" title="1">if strings.HasPrefix(base64Str, "data:") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(base64Str, ",", 2)
+                if len(parts) != 2 </span><span class="cov8" title="1">{
+                        return "", "", fmt.Errorf("invalid data URL format")
+                }</span>
+
+                // Extract MIME type
+                <span class="cov8" title="1">mimeParts := strings.Split(parts[0], ";")
+                if len(mimeParts) == 0 </span><span class="cov0" title="0">{
+                        return "", "", fmt.Errorf("missing MIME type in data URL")
+                }</span>
+                <span class="cov8" title="1">mimeType := strings.TrimPrefix(mimeParts[0], "data:")
+
+                // Clean base64 data
+                base64Data := strings.TrimSpace(parts[1])
+                base64Data = strings.ReplaceAll(base64Data, "\n", "")
+                base64Data = strings.ReplaceAll(base64Data, "\r", "")
+                base64Data = strings.ReplaceAll(base64Data, " ", "")
+
+                // Add padding if necessary
+                if mod := len(base64Data) % 4; mod != 0 </span><span class="cov0" title="0">{
+                        base64Data += strings.Repeat("=", 4-mod)
+                }</span>
+
+                <span class="cov8" title="1">return base64Data, mimeType, nil</span>
+        }
+
+        // For raw base64 without data URL prefix
+        <span class="cov8" title="1">base64Data := strings.TrimSpace(base64Str)
+        base64Data = strings.ReplaceAll(base64Data, "\n", "")
+        base64Data = strings.ReplaceAll(base64Data, "\r", "")
+        base64Data = strings.ReplaceAll(base64Data, " ", "")
+
+        // Add padding if necessary
+        if mod := len(base64Data) % 4; mod != 0 </span><span class="cov8" title="1">{
+                base64Data += strings.Repeat("=", 4-mod)
+        }</span>
+
+        // Default MIME type for raw base64
+        <span class="cov8" title="1">return base64Data, "image/jpeg", nil</span>
+}
+
+// Helper function to get minimum of two integers
+// func min(a, b int) int {
+//         if a &lt; b {
+//                 return a
+//         }
+//         return b
+// }
+
+func (s *GeminiService) Close() error <span class="cov0" title="0">{
+        if s.client != nil </span><span class="cov0" title="0">{
+                return s.client.Close()
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package services
+
+import (
+        "Document-Processing/internal/utils"
+        "bytes"
+        "context"
+        "encoding/base64"
+        "encoding/json"
+        "fmt"
+        "io"
+        "net/http"
+        "strings"
+        "time"
+)
+
+type LlamaService struct {
+        modelName string
+        apiURL    string
+        client    *http.Client
+}
+
+func NewLlamaService() *LlamaService <span class="cov8" title="1">{
+        return &amp;LlamaService{
+                modelName: "llama3.2-vision",
+                apiURL:    "http://localhost:11434/api/chat",
+                client:    &amp;http.Client{Timeout: 2 * time.Minute},
+        }
+}</span>
+
+// NewLlamaServiceWithClient creates a new LlamaService with a custom HTTP client
+func NewLlamaServiceWithClient(client *http.Client) *LlamaService <span class="cov8" title="1">{
+        return &amp;LlamaService{
+                modelName: "llama3.2-vision",
+                apiURL:    "http://localhost:11434/api/chat",
+                client:    client,
+        }
+}</span>
+
+func (s *LlamaService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string) (map[string]string, error) <span class="cov8" title="1">{
+        fmt.Printf("Llama Process Start")
+
+        // Validate base64 data
+        if base64Image == "" </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("base64 validation failed: empty input")
+        }</span>
+
+        // Handle data URL format
+        <span class="cov8" title="1">var base64Data string
+        if strings.HasPrefix(base64Image, "data:") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(base64Image, ",", 2)
+                if len(parts) != 2 </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("base64 validation failed: invalid data URL format")
+                }</span>
+                <span class="cov8" title="1">base64Data = parts[1]</span>
+        } else<span class="cov8" title="1"> {
+                base64Data = base64Image
+        }</span>
+
+        // Clean base64 string
+        <span class="cov8" title="1">base64Data = strings.TrimSpace(base64Data)
+        base64Data = strings.ReplaceAll(base64Data, "\n", "")
+        base64Data = strings.ReplaceAll(base64Data, "\r", "")
+        base64Data = strings.ReplaceAll(base64Data, " ", "")
+
+        // Add padding if necessary
+        if mod := len(base64Data) % 4; mod != 0 </span><span class="cov8" title="1">{
+                base64Data += strings.Repeat("=", 4-mod)
+        }</span>
+
+        // Validate base64 characters
+        <span class="cov8" title="1">for i, c := range base64Data </span><span class="cov8" title="1">{
+                if !IsValidBase64Char(c) </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("base64 validation failed: invalid character at position %d: %c", i, c)
+                }</span>
+        }
+
+        // Try to decode base64 to validate
+        <span class="cov8" title="1">if _, err := base64.StdEncoding.DecodeString(base64Data); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("base64 validation failed: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">requestBody := map[string]interface{}{
+                "model": s.modelName,
+                "messages": []map[string]interface{}{
+                        {
+                                "role":    "user",
+                                "content": utils.GetIdentityUserDetailsPrompt(extractionFields),
+                                "images":  []string{base64Data},
+                        },
+                },
+                "stream": false,
+        }
+
+        bodyBytes, err := json.Marshal(requestBody)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to marshal request: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">req, err := http.NewRequestWithContext(ctx, "POST", s.apiURL, bytes.NewBuffer(bodyBytes))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create request: %v", err)
+        }</span>
+        <span class="cov8" title="1">req.Header.Set("Content-Type", "application/json")
+
+        resp, err := s.client.Do(req)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("HTTP request failed: %v", err)
+        }</span>
+        <span class="cov8" title="1">defer resp.Body.Close()
+
+        if resp.StatusCode &lt; 200 || resp.StatusCode &gt;= 300 </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("non-success HTTP status: %s", resp.Status)
+        }</span>
+
+        <span class="cov8" title="1">responseData, _ := io.ReadAll(resp.Body)
+
+        var llamaResponse llamaResponse
+        dataParseErr := json.Unmarshal(responseData, &amp;llamaResponse)
+
+        if dataParseErr != nil </span><span class="cov8" title="1">{
+
+                return map[string]string{}, fmt.Errorf("failed to unmarshal JSON: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">var result map[string]string
+
+        parseErr := json.Unmarshal([]byte(llamaResponse.Message.Content), &amp;result)
+        if parseErr != nil </span><span class="cov8" title="1">{
+                fmt.Println("Error:", err)
+                return nil, fmt.Errorf("failed to unmarshal JSON: %v", parseErr)
+        }</span>
+
+        <span class="cov8" title="1">fmt.Printf("Clean AI data : %s", result)
+
+        return result, nil</span>
+
+}
+
+type message struct {
+        Role    string `json:"role"`
+        Content string `json:"content"`
+}
+
+type llamaResponse struct {
+        Model      string  `json:"model"`
+        CreatedAt  string  `json:"created_at"`
+        Message    message `json:"message"`
+        DoneReason string  `json:"done_reason"`
+        Done       bool    `json:"done"`
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package utils
+
+import (
+        "fmt"
+        "log"
+        "os"
+        "path/filepath"
+        "time"
+)
+
+// SaveBytesToTempFile saves a byte slice to a temporary file and returns the path.
+func SaveBytesToTempFile(data []byte, mimeType string) (string, error) <span class="cov8" title="1">{
+        // Get the current working directory
+        currentDir, err := os.Getwd()
+        if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("failed to get current directory: %v", err)
+        }</span>
+
+        // Create temp directory path relative to the current directory
+        <span class="cov8" title="1">tempDir := filepath.Join(currentDir, "temp")
+        log.Printf("Creating temp directory at: %s", tempDir)
+
+        // Ensure the temp folder exists
+        if err := os.MkdirAll(tempDir, os.ModePerm); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error creating temp directory: %v", err)
+                return "", fmt.Errorf("failed to create temp directory: %v", err)
+        }</span>
+
+        // Determine file extension based on MIME type
+        <span class="cov8" title="1">var ext string
+        switch mimeType </span>{
+        case "image/png":<span class="cov8" title="1">
+                ext = "png"</span>
+        case "image/jpeg", "image/jpg":<span class="cov8" title="1">
+                ext = "jpg"</span>
+        case "application/pdf":<span class="cov8" title="1">
+                ext = "pdf"</span>
+        default:<span class="cov8" title="1">
+                ext = "bin"</span>
+        }
+
+        // Create file path with timestamp
+        <span class="cov8" title="1">fileName := fmt.Sprintf("file-%d.%s", time.Now().UnixNano(), ext)
+        filePath := filepath.Join(tempDir, fileName)
+
+        // Log the file path
+        log.Printf("Saving file to: %s", filePath)
+
+        // Write to file
+        if err := os.WriteFile(filePath, data, 0644); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error writing file: %v", err)
+                return "", fmt.Errorf("failed to write file: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">log.Printf("Successfully saved file to: %s", filePath)
+        return filePath, nil</span>
+}
+
+func GetIdentityUserDetailsPrompt(fields []string) string <span class="cov8" title="1">{
+        prompt := `You are an AI system that extracts identity details from a document image.
+
+Please find the following details from the document:
+`
+
+        for _, field := range fields </span><span class="cov8" title="1">{
+                prompt += fmt.Sprintf("- %s\n", field)
+        }</span>
+
+        <span class="cov8" title="1">prompt += `
+
+Return the details in the following JSON format without any code blocks, markdown formatting, or explanations:
+
+If valid details are found:
+{
+`
+
+        for i, field := range fields </span><span class="cov8" title="1">{
+                comma := ","
+                if i == len(fields)-1 </span><span class="cov8" title="1">{
+                        comma = ""
+                }</span>
+                <span class="cov8" title="1">prompt += fmt.Sprintf("  \"%s\": \"&lt;%s or null&gt;\"%s\n", field, field, comma)</span>
+        }
+
+        <span class="cov8" title="1">prompt += `}
+
+If no valid identity details are found:
+{
+  "error": "document is not valid"
+}
+
+IMPORTANT INSTRUCTIONS:
+1. Your response must ONLY contain the raw JSON object
+2. Do not include 'json' tags
+3. Do not include any explanations before or after the JSON
+4. Do not use escape characters for newlines (\n) within the JSON values
+5. Format the JSON on multiple lines with proper indentation
+6. Keep address or any text field as a single line without line breaks
+7. Return field values exactly as they appear in the document
+
+Now, process the document and extract the required identity details.`
+
+        return prompt</span>
+}
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package yugabytedb
+
+import (
+        "Document-Processing/internal/models"
+        "fmt"
+        "log"
+        "os"
+
+        "gorm.io/driver/postgres"
+        "gorm.io/gorm"
+)
+
+func ConnectDB(host string, dbname string, password string, port string, user string) (*gorm.DB, error) <span class="cov0" title="0">{
+        dsn := fmt.Sprintf(
+                "host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+                host,
+                user,
+                password,
+                dbname,
+                port,
+        )
+        
+        db, err := gorm.Open(postgres.Open(dsn), &amp;gorm.Config{})
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to connect to YugabyteDB: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := db.AutoMigrate(&amp;models.DocumentData{}); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to migrate database: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">log.Println("Successfully connected to YugabyteDB and ran migrations.")
+        return db, nil</span>
+}
+
+func getEnv(key, fallback string) string <span class="cov0" title="0">{
+        if value := os.Getenv(key); value != "" </span><span class="cov0" title="0">{
+                return value
+        }</span>
+        <span class="cov0" title="0">return fallback</span>
+}
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">// Code generated by protoc-gen-go. DO NOT EDIT.
+// versions:
+//         protoc-gen-go v1.36.5
+//         protoc        v5.29.3
+// source: proto/service.proto
+
+package proto
+
+import (
+        protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+        protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+        reflect "reflect"
+        sync "sync"
+        unsafe "unsafe"
+)
+
+const (
+        // Verify that this generated code is sufficiently up-to-date.
+        _ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)
+        // Verify that runtime/protoimpl is sufficiently up-to-date.
+        _ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
+)
+
+type HealthCheckResponse_ServingStatus int32
+
+const (
+        HealthCheckResponse_UNKNOWN     HealthCheckResponse_ServingStatus = 0
+        HealthCheckResponse_SERVING     HealthCheckResponse_ServingStatus = 1
+        HealthCheckResponse_NOT_SERVING HealthCheckResponse_ServingStatus = 2
+)
+
+// Enum value maps for HealthCheckResponse_ServingStatus.
+var (
+        HealthCheckResponse_ServingStatus_name = map[int32]string{
+                0: "UNKNOWN",
+                1: "SERVING",
+                2: "NOT_SERVING",
+        }
+        HealthCheckResponse_ServingStatus_value = map[string]int32{
+                "UNKNOWN":     0,
+                "SERVING":     1,
+                "NOT_SERVING": 2,
+        }
+)
+
+func (x HealthCheckResponse_ServingStatus) Enum() *HealthCheckResponse_ServingStatus <span class="cov0" title="0">{
+        p := new(HealthCheckResponse_ServingStatus)
+        *p = x
+        return p
+}</span>
+
+func (x HealthCheckResponse_ServingStatus) String() string <span class="cov0" title="0">{
+        return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}</span>
+
+func (HealthCheckResponse_ServingStatus) Descriptor() protoreflect.EnumDescriptor <span class="cov0" title="0">{
+        return file_proto_service_proto_enumTypes[0].Descriptor()
+}</span>
+
+func (HealthCheckResponse_ServingStatus) Type() protoreflect.EnumType <span class="cov0" title="0">{
+        return &amp;file_proto_service_proto_enumTypes[0]
+}</span>
+
+func (x HealthCheckResponse_ServingStatus) Number() protoreflect.EnumNumber <span class="cov0" title="0">{
+        return protoreflect.EnumNumber(x)
+}</span>
+
+// Deprecated: Use HealthCheckResponse_ServingStatus.Descriptor instead.
+func (HealthCheckResponse_ServingStatus) EnumDescriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{1, 0}
+}</span>
+
+// Health check request message
+type HealthCheckRequest struct {
+        state         protoimpl.MessageState `protogen:"open.v1"`
+        Service       string                 `protobuf:"bytes,1,opt,name=service,proto3" json:"service,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthCheckRequest) Reset() <span class="cov0" title="0">{
+        *x = HealthCheckRequest{}
+        mi := &amp;file_proto_service_proto_msgTypes[0]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *HealthCheckRequest) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*HealthCheckRequest) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[0]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
+func (*HealthCheckRequest) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{0}
+}</span>
+
+func (x *HealthCheckRequest) GetService() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Service
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// Health check response message
+type HealthCheckResponse struct {
+        state         protoimpl.MessageState            `protogen:"open.v1"`
+        Status        HealthCheckResponse_ServingStatus `protobuf:"varint,1,opt,name=status,proto3,enum=documentprocessing.HealthCheckResponse_ServingStatus" json:"status,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthCheckResponse) Reset() <span class="cov0" title="0">{
+        *x = HealthCheckResponse{}
+        mi := &amp;file_proto_service_proto_msgTypes[1]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *HealthCheckResponse) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*HealthCheckResponse) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[1]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
+func (*HealthCheckResponse) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{1}
+}</span>
+
+func (x *HealthCheckResponse) GetStatus() HealthCheckResponse_ServingStatus <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Status
+        }</span>
+        <span class="cov0" title="0">return HealthCheckResponse_UNKNOWN</span>
+}
+
+// File processing request message
+type FileProcessingRequest struct {
+        state            protoimpl.MessageState `protogen:"open.v1"`
+        File             *FileData              `protobuf:"bytes,1,opt,name=file,proto3" json:"file,omitempty"`
+        ExtractionFields []string               `protobuf:"bytes,2,rep,name=extraction_fields,json=extractionFields,proto3" json:"extraction_fields,omitempty"`
+        unknownFields    protoimpl.UnknownFields
+        sizeCache        protoimpl.SizeCache
+}
+
+func (x *FileProcessingRequest) Reset() <span class="cov0" title="0">{
+        *x = FileProcessingRequest{}
+        mi := &amp;file_proto_service_proto_msgTypes[2]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *FileProcessingRequest) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*FileProcessingRequest) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *FileProcessingRequest) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[2]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use FileProcessingRequest.ProtoReflect.Descriptor instead.
+func (*FileProcessingRequest) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{2}
+}</span>
+
+func (x *FileProcessingRequest) GetFile() *FileData <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.File
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *FileProcessingRequest) GetExtractionFields() []string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.ExtractionFields
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// File data message
+type FileData struct {
+        state         protoimpl.MessageState `protogen:"open.v1"`
+        Base64File    string                 `protobuf:"bytes,1,opt,name=base64file,proto3" json:"base64file,omitempty"`
+        FileType      string                 `protobuf:"bytes,2,opt,name=file_type,json=fileType,proto3" json:"file_type,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileData) Reset() <span class="cov0" title="0">{
+        *x = FileData{}
+        mi := &amp;file_proto_service_proto_msgTypes[3]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *FileData) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*FileData) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *FileData) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[3]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use FileData.ProtoReflect.Descriptor instead.
+func (*FileData) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{3}
+}</span>
+
+func (x *FileData) GetBase64File() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Base64File
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *FileData) GetFileType() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.FileType
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// Batch file processing request
+type BatchFileProcessingRequest struct {
+        state         protoimpl.MessageState   `protogen:"open.v1"`
+        Files         []*FileProcessingRequest `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
+        BatchId       string                   `protobuf:"bytes,2,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"` // Unique identifier for the batch
+        Classifier    string                   `protobuf:"bytes,3,opt,name=classifier,proto3" json:"classifier,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchFileProcessingRequest) Reset() <span class="cov0" title="0">{
+        *x = BatchFileProcessingRequest{}
+        mi := &amp;file_proto_service_proto_msgTypes[4]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *BatchFileProcessingRequest) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*BatchFileProcessingRequest) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *BatchFileProcessingRequest) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[4]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use BatchFileProcessingRequest.ProtoReflect.Descriptor instead.
+func (*BatchFileProcessingRequest) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{4}
+}</span>
+
+func (x *BatchFileProcessingRequest) GetFiles() []*FileProcessingRequest <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Files
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *BatchFileProcessingRequest) GetBatchId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.BatchId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *BatchFileProcessingRequest) GetClassifier() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Classifier
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// Batch processing acknowledgment
+type BatchProcessingAck struct {
+        state         protoimpl.MessageState `protogen:"open.v1"`
+        BatchId       string                 `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+        Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // "ACCEPTED", "PROCESSING", "COMPLETED", "FAILED"
+        Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+        FileUrls      []string               `protobuf:"bytes,4,rep,name=file_urls,json=fileUrls,proto3" json:"file_urls,omitempty"` // URLs of all processed files in Minio
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchProcessingAck) Reset() <span class="cov0" title="0">{
+        *x = BatchProcessingAck{}
+        mi := &amp;file_proto_service_proto_msgTypes[5]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *BatchProcessingAck) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*BatchProcessingAck) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *BatchProcessingAck) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[5]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use BatchProcessingAck.ProtoReflect.Descriptor instead.
+func (*BatchProcessingAck) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{5}
+}</span>
+
+func (x *BatchProcessingAck) GetBatchId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.BatchId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *BatchProcessingAck) GetStatus() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Status
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *BatchProcessingAck) GetMessage() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Message
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *BatchProcessingAck) GetFileUrls() []string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.FileUrls
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Batch processing status request
+type BatchStatusRequest struct {
+        state         protoimpl.MessageState `protogen:"open.v1"`
+        BatchId       string                 `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchStatusRequest) Reset() <span class="cov0" title="0">{
+        *x = BatchStatusRequest{}
+        mi := &amp;file_proto_service_proto_msgTypes[6]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *BatchStatusRequest) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*BatchStatusRequest) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *BatchStatusRequest) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[6]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use BatchStatusRequest.ProtoReflect.Descriptor instead.
+func (*BatchStatusRequest) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{6}
+}</span>
+
+func (x *BatchStatusRequest) GetBatchId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.BatchId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// Processed file data
+type ProcessedFileData struct {
+        state         protoimpl.MessageState `protogen:"open.v1"`
+        FileId        string                 `protobuf:"bytes,1,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`
+        FileUrl       string                 `protobuf:"bytes,2,opt,name=file_url,json=fileUrl,proto3" json:"file_url,omitempty"`
+        ExtractedData map[string]string      `protobuf:"bytes,3,rep,name=extracted_data,json=extractedData,proto3" json:"extracted_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+        Confidence    float32                `protobuf:"fixed32,4,opt,name=confidence,proto3" json:"confidence,omitempty"` // Confidence score for this file (0-100)
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProcessedFileData) Reset() <span class="cov0" title="0">{
+        *x = ProcessedFileData{}
+        mi := &amp;file_proto_service_proto_msgTypes[7]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *ProcessedFileData) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*ProcessedFileData) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *ProcessedFileData) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[7]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use ProcessedFileData.ProtoReflect.Descriptor instead.
+func (*ProcessedFileData) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{7}
+}</span>
+
+func (x *ProcessedFileData) GetFileId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.FileId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *ProcessedFileData) GetFileUrl() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.FileUrl
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *ProcessedFileData) GetExtractedData() map[string]string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.ExtractedData
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *ProcessedFileData) GetConfidence() float32 <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Confidence
+        }</span>
+        <span class="cov0" title="0">return 0</span>
+}
+
+// Batch file processing response
+type BatchFileProcessingResponse struct {
+        state          protoimpl.MessageState `protogen:"open.v1"`
+        Success        bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+        Message        string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+        ProcessedFiles []*ProcessedFileData   `protobuf:"bytes,3,rep,name=processed_files,json=processedFiles,proto3" json:"processed_files,omitempty"`
+        CreatedAt      string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+        unknownFields  protoimpl.UnknownFields
+        sizeCache      protoimpl.SizeCache
+}
+
+func (x *BatchFileProcessingResponse) Reset() <span class="cov0" title="0">{
+        *x = BatchFileProcessingResponse{}
+        mi := &amp;file_proto_service_proto_msgTypes[8]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *BatchFileProcessingResponse) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*BatchFileProcessingResponse) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *BatchFileProcessingResponse) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_proto_service_proto_msgTypes[8]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use BatchFileProcessingResponse.ProtoReflect.Descriptor instead.
+func (*BatchFileProcessingResponse) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_proto_service_proto_rawDescGZIP(), []int{8}
+}</span>
+
+func (x *BatchFileProcessingResponse) GetSuccess() bool <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Success
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+
+func (x *BatchFileProcessingResponse) GetMessage() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Message
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *BatchFileProcessingResponse) GetProcessedFiles() []*ProcessedFileData <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.ProcessedFiles
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *BatchFileProcessingResponse) GetCreatedAt() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.CreatedAt
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+var File_proto_service_proto protoreflect.FileDescriptor
+
+var file_proto_service_proto_rawDesc = string([]byte{
+        0x0a, 0x13, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+        0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x12, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70,
+        0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x22, 0x2e, 0x0a, 0x12, 0x48, 0x65, 0x61,
+        0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+        0x18, 0x0a, 0x07, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+        0x52, 0x07, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x22, 0xa0, 0x01, 0x0a, 0x13, 0x48, 0x65,
+        0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+        0x65, 0x12, 0x4d, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28,
+        0x0e, 0x32, 0x35, 0x2e, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72, 0x6f, 0x63,
+        0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x2e, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65,
+        0x63, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69,
+        0x6e, 0x67, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73,
+        0x22, 0x3a, 0x0a, 0x0d, 0x53, 0x65, 0x72, 0x76, 0x69, 0x6e, 0x67, 0x53, 0x74, 0x61, 0x74, 0x75,
+        0x73, 0x12, 0x0b, 0x0a, 0x07, 0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x10, 0x00, 0x12, 0x0b,
+        0x0a, 0x07, 0x53, 0x45, 0x52, 0x56, 0x49, 0x4e, 0x47, 0x10, 0x01, 0x12, 0x0f, 0x0a, 0x0b, 0x4e,
+        0x4f, 0x54, 0x5f, 0x53, 0x45, 0x52, 0x56, 0x49, 0x4e, 0x47, 0x10, 0x02, 0x22, 0x76, 0x0a, 0x15,
+        0x46, 0x69, 0x6c, 0x65, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x52, 0x65,
+        0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x30, 0x0a, 0x04, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x01, 0x20,
+        0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72,
+        0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x2e, 0x46, 0x69, 0x6c, 0x65, 0x44, 0x61, 0x74,
+        0x61, 0x52, 0x04, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b, 0x0a, 0x11, 0x65, 0x78, 0x74, 0x72, 0x61,
+        0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x02, 0x20, 0x03,
+        0x28, 0x09, 0x52, 0x10, 0x65, 0x78, 0x74, 0x72, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x46, 0x69,
+        0x65, 0x6c, 0x64, 0x73, 0x22, 0x47, 0x0a, 0x08, 0x46, 0x69, 0x6c, 0x65, 0x44, 0x61, 0x74, 0x61,
+        0x12, 0x1e, 0x0a, 0x0a, 0x62, 0x61, 0x73, 0x65, 0x36, 0x34, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x01,
+        0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x62, 0x61, 0x73, 0x65, 0x36, 0x34, 0x66, 0x69, 0x6c, 0x65,
+        0x12, 0x1b, 0x0a, 0x09, 0x66, 0x69, 0x6c, 0x65, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20,
+        0x01, 0x28, 0x09, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x54, 0x79, 0x70, 0x65, 0x22, 0x98, 0x01,
+        0x0a, 0x1a, 0x42, 0x61, 0x74, 0x63, 0x68, 0x46, 0x69, 0x6c, 0x65, 0x50, 0x72, 0x6f, 0x63, 0x65,
+        0x73, 0x73, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x3f, 0x0a, 0x05,
+        0x66, 0x69, 0x6c, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x29, 0x2e, 0x64, 0x6f,
+        0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67,
+        0x2e, 0x46, 0x69, 0x6c, 0x65, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x52,
+        0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x05, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x12, 0x19, 0x0a,
+        0x08, 0x62, 0x61, 0x74, 0x63, 0x68, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+        0x07, 0x62, 0x61, 0x74, 0x63, 0x68, 0x49, 0x64, 0x12, 0x1e, 0x0a, 0x0a, 0x63, 0x6c, 0x61, 0x73,
+        0x73, 0x69, 0x66, 0x69, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x63, 0x6c,
+        0x61, 0x73, 0x73, 0x69, 0x66, 0x69, 0x65, 0x72, 0x22, 0x7e, 0x0a, 0x12, 0x42, 0x61, 0x74, 0x63,
+        0x68, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x41, 0x63, 0x6b, 0x12, 0x19,
+        0x0a, 0x08, 0x62, 0x61, 0x74, 0x63, 0x68, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+        0x52, 0x07, 0x62, 0x61, 0x74, 0x63, 0x68, 0x49, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61,
+        0x74, 0x75, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75,
+        0x73, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x03, 0x20, 0x01,
+        0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x66,
+        0x69, 0x6c, 0x65, 0x5f, 0x75, 0x72, 0x6c, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x09, 0x52, 0x08,
+        0x66, 0x69, 0x6c, 0x65, 0x55, 0x72, 0x6c, 0x73, 0x22, 0x2f, 0x0a, 0x12, 0x42, 0x61, 0x74, 0x63,
+        0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x19,
+        0x0a, 0x08, 0x62, 0x61, 0x74, 0x63, 0x68, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+        0x52, 0x07, 0x62, 0x61, 0x74, 0x63, 0x68, 0x49, 0x64, 0x22, 0x8a, 0x02, 0x0a, 0x11, 0x50, 0x72,
+        0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x46, 0x69, 0x6c, 0x65, 0x44, 0x61, 0x74, 0x61, 0x12,
+        0x17, 0x0a, 0x07, 0x66, 0x69, 0x6c, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+        0x52, 0x06, 0x66, 0x69, 0x6c, 0x65, 0x49, 0x64, 0x12, 0x19, 0x0a, 0x08, 0x66, 0x69, 0x6c, 0x65,
+        0x5f, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x66, 0x69, 0x6c, 0x65,
+        0x55, 0x72, 0x6c, 0x12, 0x5f, 0x0a, 0x0e, 0x65, 0x78, 0x74, 0x72, 0x61, 0x63, 0x74, 0x65, 0x64,
+        0x5f, 0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x38, 0x2e, 0x64, 0x6f,
+        0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67,
+        0x2e, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x46, 0x69, 0x6c, 0x65, 0x44, 0x61,
+        0x74, 0x61, 0x2e, 0x45, 0x78, 0x74, 0x72, 0x61, 0x63, 0x74, 0x65, 0x64, 0x44, 0x61, 0x74, 0x61,
+        0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x0d, 0x65, 0x78, 0x74, 0x72, 0x61, 0x63, 0x74, 0x65, 0x64,
+        0x44, 0x61, 0x74, 0x61, 0x12, 0x1e, 0x0a, 0x0a, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x64, 0x65, 0x6e,
+        0x63, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x02, 0x52, 0x0a, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x64,
+        0x65, 0x6e, 0x63, 0x65, 0x1a, 0x40, 0x0a, 0x12, 0x45, 0x78, 0x74, 0x72, 0x61, 0x63, 0x74, 0x65,
+        0x64, 0x44, 0x61, 0x74, 0x61, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65,
+        0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05,
+        0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c,
+        0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xc0, 0x01, 0x0a, 0x1b, 0x42, 0x61, 0x74, 0x63, 0x68,
+        0x46, 0x69, 0x6c, 0x65, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x52, 0x65,
+        0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73,
+        0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73,
+        0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
+        0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x4e, 0x0a, 0x0f, 0x70, 0x72,
+        0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x5f, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x18, 0x03, 0x20,
+        0x03, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72,
+        0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x2e, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73,
+        0x65, 0x64, 0x46, 0x69, 0x6c, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x0e, 0x70, 0x72, 0x6f, 0x63,
+        0x65, 0x73, 0x73, 0x65, 0x64, 0x46, 0x69, 0x6c, 0x65, 0x73, 0x12, 0x1d, 0x0a, 0x0a, 0x63, 0x72,
+        0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09,
+        0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x32, 0x6b, 0x0a, 0x0d, 0x48, 0x65, 0x61,
+        0x6c, 0x74, 0x68, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x5a, 0x0a, 0x05, 0x43, 0x68,
+        0x65, 0x63, 0x6b, 0x12, 0x26, 0x2e, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72,
+        0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x2e, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43,
+        0x68, 0x65, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x27, 0x2e, 0x64, 0x6f,
+        0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67,
+        0x2e, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x52, 0x65, 0x73, 0x70,
+        0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x32, 0xfd, 0x01, 0x0a, 0x1b, 0x44, 0x6f, 0x63, 0x75, 0x6d,
+        0x65, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x53, 0x65, 0x72,
+        0x76, 0x69, 0x63, 0x65, 0x56, 0x31, 0x12, 0x6f, 0x0a, 0x13, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73,
+        0x73, 0x42, 0x61, 0x74, 0x63, 0x68, 0x46, 0x69, 0x6c, 0x65, 0x73, 0x56, 0x31, 0x12, 0x2e, 0x2e,
+        0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69,
+        0x6e, 0x67, 0x2e, 0x42, 0x61, 0x74, 0x63, 0x68, 0x46, 0x69, 0x6c, 0x65, 0x50, 0x72, 0x6f, 0x63,
+        0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x26, 0x2e,
+        0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69,
+        0x6e, 0x67, 0x2e, 0x42, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69,
+        0x6e, 0x67, 0x41, 0x63, 0x6b, 0x22, 0x00, 0x12, 0x6d, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x42, 0x61,
+        0x74, 0x63, 0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x56, 0x31, 0x12, 0x26, 0x2e, 0x64, 0x6f,
+        0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67,
+        0x2e, 0x42, 0x61, 0x74, 0x63, 0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x75,
+        0x65, 0x73, 0x74, 0x1a, 0x2f, 0x2e, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x70, 0x72,
+        0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x2e, 0x42, 0x61, 0x74, 0x63, 0x68, 0x46, 0x69,
+        0x6c, 0x65, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x73, 0x70,
+        0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x1b, 0x5a, 0x19, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65,
+        0x6e, 0x74, 0x2d, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x2f, 0x70, 0x72,
+        0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+})
+
+var (
+        file_proto_service_proto_rawDescOnce sync.Once
+        file_proto_service_proto_rawDescData []byte
+)
+
+func file_proto_service_proto_rawDescGZIP() []byte <span class="cov0" title="0">{
+        file_proto_service_proto_rawDescOnce.Do(func() </span><span class="cov0" title="0">{
+                file_proto_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_service_proto_rawDesc), len(file_proto_service_proto_rawDesc)))
+        }</span>)
+        <span class="cov0" title="0">return file_proto_service_proto_rawDescData</span>
+}
+
+var file_proto_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_proto_service_proto_goTypes = []any{
+        (HealthCheckResponse_ServingStatus)(0), // 0: documentprocessing.HealthCheckResponse.ServingStatus
+        (*HealthCheckRequest)(nil),             // 1: documentprocessing.HealthCheckRequest
+        (*HealthCheckResponse)(nil),            // 2: documentprocessing.HealthCheckResponse
+        (*FileProcessingRequest)(nil),          // 3: documentprocessing.FileProcessingRequest
+        (*FileData)(nil),                       // 4: documentprocessing.FileData
+        (*BatchFileProcessingRequest)(nil),     // 5: documentprocessing.BatchFileProcessingRequest
+        (*BatchProcessingAck)(nil),             // 6: documentprocessing.BatchProcessingAck
+        (*BatchStatusRequest)(nil),             // 7: documentprocessing.BatchStatusRequest
+        (*ProcessedFileData)(nil),              // 8: documentprocessing.ProcessedFileData
+        (*BatchFileProcessingResponse)(nil),    // 9: documentprocessing.BatchFileProcessingResponse
+        nil,                                    // 10: documentprocessing.ProcessedFileData.ExtractedDataEntry
+}
+var file_proto_service_proto_depIdxs = []int32{
+        0,  // 0: documentprocessing.HealthCheckResponse.status:type_name -&gt; documentprocessing.HealthCheckResponse.ServingStatus
+        4,  // 1: documentprocessing.FileProcessingRequest.file:type_name -&gt; documentprocessing.FileData
+        3,  // 2: documentprocessing.BatchFileProcessingRequest.files:type_name -&gt; documentprocessing.FileProcessingRequest
+        10, // 3: documentprocessing.ProcessedFileData.extracted_data:type_name -&gt; documentprocessing.ProcessedFileData.ExtractedDataEntry
+        8,  // 4: documentprocessing.BatchFileProcessingResponse.processed_files:type_name -&gt; documentprocessing.ProcessedFileData
+        1,  // 5: documentprocessing.HealthService.Check:input_type -&gt; documentprocessing.HealthCheckRequest
+        5,  // 6: documentprocessing.DocumentProcessingServiceV1.ProcessBatchFilesV1:input_type -&gt; documentprocessing.BatchFileProcessingRequest
+        7,  // 7: documentprocessing.DocumentProcessingServiceV1.GetBatchStatusV1:input_type -&gt; documentprocessing.BatchStatusRequest
+        2,  // 8: documentprocessing.HealthService.Check:output_type -&gt; documentprocessing.HealthCheckResponse
+        6,  // 9: documentprocessing.DocumentProcessingServiceV1.ProcessBatchFilesV1:output_type -&gt; documentprocessing.BatchProcessingAck
+        9,  // 10: documentprocessing.DocumentProcessingServiceV1.GetBatchStatusV1:output_type -&gt; documentprocessing.BatchFileProcessingResponse
+        8,  // [8:11] is the sub-list for method output_type
+        5,  // [5:8] is the sub-list for method input_type
+        5,  // [5:5] is the sub-list for extension type_name
+        5,  // [5:5] is the sub-list for extension extendee
+        0,  // [0:5] is the sub-list for field type_name
+}
+
+func init() <span class="cov0" title="0">{ file_proto_service_proto_init() }</span>
+func file_proto_service_proto_init() <span class="cov0" title="0">{
+        if File_proto_service_proto != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">type x struct{}
+        out := protoimpl.TypeBuilder{
+                File: protoimpl.DescBuilder{
+                        GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
+                        RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_service_proto_rawDesc), len(file_proto_service_proto_rawDesc)),
+                        NumEnums:      1,
+                        NumMessages:   10,
+                        NumExtensions: 0,
+                        NumServices:   2,
+                },
+                GoTypes:           file_proto_service_proto_goTypes,
+                DependencyIndexes: file_proto_service_proto_depIdxs,
+                EnumInfos:         file_proto_service_proto_enumTypes,
+                MessageInfos:      file_proto_service_proto_msgTypes,
+        }.Build()
+        File_proto_service_proto = out.File
+        file_proto_service_proto_goTypes = nil
+        file_proto_service_proto_depIdxs = nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">// Code generated by protoc-gen-go-grpc. DO NOT EDIT.
+// versions:
+// - protoc-gen-go-grpc v1.5.1
+// - protoc             v5.29.3
+// source: proto/service.proto
+
+package proto
+
+import (
+        context "context"
+        grpc "google.golang.org/grpc"
+        codes "google.golang.org/grpc/codes"
+        status "google.golang.org/grpc/status"
+)
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.64.0 or later.
+const _ = grpc.SupportPackageIsVersion9
+
+const (
+        HealthService_Check_FullMethodName = "/documentprocessing.HealthService/Check"
+)
+
+// HealthServiceClient is the client API for HealthService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Health check service definition
+type HealthServiceClient interface {
+        Check(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
+}
+
+type healthServiceClient struct {
+        cc grpc.ClientConnInterface
+}
+
+func NewHealthServiceClient(cc grpc.ClientConnInterface) HealthServiceClient <span class="cov0" title="0">{
+        return &amp;healthServiceClient{cc}
+}</span>
+
+func (c *healthServiceClient) Check(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(HealthCheckResponse)
+        err := c.cc.Invoke(ctx, HealthService_Check_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+// HealthServiceServer is the server API for HealthService service.
+// All implementations must embed UnimplementedHealthServiceServer
+// for forward compatibility.
+//
+// Health check service definition
+type HealthServiceServer interface {
+        Check(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
+        mustEmbedUnimplementedHealthServiceServer()
+}
+
+// UnimplementedHealthServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedHealthServiceServer struct{}
+
+func (UnimplementedHealthServiceServer) Check(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method Check not implemented")
+}</span>
+func (UnimplementedHealthServiceServer) mustEmbedUnimplementedHealthServiceServer() {<span class="cov0" title="0">}</span>
+func (UnimplementedHealthServiceServer) testEmbeddedByValue()                       {<span class="cov0" title="0">}</span>
+
+// UnsafeHealthServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to HealthServiceServer will
+// result in compilation errors.
+type UnsafeHealthServiceServer interface {
+        mustEmbedUnimplementedHealthServiceServer()
+}
+
+func RegisterHealthServiceServer(s grpc.ServiceRegistrar, srv HealthServiceServer) <span class="cov0" title="0">{
+        // If the following call pancis, it indicates UnimplementedHealthServiceServer was
+        // embedded by pointer and is nil.  This will cause panics if an
+        // unimplemented method is ever invoked, so we test this at initialization
+        // time to prevent it from happening at runtime later due to I/O.
+        if t, ok := srv.(interface{ testEmbeddedByValue() }); ok </span><span class="cov0" title="0">{
+                t.testEmbeddedByValue()
+        }</span>
+        <span class="cov0" title="0">s.RegisterService(&amp;HealthService_ServiceDesc, srv)</span>
+}
+
+func _HealthService_Check_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(HealthCheckRequest)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(HealthServiceServer).Check(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: HealthService_Check_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(HealthServiceServer).Check(ctx, req.(*HealthCheckRequest))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+// HealthService_ServiceDesc is the grpc.ServiceDesc for HealthService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var HealthService_ServiceDesc = grpc.ServiceDesc{
+        ServiceName: "documentprocessing.HealthService",
+        HandlerType: (*HealthServiceServer)(nil),
+        Methods: []grpc.MethodDesc{
+                {
+                        MethodName: "Check",
+                        Handler:    _HealthService_Check_Handler,
+                },
+        },
+        Streams:  []grpc.StreamDesc{},
+        Metadata: "proto/service.proto",
+}
+
+const (
+        DocumentProcessingServiceV1_ProcessBatchFilesV1_FullMethodName = "/documentprocessing.DocumentProcessingServiceV1/ProcessBatchFilesV1"
+        DocumentProcessingServiceV1_GetBatchStatusV1_FullMethodName    = "/documentprocessing.DocumentProcessingServiceV1/GetBatchStatusV1"
+)
+
+// DocumentProcessingServiceV1Client is the client API for DocumentProcessingServiceV1 service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Document processing service definition with versioning
+type DocumentProcessingServiceV1Client interface {
+        // V1 methods
+        ProcessBatchFilesV1(ctx context.Context, in *BatchFileProcessingRequest, opts ...grpc.CallOption) (*BatchProcessingAck, error)
+        GetBatchStatusV1(ctx context.Context, in *BatchStatusRequest, opts ...grpc.CallOption) (*BatchFileProcessingResponse, error)
+}
+
+type documentProcessingServiceV1Client struct {
+        cc grpc.ClientConnInterface
+}
+
+func NewDocumentProcessingServiceV1Client(cc grpc.ClientConnInterface) DocumentProcessingServiceV1Client <span class="cov0" title="0">{
+        return &amp;documentProcessingServiceV1Client{cc}
+}</span>
+
+func (c *documentProcessingServiceV1Client) ProcessBatchFilesV1(ctx context.Context, in *BatchFileProcessingRequest, opts ...grpc.CallOption) (*BatchProcessingAck, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(BatchProcessingAck)
+        err := c.cc.Invoke(ctx, DocumentProcessingServiceV1_ProcessBatchFilesV1_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+func (c *documentProcessingServiceV1Client) GetBatchStatusV1(ctx context.Context, in *BatchStatusRequest, opts ...grpc.CallOption) (*BatchFileProcessingResponse, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(BatchFileProcessingResponse)
+        err := c.cc.Invoke(ctx, DocumentProcessingServiceV1_GetBatchStatusV1_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+// DocumentProcessingServiceV1Server is the server API for DocumentProcessingServiceV1 service.
+// All implementations must embed UnimplementedDocumentProcessingServiceV1Server
+// for forward compatibility.
+//
+// Document processing service definition with versioning
+type DocumentProcessingServiceV1Server interface {
+        // V1 methods
+        ProcessBatchFilesV1(context.Context, *BatchFileProcessingRequest) (*BatchProcessingAck, error)
+        GetBatchStatusV1(context.Context, *BatchStatusRequest) (*BatchFileProcessingResponse, error)
+        mustEmbedUnimplementedDocumentProcessingServiceV1Server()
+}
+
+// UnimplementedDocumentProcessingServiceV1Server must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedDocumentProcessingServiceV1Server struct{}
+
+func (UnimplementedDocumentProcessingServiceV1Server) ProcessBatchFilesV1(context.Context, *BatchFileProcessingRequest) (*BatchProcessingAck, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method ProcessBatchFilesV1 not implemented")
+}</span>
+func (UnimplementedDocumentProcessingServiceV1Server) GetBatchStatusV1(context.Context, *BatchStatusRequest) (*BatchFileProcessingResponse, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method GetBatchStatusV1 not implemented")
+}</span>
+func (UnimplementedDocumentProcessingServiceV1Server) mustEmbedUnimplementedDocumentProcessingServiceV1Server() {<span class="cov0" title="0">
+}</span>
+func (UnimplementedDocumentProcessingServiceV1Server) testEmbeddedByValue() {<span class="cov0" title="0">}</span>
+
+// UnsafeDocumentProcessingServiceV1Server may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DocumentProcessingServiceV1Server will
+// result in compilation errors.
+type UnsafeDocumentProcessingServiceV1Server interface {
+        mustEmbedUnimplementedDocumentProcessingServiceV1Server()
+}
+
+func RegisterDocumentProcessingServiceV1Server(s grpc.ServiceRegistrar, srv DocumentProcessingServiceV1Server) <span class="cov0" title="0">{
+        // If the following call pancis, it indicates UnimplementedDocumentProcessingServiceV1Server was
+        // embedded by pointer and is nil.  This will cause panics if an
+        // unimplemented method is ever invoked, so we test this at initialization
+        // time to prevent it from happening at runtime later due to I/O.
+        if t, ok := srv.(interface{ testEmbeddedByValue() }); ok </span><span class="cov0" title="0">{
+                t.testEmbeddedByValue()
+        }</span>
+        <span class="cov0" title="0">s.RegisterService(&amp;DocumentProcessingServiceV1_ServiceDesc, srv)</span>
+}
+
+func _DocumentProcessingServiceV1_ProcessBatchFilesV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(BatchFileProcessingRequest)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(DocumentProcessingServiceV1Server).ProcessBatchFilesV1(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: DocumentProcessingServiceV1_ProcessBatchFilesV1_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(DocumentProcessingServiceV1Server).ProcessBatchFilesV1(ctx, req.(*BatchFileProcessingRequest))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+func _DocumentProcessingServiceV1_GetBatchStatusV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(BatchStatusRequest)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(DocumentProcessingServiceV1Server).GetBatchStatusV1(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: DocumentProcessingServiceV1_GetBatchStatusV1_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(DocumentProcessingServiceV1Server).GetBatchStatusV1(ctx, req.(*BatchStatusRequest))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+// DocumentProcessingServiceV1_ServiceDesc is the grpc.ServiceDesc for DocumentProcessingServiceV1 service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DocumentProcessingServiceV1_ServiceDesc = grpc.ServiceDesc{
+        ServiceName: "documentprocessing.DocumentProcessingServiceV1",
+        HandlerType: (*DocumentProcessingServiceV1Server)(nil),
+        Methods: []grpc.MethodDesc{
+                {
+                        MethodName: "ProcessBatchFilesV1",
+                        Handler:    _DocumentProcessingServiceV1_ProcessBatchFilesV1_Handler,
+                },
+                {
+                        MethodName: "GetBatchStatusV1",
+                        Handler:    _DocumentProcessingServiceV1_GetBatchStatusV1_Handler,
+                },
+        },
+        Streams:  []grpc.StreamDesc{},
+        Metadata: "proto/service.proto",
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
