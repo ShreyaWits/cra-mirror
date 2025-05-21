@@ -1,3 +1,5 @@
+
+
 package confluent
 
 import (
@@ -133,7 +135,7 @@ func (d *DLQProducerImpl) SendToDLQ(ctx context.Context, messageID string, value
 	// Flush to ensure delivery
 	remaining := d.Producer.Flush(int(d.Config.WriteTimeout.Milliseconds()))
 	if remaining > 0 {
-		d.obs.LoggerService.Warn(ctx,"Messages still in queue after flush timeout", map[string]interface{}{
+		d.obs.LoggerService.Warn(ctx, "Messages still in queue after flush timeout", map[string]interface{}{
 			"topic":     d.Topic,
 			"remaining": remaining,
 			"timeout":   d.Config.WriteTimeout.String(),
@@ -163,7 +165,7 @@ func (d *DLQProducerImpl) Close() error {
 	// Flush any pending messages
 	remaining := d.Producer.Flush(int(d.Config.WriteTimeout.Milliseconds()))
 	if remaining > 0 {
-		d.obs.LoggerService.Warn(ctx,"Messages still in queue after close flush timeout", map[string]interface{}{
+		d.obs.LoggerService.Warn(ctx, "Messages still in queue after close flush timeout", map[string]interface{}{
 			"topic":     d.Topic,
 			"remaining": remaining,
 			"timeout":   d.Config.WriteTimeout.String(),

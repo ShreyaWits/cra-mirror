@@ -7,18 +7,18 @@ services:
       dockerfile: ./messaging_service/Dockerfile
     ports:
       - "${GRPC_PORT}:${GRPC_PORT}"
-      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${PORT}:${PORT}"
     networks:
       - messaging-service-network
     environment:
       GRPC_PORT: ${GRPC_PORT}
       CONFIG_SERVICE_URL: ${CONFIG_SERVICE_URL}
-      CONFIG_SERVICE_TOKEN: ${CONFIG_SERVICE_TOKEN}
+      MESSAGING_CONFIG_SERVICE_TOKEN: ${MESSAGING_CONFIG_SERVICE_TOKEN}
       ENVIRONMENT: ${ENVIRONMENT}
-      HTTP_PORT: ${HTTP_PORT}
-      CACHE_TTL: ${CACHE_TTL}
+      PORT: ${PORT}
+      MESSAGING_SERVICE_REDIS_TTL: ${MESSAGING_SERVICE_REDIS_TTL}
       SERVICE_NAME: ${SERVICE_NAME}
-      CACHE_URL: ${CACHE_URL}
+      CACHING_SERVICE_GRPC_URL: ${CACHING_SERVICE_GRPC_URL}
 
     restart: on-failure
 
