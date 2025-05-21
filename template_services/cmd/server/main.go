@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"template-services/internal/di"
 	"template-services/internal/template/routes"
 	pb "template-services/proto"
@@ -49,19 +50,19 @@ func main() {
 
 	// Start gRPC Server
 	go func() {
-		listener, err := net.Listen("tcp", ":50051")
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%s", os.Getenv("GRPC_PORT")))
 		if err != nil {
 			log.Fatalf("Failed to listen: %v", err)
 		}
 		grpcServer := grpc.NewServer()
 		pb.RegisterTemplateServiceServer(grpcServer, templateGRPCHandler)
-		fmt.Println("gRPC server listening on :50051")
+		fmt.Println("gRPC server listening on :", fmt.Sprintf(":%s", os.Getenv("GRPC_PORT")))
 		if err := grpcServer.Serve(listener); err != nil {
 			log.Fatalf("Failed to serve gRPC: %v", err)
 		}
 	}()
 
 	// Start HTTP Server
-	fmt.Println("HTTP server listening on :8080")
-	log.Fatal(app.Listen(":8080"))
+	fmt.Println("HTTP server listening on :", fmt.Sprintf(":%s", os.Getenv("REST_PORT")))
+	log.Fatal(app.Listen(fmt.Sprintf(":%s", os.Getenv("REST_PORT"))))
 }

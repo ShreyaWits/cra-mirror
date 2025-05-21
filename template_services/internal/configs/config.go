@@ -1,6 +1,7 @@
 package configEnv
 
 import (
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -28,22 +29,25 @@ type Config struct {
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(".env file not found, falling back to system env")
+	}
 
 	// Default values
 	config := &Config{
-		ServerPort:         getEnv("PORT", "8080"),
+		ServerPort:         getEnv("REST_PORT", "8080"),
 		GRPCPort:           getEnv("GRPC_PORT", "50051"),
 		RedisHost:          getEnv("REDIS_HOST", "localhost"),
 		RedisPort:          getEnv("REDIS_PORT", "6379"),
 		RedisUser:          getEnv("REDIS_USER", "templateuser"),
 		RedisPassword:      getEnv("REDIS_PASSWORD", "templatepassword"),
 		JWTSecret:          getEnv("JWT_SECRET", "myTemplateSecureKey1234567890@GoLan"),
-		YugabyteDBHost:     getEnv("YUGABYTEDB_HOST", "yugabyte"),
-		YugabyteDBPort:     getEnv("YUGABYTEDB_PORT", "5433"),
-		YugabyteDBUser:     getEnv("YUGABYTEDB_USER", "yugabyte"),
-		YugabyteDBPassword: getEnv("YUGABYTEDB_PASSWORD", "yugabyte"),
-		YugabyteDBName:     getEnv("YUGABYTEDB_NAME", "yugabyte"),
+		YugabyteDBHost:     getEnv("YUGABYTE_DATABASE_HOST", "yugabyte"),
+		YugabyteDBPort:     getEnv("YUGABYTE_DATABASE_PORT", "5433"),
+		YugabyteDBUser:     getEnv("YUGABYTE_DATABASE_USER", "yugabyte"),
+		YugabyteDBPassword: getEnv("YUGABYTE_DATABASE_PASSWORD", "yugabyte"),
+		YugabyteDBName:     getEnv("TEMPLATE_SERVICE_YUGABYTE_DATABASE_NAME", "yugabyte"),
 	}
 
 	return config, nil
