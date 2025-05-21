@@ -23,11 +23,25 @@ func BootstrapServices() *grpcServer.GrpcServer {
 	}
 
 	// Redis setup
-	redisAddr := os.Getenv("REDIS_ADDRESS")
-	if redisAddr == "" {
-		log.Fatal("REDIS_ADDRESS is not set")
+	redisHost := os.Getenv("REDIS_HOST")
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	redisUsername := os.Getenv("REDIS_USERNAME")
+	redisTTL := os.Getenv("RECEIPT_SERVICE_REDIS_TTL")
+
+	if redisHost == "" {
+		log.Fatal("REDIS_HOST is not set")
 	}
-	config.InitRedis(redisAddr)
+	if redisPassword == "" {
+		log.Fatal("REDIS_PASSWORD is not set")
+	}
+	if redisUsername == "" {
+		log.Fatal("REDIS_USERNAME is not set")
+	}
+	if redisTTL == "" {
+		log.Fatal("RECEIPT_SERVICE_REDIS_TTL is not set")
+	}
+
+	config.InitRedis(redisHost, redisUsername, redisPassword, redisTTL)
 
 	// gRPC setup
 	grpcAddr := os.Getenv("GRPC_PORT")
