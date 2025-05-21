@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"messaging_service/internal/config"
 	"messaging_service/internal/modules/message_broker/models"
 	"os"
 	"strings"
@@ -65,8 +66,8 @@ func SetupOTelSDK(ctx context.Context, env *models.EnvConfig) (shutdown func(con
 	// Create a resource with service information
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(env.ServiceName),
-			semconv.ServiceVersionKey.String(env.ServiceVersion),
+			semconv.ServiceNameKey.String(config.SERVICE_NAME),
+			semconv.ServiceVersionKey.String(config.SERVICE_NAME),
 			semconv.DeploymentEnvironmentKey.String(env.Environment),
 		),
 	)
@@ -226,7 +227,7 @@ func newLoggerProvider(ctx context.Context, env *models.EnvConfig, res *resource
 	)
 
 	// Log a message that initialization was successful (using fmt instead of logger)
-	fmt.Printf("OpenTelemetry logger provider successfully initialized for service: %s\n", env.ServiceName)
+	fmt.Printf("OpenTelemetry logger provider successfully initialized for service: %s\n", config.SERVICE_NAME)
 
 	return loggerProvider, nil
 }

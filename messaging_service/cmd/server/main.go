@@ -13,6 +13,7 @@ import (
 
 	pb "cra-protos/messaging_service"
 	routes "messaging_service/internal/app"
+	"messaging_service/internal/config"
 	"messaging_service/internal/modules/message_broker/di"
 	"messaging_service/pkg/observability"
 
@@ -40,7 +41,7 @@ func main() {
 
 	// Create observability context
 	obs := container.Obs
-	ctx, span := obs.TracerService.StartTracer(rootCtx, container.Env.ServiceName)
+	ctx, span := obs.TracerService.StartTracer(rootCtx, config.SERVICE_NAME)
 	defer obs.TracerService.StopSpan(span)
 
 	// Setup servers with graceful shutdown

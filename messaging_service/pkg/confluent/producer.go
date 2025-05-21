@@ -1,3 +1,5 @@
+
+
 package confluent
 
 import (
@@ -27,7 +29,6 @@ type ProducerImpl struct {
 // NewProducer creates a new Producer instance for a specific topic
 func NewProducer(ctx context.Context, cfg KafkaConfig, obs *observability.ObservabilityStack) (Producer, error) {
 	functionName := "NewProducer"
-
 
 	_, span := obs.TracerService.StartTracer(ctx, functionName)
 	defer obs.TracerService.StopSpan(span)
