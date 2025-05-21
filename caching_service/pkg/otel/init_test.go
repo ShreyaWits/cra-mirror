@@ -34,20 +34,20 @@ func (m *mockConfig) GetDeploymentEnv() string {
 
 func TestSetupOTelSDK(t *testing.T) {
 	// Save original environment variables
-	originalEnv := os.Getenv("OTEL_COLLECTOR_URL")
+	originalEnv := os.Getenv("OTEL_COLLECTOR_GRPC_ENDPOINT")
 	originalServiceName := os.Getenv("SERVICE_NAME")
-	originalDeploymentEnv := os.Getenv("DEPLOYMENT_ENV")
+	originalDeploymentEnv := os.Getenv("ENVIRONMENT")
 
 	// Set test environment variables
-	os.Setenv("OTEL_COLLECTOR_URL", "")
+	os.Setenv("OTEL_COLLECTOR_GRPC_ENDPOINT", "")
 	os.Setenv("SERVICE_NAME", "test-service")
-	os.Setenv("DEPLOYMENT_ENV", "test")
+	os.Setenv("ENVIRONMENT", "test")
 
 	// Restore environment variables after test
 	defer func() {
-		os.Setenv("OTEL_COLLECTOR_URL", originalEnv)
+		os.Setenv("OTEL_COLLECTOR_GRPC_ENDPOINT", originalEnv)
 		os.Setenv("SERVICE_NAME", originalServiceName)
-		os.Setenv("DEPLOYMENT_ENV", originalDeploymentEnv)
+		os.Setenv("ENVIRONMENT", originalDeploymentEnv)
 	}()
 
 	// Test successful initialization
@@ -124,9 +124,9 @@ func TestSetupOTelSDK(t *testing.T) {
 
 	t.Run("span_propagation", func(t *testing.T) {
 		// Set up test environment for span propagation
-		os.Setenv("OTEL_COLLECTOR_URL", "")
+		os.Setenv("OTEL_COLLECTOR_GRPC_ENDPOINT", "")
 		os.Setenv("SERVICE_NAME", "test-service")
-		os.Setenv("DEPLOYMENT_ENV", "test")
+		os.Setenv("ENVIRONMENT", "test")
 
 		// Set up no-op providers for all telemetry types
 		tp := trace.NewTracerProvider(

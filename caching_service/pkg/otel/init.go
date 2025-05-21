@@ -3,8 +3,6 @@ package opentelemetry
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"redis-service/pkg/config"
 	"time"
 
@@ -25,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog" 
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 )
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
@@ -49,14 +47,14 @@ func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	grpcEndpoint := config.OTEL_COLLECTOR_URL
+	grpcEndpoint := config.OTEL_COLLECTOR_GRPC_ENDPOINT
 
 	// Create a resource with service information
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.DEPLOYMENT_ENV),
+			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 	)
 	if err != nil {
@@ -124,7 +122,7 @@ func newPropagator() propagation.TextMapPropagator {
 
 func newTracerProvider(ctx context.Context, endpoint string) (*trace.TracerProvider, error) {
 	if endpoint == "" {
-		return nil, errors.New("OTEL_COLLECTOR_URL is not set")
+		return nil, errors.New("OTEL_COLLECTOR_GRPC_ENDPOINT is not set")
 	}
 
 	traceGrpcExporter, err := otlptracegrpc.New(
@@ -141,8 +139,8 @@ func newTracerProvider(ctx context.Context, endpoint string) (*trace.TracerProvi
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.DEPLOYMENT_ENV),
+			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 	)
 	if err != nil {
@@ -177,38 +175,12 @@ func newMeterProvider(grpcEndpoint string) (*metric.MeterProvider, error) {
 		metric.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.DEPLOYMENT_ENV),
+			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 		),
 	)
 	return meterProvider, nil
-}
-
-func newResource() (*resource.Resource, error) {
-	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			// semconv.ServiceVersion("0.1.0"),
-		))
-}
-
-type stdoutExporter struct{}
-
-func (e *stdoutExporter) Export(ctx context.Context, records []log.Record) error {
-	for _, rec := range records {
-		fmt.Fprintf(os.Stdout, "[%s] %s: %s\n", rec.Timestamp(), rec.SeverityText(), rec.Body().AsString())
-	}
-	return nil
-}
-
-func (e *stdoutExporter) Shutdown(ctx context.Context) error {
-	return nil
-}
-
-func (e *stdoutExporter) ForceFlush(ctx context.Context) error {
-	// You can add any necessary logic here to force flush the exporter
-	return nil
 }
 
 func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
@@ -227,7 +199,7 @@ func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 	logStoutExporter, err := stdoutlog.New()
 	if err != nil {
 		return nil, err
-	} 
+	}
 
 	loggerProvider := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
@@ -235,8 +207,8 @@ func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 		log.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String("v0.1.0"),
-			semconv.DeploymentEnvironmentKey.String(config.DEPLOYMENT_ENV),
+			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 		),
 	)

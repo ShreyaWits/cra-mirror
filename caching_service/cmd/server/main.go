@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -46,9 +47,9 @@ func main() {
 	logger.DebugContext(context.Background(), "Creating gRPC server instance...")
 
 	// create a new grpc server instance with tracing interceptor
-	lis, err := net.Listen("tcp", config.GRPC_PORT)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.GRPC_PORT))
 	if err != nil {
-		logger.ErrorContext(context.Background(), "Failed to listen", "error", err)
+		logger.ErrorContext(context.Background(), "Failed to listen", "error", err.Error())
 		os.Exit(1)
 	}
 
@@ -58,7 +59,7 @@ func main() {
 
 	grpcServer, err := server.NewGRPCServer(s, lis)
 	if err != nil {
-		logger.ErrorContext(context.Background(), "gRPC server failed to listen:", err)
+		logger.ErrorContext(context.Background(), "gRPC server failed to listen:", "error", err.Error())
 		os.Exit(1)
 	}
 
@@ -77,7 +78,7 @@ func main() {
 		err := app.Listen(config.PORT)
 		if err != nil {
 			logger.ErrorContext(context.Background(), "Failed to start HTTP server", "error", err)
-			panic(err)
+			os.Exit(1)
 		}
 		logger.InfoContext(context.Background(), "HTTP server started", "port", config.PORT)
 	}()

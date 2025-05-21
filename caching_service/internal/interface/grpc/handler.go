@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"redis-service/internal/app"
 	"redis-service/internal/dto"
@@ -164,6 +165,8 @@ func (grpc *GRPCServer) SetCache(ctx context.Context, req *proto.SetCacheRequest
 
 	// Set cache value
 	success, err := grpc.service.SetCache(payload)
+
+	log.Println("err", err, success)
 
 	if err != nil || !success {
 		if span != nil {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -9,14 +10,15 @@ import (
 
 // Exported variables
 var (
-	REDIS_URL          string
-	REDIS_PASSWORD     string
-	REDIS_DB           string
-	PORT               string
-	GRPC_PORT          string
-	OTEL_COLLECTOR_URL string
-	SERVICE_NAME       string
-	DEPLOYMENT_ENV     string
+	REDIS_URL                    string
+	REDIS_PASSWORD               string
+	REDIS_DB                     string
+	PORT                         string
+	GRPC_PORT                    string
+	OTEL_COLLECTOR_GRPC_ENDPOINT string
+	SERVICE_NAME                 string
+	ENVIRONMENT                  string
+	SERVICE_VERSION              string
 )
 
 // LoadEnv reads from .env and sets global config variables
@@ -26,14 +28,18 @@ func LoadEnv() {
 		log.Println(".env file not found, falling back to system env")
 	}
 
-	REDIS_URL = getEnv("REDIS_URL", "localhost:6379")
+	REDIS_HOST := getEnv("REDIS_HOST", "")
+	REDIS_PORT := getEnv("REDIS_PORT", "6379")
+
+	REDIS_URL = fmt.Sprintf("%s:%s", REDIS_HOST, REDIS_PORT)
 	REDIS_PASSWORD = getEnv("REDIS_PASSWORD", "")
 	REDIS_DB = getEnv("REDIS_DB", "0")
 	PORT = getEnv("PORT", ":8080")
 	GRPC_PORT = getEnv("GRPC_PORT", ":50051")
-	OTEL_COLLECTOR_URL = getEnv("OTEL_COLLECTOR_URL", "")
+	OTEL_COLLECTOR_GRPC_ENDPOINT = getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", "")
 	SERVICE_NAME = getEnv("SERVICE_NAME", "caching-service")
-	DEPLOYMENT_ENV = getEnv("DEPLOYMENT_ENV", "development")
+	ENVIRONMENT = getEnv("ENVIRONMENT", "development")
+	SERVICE_VERSION = getEnv("SERVICE_VERSION", "0.0.1")
 }
 
 func getEnv(key, fallback string) string {
