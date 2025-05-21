@@ -2,7 +2,7 @@ package middleware
 
 import (
 	common "nps-config-service/internal/common/errors"
-	"os"
+	"nps-config-service/internal/configs"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -36,7 +36,7 @@ func JWTMiddleware() fiber.Handler {
 		}
 
 		tokenStr := parts[1]
-		jwtSecret := os.Getenv("JWT_SECRET")
+		jwtSecret := configs.AppConfig.JWTSecret
 
 		// Parse and validate token
 		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {

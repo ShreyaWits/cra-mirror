@@ -17,7 +17,7 @@ import (
 func main() {
 	// Seed the random number generator once in main
 	rand.Seed(time.Now().UnixNano())
-	endpoint := os.Getenv("TEMPORAL_ENDPOINT")
+	endpoint := os.Getenv("TEMPORAL_SERVER_ENDPOINT")
 	// Create a Temporal Client
 	c, err := client.Dial(client.Options{
 		HostPort: endpoint,
