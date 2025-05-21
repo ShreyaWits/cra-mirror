@@ -22,6 +22,7 @@ func ConnectRedis(cfg *configEnv.Config) (*RedisConfig, error) {
 	var err error
 
 	options := &redis.Options{
+		Username: cfg.REDIS_USERNAME,
 		Addr:     fmt.Sprintf("%s:%s", cfg.REDIS_HOST, cfg.REDIS_PORT),
 		Password: cfg.REDIS_PASSWORD,
 		DB:       0,

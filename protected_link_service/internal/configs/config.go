@@ -10,11 +10,13 @@ import (
 type Config struct {
 	// Server settings
 	ServerPort string
+	OtpExpiryDuration string
 
 	// Database settings
 	REDIS_HOST     string
 	REDIS_PORT     string
 	REDIS_PASSWORD string
+	REDIS_USERNAME string
 
 	JWTSecret        string
 	RedirectionURL   string
@@ -43,6 +45,8 @@ func LoadConfig() (*Config, error) {
 		REDIS_HOST:         getEnv("DB_PORT", "localhost:6379"),
 		REDIS_PORT:         getEnv("DB_PORT", "6379"),
 		REDIS_PASSWORD:     getEnv("DB_PASSWORD", "sarb"),
+		REDIS_USERNAME:     getEnv("REDIS_USERNAME", "sarb"),
+		OtpExpiryDuration:  getEnv("REDIS_TTL", "5m"),
 		KafkaProducer:      getEnv("KAFKA_PRODUCER_TOPIC", "send_notification"),
 		AppEnv:             getEnv("APP_ENV", "local"),
 		Kafka_Broker_Url:   getEnv("KAFKA_BROKER_URL", "localhost:9092"),
