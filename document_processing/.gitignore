@@ -1,1 +1,4 @@
 .env
+.DS_Store
+coverage.html
+coverage.out

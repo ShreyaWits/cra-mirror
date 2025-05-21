@@ -32,13 +32,17 @@ func startServer(cfg *config.Config) (*di.Container, error) {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Print("Failed to get .env")
+	if os.Getenv("IS_DOCKER") != "true" {
+		if err := godotenv.Load(); err != nil {
+			log.Fatalf("error loading environment variables: %v\n", err)
+		}
 	}
 
 	// Load environment variables
 	token := os.Getenv("JWT_TOKEN")
+	if token == "" {
+		log.Fatalf("JWT_TOKEN is missing in .env")
+	}
 
 	rawData, err := config.LoadConfigFromAPI(token)
 	if err != nil {
