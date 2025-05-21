@@ -27,7 +27,7 @@ func setupHandler(t *testing.T) (*handler.MessagingHandler, *mock_service.MockMe
 		KafkaNumPartitions:     3,
 		KafkaReplicationFactor: 3,
 	}
-	h, _ := handler.NewMessagingHandler(cfg, mockSvc, observability.NewObservabilityStack(&config.Env{ServiceName: "test-service", ConfigServiceUrl: "http://localhost:8080"}))
+	h, _ := handler.NewMessagingHandler(cfg, mockSvc, observability.NewObservabilityStack(&config.Env{ConfigServiceUrl: "http://localhost:8080"}))
 
 	return h, mockSvc, ctrl
 }
@@ -42,7 +42,7 @@ func TestNewMessagingHandler(t *testing.T) {
 		KafkaNumPartitions:     3,
 		KafkaReplicationFactor: 3,
 	}
-	validObs := observability.NewObservabilityStack(&config.Env{ServiceName: "test-service", ConfigServiceUrl: "http://localhost:8080"})
+	validObs := observability.NewObservabilityStack(&config.Env{ConfigServiceUrl: "http://localhost:8080"})
 
 	tests := []struct {
 		name        string
@@ -479,7 +479,6 @@ func TestHelperFunctions(t *testing.T) {
 	t.Run("observability stack initialization", func(t *testing.T) {
 		// Create a new observability stack
 		obs := observability.NewObservabilityStack(&config.Env{
-			ServiceName:      "test-service",
 			ConfigServiceUrl: "http://localhost:8080",
 		})
 

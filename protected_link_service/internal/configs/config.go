@@ -47,7 +47,7 @@ func LoadConfig() (*Config, error) {
 		REDIS_PASSWORD:     getEnv("DB_PASSWORD", "sarb"),
 		REDIS_USERNAME:     getEnv("REDIS_USERNAME", "sarb"),
 		OtpExpiryDuration:  getEnv("REDIS_TTL", "5m"),
-		KafkaProducer:      getEnv("KAFKA_PRODUCER_TOPIC", "send_notification"),
+		KafkaProducer:      getEnv("PROTECTED_LINK_SERVICE_KAFKA_PRODUCER_TOPIC", "send_notification"),
 		AppEnv:             getEnv("APP_ENV", "local"),
 		Kafka_Broker_Url:   getEnv("KAFKA_BROKER_URL", "localhost:9092"),
 		JWTSecret:          getEnv("JWT_SECRET", "mySuperSecureKey1234567890@GoLan"),

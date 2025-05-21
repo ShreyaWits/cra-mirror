@@ -26,9 +26,6 @@ func ValidateSubscribeRequest(req *pb.SubscribeRequest) *errors.CustomError {
 	if !IsValidTopicName(req.GroupId) {
 		return errors.NewCustomError(errors.MSGErrInvalidGroup, fmt.Errorf("invalid group name: must contain only alphanumeric characters, '.', '_', or '-'"))
 	}
-	if req.GroupId == "" {
-		return errors.NewCustomError(errors.MSGErrInvalidGroup, fmt.Errorf("group_id is required"))
-	}
 	return nil
 }
 

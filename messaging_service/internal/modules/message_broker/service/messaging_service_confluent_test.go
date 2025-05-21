@@ -11,6 +11,7 @@ import (
 	"messaging_service/internal/modules/message_broker/service"
 	"messaging_service/pkg/confluent"
 	pkgErrors "messaging_service/pkg/errors"
+	"messaging_service/pkg/logger"
 	"messaging_service/pkg/observability"
 	"sync"
 	"testing"
@@ -18,8 +19,64 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	testifyMock "github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )
+
+// MockLogger implements the logger interface for testing
+type MockLogger struct {
+	testifyMock.Mock
+}
+
+func (m *MockLogger) Info(ctx context.Context, args ...interface{}) {
+	m.Called(append([]interface{}{ctx}, args...)...)
+}
+
+func (m *MockLogger) Error(ctx context.Context, args ...interface{}) {
+	m.Called(append([]interface{}{ctx}, args...)...)
+}
+
+func (m *MockLogger) Debug(ctx context.Context, args ...interface{}) {
+	m.Called(append([]interface{}{ctx}, args...)...)
+}
+
+func (m *MockLogger) Warn(ctx context.Context, args ...interface{}) {
+	m.Called(append([]interface{}{ctx}, args...)...)
+}
+
+func (m *MockLogger) WithFields(fields map[string]interface{}) logger.Logger {
+	return m
+}
+
+func (m *MockLogger) Sync() error {
+	return nil
+}
+
+// MockTracerService implements a mock tracer
+type MockTracerService struct {
+	testifyMock.Mock
+}
+
+func (m *MockTracerService) StartTracer(ctx context.Context, name string) (context.Context, interface{}) {
+	args := m.Called(ctx, name)
+	return args.Get(0).(context.Context), args.Get(1)
+}
+
+func (m *MockTracerService) StopSpan(span interface{}) {
+	m.Called(span)
+}
+
+func (m *MockTracerService) SetAttributes(span interface{}, attrs map[string]string) {
+	m.Called(span, attrs)
+}
+
+func (m *MockTracerService) SetStatus(span interface{}, code int, message string) {
+	m.Called(span, code, message)
+}
+
+func (m *MockTracerService) RecordError(span interface{}, err error) {
+	m.Called(span, err)
+}
 
 func TestTopicExists(t *testing.T) {
 	tests := []struct {
@@ -82,7 +139,6 @@ func TestTopicExists(t *testing.T) {
 }
 
 func TestConsumeMessage(t *testing.T) {
-
 	tests := []struct {
 		name      string
 		topic     string
@@ -119,16 +175,27 @@ func TestConsumeMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+
 			// Create a valid configuration
 			cfg := config.GetMockConfig()
 			mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 			mockFactory := mock.NewMockKafkaFactory(ctrl)
 			mockConsumer := mock.NewMockConsumer(ctrl)
-			service := &service.ConfluentMessagingService{
-				Factory: mockFactory,
-				Admin:   mockAdmin,
-				Config:  cfg,
-			}
+
+			// Create the observability stack with a real instance
+			env := &config.Env{}
+			mockObs := observability.NewObservabilityStack(env)
+
+			// Set up the CreateAdmin mock expectation
+			mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+			// Create the service through proper constructor
+			messagingService, _ := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+			// Type assertion to access internal fields for testing
+			svc := messagingService.(*service.ConfluentMessagingService)
+			// Override Admin for testing
+			svc.Admin = mockAdmin
+
 			ctx, cancel := context.WithCancel(context.Background())
 			stream := &mockSubscribeV1Server{
 				ctx: ctx, // or context.WithCancel for controlled shutdown
@@ -140,12 +207,10 @@ func TestConsumeMessage(t *testing.T) {
 				// Simulate consumer Start and cancel after mock call
 				mockConsumer.EXPECT().Start(gomock.Any()).Do(func(ctx context.Context) {
 					cancel()
-
 				})
 				mockConsumer.EXPECT().Close()
 			case "topic call error":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"any-topic"}, errors.New("topic call error"))
-
 			case "topic does not exist":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 				mockFactory.EXPECT().CreateConsumer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("creation error"))
@@ -160,9 +225,8 @@ func TestConsumeMessage(t *testing.T) {
 			configurator := confluent.NewConfigurator([]string{"localhost:9092"}, cfg)
 			kafkaConfig := configurator.CreateSubscribeConfig(tt.topic, tt.group, &pb.SubscribeRequest{Topic: tt.topic, GroupId: tt.group})
 
-			// Call the CreateTopic method
-
-			err := service.ConsumeMessage(stream, kafkaConfig)
+			// Call the ConsumeMessage method
+			err := svc.ConsumeMessage(stream, kafkaConfig)
 
 			if tt.expectErr {
 				assert.Error(t, err)
@@ -293,13 +357,26 @@ func TestPublishMessage(t *testing.T) {
 
 			mockAdmin := mock.NewMockKafkaAdmin(ctrl)
 			mockProducer := mock.NewMockProducer(ctrl)
-			service := &service.ConfluentMessagingService{
-				Factory: mock.NewMockKafkaFactory(ctrl),
-				Admin:   mockAdmin,
-				Producers: map[string]confluent.Producer{
-					tt.topic: mockProducer,
-				},
-				Config: cfg,
+			mockFactory := mock.NewMockKafkaFactory(ctrl)
+
+			// Create the observability stack
+			env := &config.Env{}
+			mockObs := observability.NewObservabilityStack(env)
+
+			// Set up mock for CreateAdmin
+			mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+			// Create the service using the proper constructor
+			svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+			assert.NoError(t, err)
+
+			// Type assertion to access internal fields
+			service := svc.(*service.ConfluentMessagingService)
+
+			// Override fields for testing
+			service.Admin = mockAdmin
+			service.Producers = map[string]confluent.Producer{
+				tt.topic: mockProducer,
 			}
 
 			switch tt.name {
@@ -318,11 +395,11 @@ func TestPublishMessage(t *testing.T) {
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(false, nil)
 			case "topic call error":
-				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{}, errors.New("topic call error"))
+				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"any-topic"}, errors.New("topic call error"))
 			case "publish message successfully":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{tt.topic}, nil)
 				mockAdmin.EXPECT().HasActiveConsumers(gomock.Any(), tt.topic).Return(true, nil)
-				mockProducer.EXPECT().BeginTransaction(gomock.Any()).DoAndReturn(func() error {
+				mockProducer.EXPECT().BeginTransaction(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					time.Sleep(time.Second) // simulate delay
 					return nil
 				})
@@ -354,14 +431,13 @@ func TestPublishMessage(t *testing.T) {
 				service.Producers = make(map[string]confluent.Producer)
 
 				// Setup a factory that fails producer creation
-				service.Factory.(*mock.MockKafkaFactory).EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(nil, errors.New("producer creation failed"))
+				mockFactory.EXPECT().CreateProducer(gomock.Any(), gomock.Any()).Return(nil, errors.New("producer creation failed"))
 			}
 
-			err := service.PublishMessage(context.Background(), tt.cfg.(confluent.KafkaConfig), &pb.PublishRequest{Topic: tt.topic, Value: tt.value, Key: tt.key})
+			err = service.PublishMessage(context.Background(), tt.cfg.(confluent.KafkaConfig), &pb.PublishRequest{Topic: tt.topic, Value: tt.value, Key: tt.key})
 			if tt.expectErr {
 				assert.Error(t, err)
 			} else {
-
 				assert.Nil(t, err)
 			}
 		})
@@ -414,11 +490,24 @@ func TestCreateTopic(t *testing.T) {
 			// Create a valid configuration
 			cfg := config.GetMockConfig()
 			mockAdmin := mock.NewMockKafkaAdmin(ctrl)
-			service := &service.ConfluentMessagingService{
-				Factory: mock.NewMockKafkaFactory(ctrl),
-				Admin:   mockAdmin,
-				Config:  cfg,
-			}
+			mockFactory := mock.NewMockKafkaFactory(ctrl)
+
+			// Create the observability stack
+			env := &config.Env{}
+			mockObs := observability.NewObservabilityStack(env)
+
+			// Set up mock for CreateAdmin
+			mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+			// Create the service using the proper constructor
+			svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+			assert.NoError(t, err)
+
+			// Type assertion to access internal fields
+			service := svc.(*service.ConfluentMessagingService)
+
+			// Override fields for testing
+			service.Admin = mockAdmin
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -446,7 +535,7 @@ func TestCreateTopic(t *testing.T) {
 			case "topic call error":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"any-topic"}, errors.New("topic call error"))
 				// When TopicExists fails, the code continues with topic creation, so we need to expect a CreateTopic call
-				mockAdmin.EXPECT().CreateTopic(gomock.Any(), tt.topic, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAdmin.EXPECT().CreateTopic(gomock.Any(), tt.topic, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			case "error creating topic":
 				mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"any-topic"}, nil)
 				mockAdmin.EXPECT().CreateTopic(gomock.Any(), tt.topic, gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("creation error"))
@@ -458,7 +547,7 @@ func TestCreateTopic(t *testing.T) {
 			t_cfg := kafkaConfig.CreateTopicConfig(tt.topic, &pb.CreateTopicRequest{Topic: tt.topic})
 
 			// Call the CreateTopic method
-			err := service.CreateTopic(ctx, &pb.CreateTopicRequest{Topic: tt.topic}, t_cfg)
+			err = service.CreateTopic(ctx, &pb.CreateTopicRequest{Topic: tt.topic}, t_cfg)
 
 			// Assert the expected outcome
 			if tt.expectErr {
@@ -545,9 +634,12 @@ func TestNewConfluentMessagingService(t *testing.T) {
 				KafkaConsumerMaxPollRecords:   500,
 			}
 
+			// Create a proper observability stack
+			env := &config.Env{}
+			mockObs := observability.NewObservabilityStack(env)
+
 			// Use the real constructor but monkey-patch the factory
-			// This would require your production code to allow injecting the factory.
-			_, err := service.NewConfluentMessagingService(cfg, mockFactory, &observability.ObservabilityStack{}) // hypothetical constructor
+			_, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs) // hypothetical constructor
 
 			if tt.expectAdminNil {
 				assert.Error(t, err)
@@ -590,13 +682,23 @@ func TestPublishMessageJSONError(t *testing.T) {
 
 	cfg := config.GetMockConfig()
 
-	// Create the service - don't include the producer in the map to test json marshaling
-	service := &service.ConfluentMessagingService{
-		Factory:   mockFactory,
-		Admin:     mockAdmin,
-		Producers: make(map[string]confluent.Producer),
-		Config:    cfg,
-	}
+	// Create the observability stack
+	env := &config.Env{}
+	mockObs := observability.NewObservabilityStack(env)
+
+	// Set up mock for CreateAdmin
+	mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+	// Create the service using the proper constructor
+	svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+	assert.NoError(t, err)
+
+	// Type assertion to access internal fields
+	service := svc.(*service.ConfluentMessagingService)
+
+	// Override fields for testing
+	service.Admin = mockAdmin
+	service.Producers = make(map[string]confluent.Producer)
 
 	// Set up mock expectations
 	mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"json-error-topic"}, nil)
@@ -632,7 +734,7 @@ func TestPublishMessageJSONError(t *testing.T) {
 	}
 
 	// Call the method
-	err := service.PublishMessage(context.Background(), kafkaConfig, req)
+	err = service.PublishMessage(context.Background(), kafkaConfig, req)
 
 	// Verify error is returned and has the expected message
 	assert.NotNil(t, err)
@@ -653,14 +755,24 @@ func TestPublishMessageBeginTransactionFailure(t *testing.T) {
 
 	cfg := config.GetMockConfig()
 
-	// Create the service
-	service := &service.ConfluentMessagingService{
-		Factory: mockFactory,
-		Admin:   mockAdmin,
-		Producers: map[string]confluent.Producer{
-			"transaction-error-topic": mockProducer,
-		},
-		Config: cfg,
+	// Create the observability stack
+	env := &config.Env{}
+	mockObs := observability.NewObservabilityStack(env)
+
+	// Set up mock for CreateAdmin
+	mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+	// Create the service using the proper constructor
+	svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+	assert.NoError(t, err)
+
+	// Type assertion to access internal fields
+	service := svc.(*service.ConfluentMessagingService)
+
+	// Override fields for testing
+	service.Admin = mockAdmin
+	service.Producers = map[string]confluent.Producer{
+		"transaction-error-topic": mockProducer,
 	}
 
 	// Create request
@@ -703,7 +815,7 @@ func TestPublishMessageBeginTransactionFailure(t *testing.T) {
 	})
 
 	// Call the method
-	err := service.PublishMessage(context.Background(), kafkaConfig, req)
+	err = service.PublishMessage(context.Background(), kafkaConfig, req)
 
 	// Verify no error is returned - it should succeed after recreating the producer
 	assert.Nil(t, err)
@@ -725,14 +837,24 @@ func TestPublishMessageBeginTransactionDoubleFailure(t *testing.T) {
 
 	cfg := config.GetMockConfig()
 
-	// Create the service
-	service := &service.ConfluentMessagingService{
-		Factory: mockFactory,
-		Admin:   mockAdmin,
-		Producers: map[string]confluent.Producer{
-			"transaction-error-topic": mockProducer,
-		},
-		Config: cfg,
+	// Create the observability stack
+	env := &config.Env{}
+	mockObs := observability.NewObservabilityStack(env)
+
+	// Set up mock for CreateAdmin
+	mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+	// Create the service using the proper constructor
+	svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+	assert.NoError(t, err)
+
+	// Type assertion to access internal fields
+	service := svc.(*service.ConfluentMessagingService)
+
+	// Override fields for testing
+	service.Admin = mockAdmin
+	service.Producers = map[string]confluent.Producer{
+		"transaction-error-topic": mockProducer,
 	}
 
 	// Create request
@@ -765,7 +887,7 @@ func TestPublishMessageBeginTransactionDoubleFailure(t *testing.T) {
 	mockReplacementProducer.EXPECT().BeginTransaction(gomock.Any()).Return(errors.New("second transaction begin failed"))
 
 	// Call the method
-	err := service.PublishMessage(context.Background(), kafkaConfig, req)
+	err = service.PublishMessage(context.Background(), kafkaConfig, req)
 
 	// Verify error is returned
 	assert.NotNil(t, err)
@@ -784,13 +906,23 @@ func TestPublishMessageCircularReference(t *testing.T) {
 
 	cfg := config.GetMockConfig()
 
-	// Create the regular service
-	service := &service.ConfluentMessagingService{
-		Factory:   mockFactory,
-		Admin:     mockAdmin,
-		Producers: make(map[string]confluent.Producer),
-		Config:    cfg,
-	}
+	// Create the observability stack
+	env := &config.Env{}
+	mockObs := observability.NewObservabilityStack(env)
+
+	// Set up mock for CreateAdmin
+	mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+	// Create the service using the proper constructor
+	svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+	assert.NoError(t, err)
+
+	// Type assertion to access internal fields
+	service := svc.(*service.ConfluentMessagingService)
+
+	// Override fields for testing
+	service.Admin = mockAdmin
+	service.Producers = make(map[string]confluent.Producer)
 
 	// Set up mock expectations for topic check
 	mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"circular-ref-topic"}, nil)
@@ -828,11 +960,15 @@ func TestPublishMessageCircularReference(t *testing.T) {
 		Return(fmt.Errorf("json marshaling error: encountered a cycle")).AnyTimes()
 
 	// Call the method directly to test the error path
-	err := service.PublishMessage(context.Background(), kafkaConfig, req)
+	err = service.PublishMessage(context.Background(), kafkaConfig, req)
 
 	// Verify error has the expected properties
 	assert.NotNil(t, err)
-	assert.Equal(t, pkgErrors.PUBErrPublishFailed, err.ErrorCode)
+	customErr, ok := err.(*pkgErrors.CustomError)
+	assert.True(t, ok, "Expected the error to be of type *pkgErrors.CustomError")
+	if ok {
+		assert.Equal(t, pkgErrors.PUBErrPublishFailed, customErr.ErrorCode)
+	}
 }
 
 // TestPublishMessageGetOrCreateProducerError tests the case where GetOrCreateProducer returns an error
@@ -846,13 +982,23 @@ func TestPublishMessageGetOrCreateProducerError(t *testing.T) {
 
 	cfg := config.GetMockConfig()
 
-	// Create the service with an empty producers map to force creation
-	service := &service.ConfluentMessagingService{
-		Factory:   mockFactory,
-		Admin:     mockAdmin,
-		Producers: make(map[string]confluent.Producer),
-		Config:    cfg,
-	}
+	// Create the observability stack
+	env := &config.Env{}
+	mockObs := observability.NewObservabilityStack(env)
+
+	// Set up mock for CreateAdmin
+	mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+	// Create the service using the proper constructor
+	svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+	assert.NoError(t, err)
+
+	// Type assertion to access internal fields
+	service := svc.(*service.ConfluentMessagingService)
+
+	// Override fields for testing
+	service.Admin = mockAdmin
+	service.Producers = make(map[string]confluent.Producer)
 
 	// Set up mock expectations for topic check - topic exists
 	mockAdmin.EXPECT().ListTopics(gomock.Any()).Return([]string{"producer-error-topic"}, nil)
@@ -873,12 +1019,16 @@ func TestPublishMessageGetOrCreateProducerError(t *testing.T) {
 	}
 
 	// Call the method
-	err := service.PublishMessage(context.Background(), kafkaConfig, req)
+	err = service.PublishMessage(context.Background(), kafkaConfig, req)
 
 	// Verify error is returned with the expected code and message
 	assert.NotNil(t, err)
-	assert.Equal(t, pkgErrors.PUBErrProducerNotReady, err.ErrorCode)
-	assert.Contains(t, err.Error(), "failed to create producer")
+	customErr, ok := err.(*pkgErrors.CustomError)
+	assert.True(t, ok, "Expected the error to be of type *pkgErrors.CustomError")
+	if ok {
+		assert.Equal(t, pkgErrors.PUBErrProducerNotReady, customErr.ErrorCode)
+		assert.Contains(t, err.Error(), "failed to create producer")
+	}
 }
 
 // TestPublishMessageProducerRecreationAfterTxnError tests the scenario where producer recreation fails after BeginTransaction error
@@ -893,14 +1043,24 @@ func TestPublishMessageProducerRecreationAfterTxnError(t *testing.T) {
 
 	cfg := config.GetMockConfig()
 
-	// Create the service with a producer that will fail during BeginTransaction
-	service := &service.ConfluentMessagingService{
-		Factory: mockFactory,
-		Admin:   mockAdmin,
-		Producers: map[string]confluent.Producer{
-			"txn-recreation-error-topic": mockProducer,
-		},
-		Config: cfg,
+	// Create the observability stack
+	env := &config.Env{}
+	mockObs := observability.NewObservabilityStack(env)
+
+	// Set up mock for CreateAdmin
+	mockFactory.EXPECT().CreateAdmin(gomock.Any()).Return(mockAdmin, nil).AnyTimes()
+
+	// Create the service using the proper constructor
+	svc, err := service.NewConfluentMessagingService(cfg, mockFactory, mockObs)
+	assert.NoError(t, err)
+
+	// Type assertion to access internal fields
+	service := svc.(*service.ConfluentMessagingService)
+
+	// Override fields for testing
+	service.Admin = mockAdmin
+	service.Producers = map[string]confluent.Producer{
+		"txn-recreation-error-topic": mockProducer,
 	}
 
 	// Set up mock expectations for topic check
@@ -929,12 +1089,16 @@ func TestPublishMessageProducerRecreationAfterTxnError(t *testing.T) {
 	}
 
 	// Call the method
-	err := service.PublishMessage(context.Background(), kafkaConfig, req)
+	err = service.PublishMessage(context.Background(), kafkaConfig, req)
 
 	// Verify error is returned with the expected code and message
 	assert.NotNil(t, err)
-	assert.Equal(t, pkgErrors.PUBErrProducerNotReady, err.ErrorCode)
-	assert.Contains(t, err.Error(), "failed to recreate producer after transaction failure")
+	customErr, ok := err.(*pkgErrors.CustomError)
+	assert.True(t, ok, "Expected the error to be of type *pkgErrors.CustomError")
+	if ok {
+		assert.Equal(t, pkgErrors.PUBErrProducerNotReady, customErr.ErrorCode)
+		assert.Contains(t, err.Error(), "failed to recreate producer after transaction failure")
+	}
 }
 
 func TestGetOrCreateProducer(t *testing.T) {

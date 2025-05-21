@@ -15,9 +15,11 @@ type Config = models.MessaggingConfigResponse
 type Env = models.EnvConfig
 
 var (
-	config    *Config = &Config{}
-	envConfig *Env    = &Env{}
-	validate  *validator.Validate
+	config          *Config = &Config{}
+	envConfig       *Env    = &Env{}
+	validate        *validator.Validate
+	SERVICE_NAME    string = "messaging_service"
+	SERVICE_VERSION string = "1.0.0"
 )
 
 func GetKafkaRetentionMs() int {
@@ -100,18 +102,14 @@ func LoadConfig() (*Env, error) {
 
 	// Load environment variables into struct
 	envConfig = &models.EnvConfig{
-		ConfigServiceUrl:   getEnvString("CONFIG_SERVICE_URL", ""),
-		ConfigServiceToken: getEnvString("CONFIG_SERVICE_TOKEN", ""),
-		Environment:        getEnvString("ENVIRONMENT", ""),
-		ServiceName:        getEnvString("SERVICE_NAME", ""),
-		HttpPort:           getEnvString("HTTP_PORT", ""),
-		GrpcPort:           getEnvString("GRPC_PORT", ""),
-		CacheUrl:           getEnvString("CACHE_URL", ""),
-		ObservabilityUrl:   getEnvString("OBSERVABILITY_URL", ""),
-		ServiceVersion:     getEnvString("SERVICE_VERSION", ""),
-		CACHE_TTL:          getEnvInt("CACHE_TTL", 24), // Default 24 hours
-		TLSDisabled:        getEnvBool("TLSDISABLE", false),
-		SamplingRatio:      getEnvFloat("SAMPLINGRATIO", 1.0), // Default to 100% sampling
+		ConfigServiceUrl:            getEnvString("CONFIG_SERVICE_URL", ""),
+		ConfigServiceToken:          getEnvString("MESSAGING_CONFIG_SERVICE_TOKEN", ""),
+		Environment:                 getEnvString("ENVIRONMENT", ""),
+		HttpPort:                    getEnvString("REST_PORT", ""),
+		GrpcPort:                    getEnvString("GRPC_PORT", ""),
+		CacheUrl:                    getEnvString("CACHING_SERVICE_GRPC_URL", ""),
+		ObservabilityUrl:            getEnvString("OTLEL_COLLECTOR_GRPC_ENDPOINT", ""),
+		MESSAGING_SERVICE_REDIS_TTL: getEnvInt("MESSAGING_SERVICE_REDIS_TTL", 240), // Default 24 hours
 	}
 
 	// Validate using the validator

@@ -55,27 +55,14 @@ func (k *Configurator) CreatePublishConfig(topic string, req *pb.PublishRequest)
 	cfg.ExactlyOnceConfig.EnableIdempotence = true
 	cfg.ExactlyOnceConfig.EnableTransactions = true
 
-	// Apply environment-based configuration if available
-	if k.config != nil {
-		cfg.MaxAttempts = k.config.KafkaMaxAttempts
-		cfg.RetryBackoffMs = k.config.KafkaRetryBackoffMs
-		cfg.BatchSize = k.config.KafkaBatchSize
-		cfg.BatchBytes = k.config.KafkaBatchBytes
-		cfg.BatchTimeout = time.Duration(k.config.KafkaBatchTimeoutMs) * time.Millisecond
-		cfg.ReadTimeout = time.Duration(k.config.KafkaReadTimeoutMs) * time.Millisecond
-		cfg.WriteTimeout = time.Duration(k.config.KafkaWriteTimeoutMs) * time.Millisecond
-		cfg.CompressionType = k.config.KafkaCompressionCodec
-	} else {
-		// Fallback to default values if config is not available
-		cfg.MaxAttempts = 3
-		cfg.RetryBackoffMs = 100
-		cfg.BatchSize = 100
-		cfg.BatchBytes = 1 * 1024 * 1024 // 1MB
-		cfg.BatchTimeout = 500 * time.Millisecond
-		cfg.ReadTimeout = 5 * time.Second
-		cfg.WriteTimeout = 5 * time.Second
-		cfg.CompressionType = "snappy"
-	}
+	cfg.MaxAttempts = k.config.KafkaMaxAttempts
+	cfg.RetryBackoffMs = k.config.KafkaRetryBackoffMs
+	cfg.BatchSize = k.config.KafkaBatchSize
+	cfg.BatchBytes = k.config.KafkaBatchBytes
+	cfg.BatchTimeout = time.Duration(k.config.KafkaBatchTimeoutMs) * time.Millisecond
+	cfg.ReadTimeout = time.Duration(k.config.KafkaReadTimeoutMs) * time.Millisecond
+	cfg.WriteTimeout = time.Duration(k.config.KafkaWriteTimeoutMs) * time.Millisecond
+	cfg.CompressionType = k.config.KafkaCompressionCodec
 
 	return cfg
 }

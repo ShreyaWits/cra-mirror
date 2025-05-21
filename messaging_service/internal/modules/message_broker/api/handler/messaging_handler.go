@@ -199,17 +199,6 @@ func (s *MessagingHandler) CreateTopicV1(ctx context.Context, req *pb.CreateTopi
 	}, nil
 }
 
-// Helper function to get request ID from context
-func getRequestID(ctx context.Context) string {
-	// Check if request ID is in the context
-	if id, ok := ctx.Value("request_id").(string); ok && id != "" {
-		return id
-	}
-
-	// Fallback to timestamp-based ID if not found
-	return fmt.Sprintf("req-%d", time.Now().UnixNano())
-}
-
 // UpdateMessagingService updates the messaging service with a new instance
 func (h *MessagingHandler) UpdateMessagingService(config *appconfig.Config, messagingService service.MessagingService) error {
 	// Validate inputs

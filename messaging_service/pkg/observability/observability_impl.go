@@ -15,8 +15,8 @@ type ObservabilityStack struct {
 
 func NewObservabilityStack(env *config.Env) *ObservabilityStack {
 	return &ObservabilityStack{
-		TracerService:  tracer.NewTracer(env.ServiceName, true),
-		MetricsService: metrics.NewMetricsService(env.ServiceName, true),
-		LoggerService:  logger.NewLogger(env.ServiceName, true),
+		TracerService:  tracer.NewTracer(config.SERVICE_NAME, true),
+		MetricsService: metrics.NewMetricsService(config.SERVICE_NAME, true),
+		LoggerService:  logger.NewLogger(config.SERVICE_NAME, true),
 	}
 }

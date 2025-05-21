@@ -147,8 +147,9 @@ func (l *customLogger) Sync() error {
 	return nil
 }
 
-// Helper function to format endpoint by ensuring it doesn't have a protocol prefix
-func formatEndpoint(endpoint string) string {
+// FormatEndpoint ensures an endpoint doesn't have a protocol prefix
+// Exported for testing
+func FormatEndpoint(endpoint string) string {
 	// Remove any protocol prefix if present
 	if strings.HasPrefix(endpoint, "http://") {
 		endpoint = endpoint[7:]
@@ -163,7 +164,7 @@ func ValidateObservabilityBackends(ctx context.Context, env *models.EnvConfig) e
 	// Try connecting to the OTLP endpoint
 	conn, err := grpc.DialContext(
 		ctx,
-		formatEndpoint(env.ObservabilityUrl),
+		FormatEndpoint(env.ObservabilityUrl),
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithTimeout(5*time.Second),

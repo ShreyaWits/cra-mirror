@@ -38,7 +38,7 @@ func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Env) (ConfigC
 	if cfg.Environment == "" {
 		return nil, fmt.Errorf("environment is required in environment configuration")
 	}
-	if cfg.ServiceName == "" {
+	if config.SERVICE_NAME == "" {
 		return nil, fmt.Errorf("service name is required in environment configuration")
 	}
 
@@ -54,7 +54,7 @@ func (c *ConfigClientImpl) FetchConfig(ctx context.Context) (*models.MessaggingC
 		"%s/config/%s/%s",
 		c.cfg.ConfigServiceUrl,
 		c.cfg.Environment,
-		c.cfg.ServiceName,
+		config.SERVICE_NAME,
 	)
 
 	fmt.Println("[ConfigClient] Fetching config from URL:", fullURL)

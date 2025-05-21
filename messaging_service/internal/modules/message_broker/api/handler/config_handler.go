@@ -19,14 +19,14 @@ const (
 type ReinitializeCallback func(configuration *config.Config) error
 
 type ConfigHandler struct {
-	configManagerService *service.ConfigManagerService
+	configManagerService service.ConfigManagerServiceInterface
 	env                  *config.Env
 	reinitCallback       ReinitializeCallback
 	obs                  *observability.ObservabilityStack
 }
 
 // NewConfigHandler creates a new instance of ConfigHandler
-func NewConfigHandler(configManagerService *service.ConfigManagerService, env *config.Env, obs *observability.ObservabilityStack) (*ConfigHandler, error) {
+func NewConfigHandler(configManagerService service.ConfigManagerServiceInterface, env *config.Env, obs *observability.ObservabilityStack) (*ConfigHandler, error) {
 	// Validate input arguments
 	if configManagerService == nil {
 		return nil, fmt.Errorf("configManagerService cannot be nil in NewConfigHandler")
@@ -38,10 +38,6 @@ func NewConfigHandler(configManagerService *service.ConfigManagerService, env *c
 		return nil, fmt.Errorf("observability stack cannot be nil in NewConfigHandler")
 	}
 
-	// Validate required environment fields
-	if env.ServiceName == "" {
-		return nil, fmt.Errorf("service name is required in environment configuration")
-	}
 
 	return &ConfigHandler{
 		configManagerService: configManagerService,
@@ -85,9 +81,9 @@ func (h *ConfigHandler) UpdateConfigurations(ctx *fiber.Ctx) error {
 
 	config.SetConfig(configurations)
 
-	err := h.configManagerService.SetDataToCache(tCtx, h.env.ServiceName, configurations)
+	err := h.configManagerService.SetDataToCache(tCtx, "config", configurations)
 	if err != nil {
-		loggerdata := fmt.Sprintf("Error saving data in cache service: %v", err)
+		loggerdata := fmt.Sprintf("Error saving data in cache service : %v", err)
 		h.obs.LoggerService.Error(tCtx, loggerdata)
 		h.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{"error": loggerdata})
 	}

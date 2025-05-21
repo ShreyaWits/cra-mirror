@@ -10,6 +10,22 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// DialerFunc defines the signature for a function that creates a gRPC connection
+type DialerFunc func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
+
+// DefaultDialer implements the default gRPC connection creation
+func DefaultDialer(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	return grpc.NewClient(target, opts...)
+}
+
+// CacheServiceClientFactory defines the signature for a function that creates a CacheServiceClient
+type CacheServiceClientFactory func(conn *grpc.ClientConn) pb.CacheServiceClient
+
+// DefaultCacheServiceClientFactory is the default factory for creating a CacheServiceClient
+func DefaultCacheServiceClientFactory(conn *grpc.ClientConn) pb.CacheServiceClient {
+	return pb.NewCacheServiceClient(conn)
+}
+
 type RedisClient interface {
 	Close() error
 	SetCache(ctx context.Context, namespace, key, value string, ttl time.Duration, trackingID string) error
@@ -23,14 +39,24 @@ type RedisClientStruct struct {
 	client pb.CacheServiceClient
 }
 
-// NewClient creates a new Redis cache client
+// NewRedisClient creates a new Redis cache client
 func NewRedisClient(redisServiceAddr string) (*RedisClientStruct, error) {
+	return NewRedisClientWithOptions(redisServiceAddr, DefaultDialer, DefaultCacheServiceClientFactory)
+}
+
+// NewRedisClientWithDialer creates a new Redis cache client using the provided dialer function
+func NewRedisClientWithDialer(redisServiceAddr string, dialer DialerFunc) (*RedisClientStruct, error) {
+	return NewRedisClientWithOptions(redisServiceAddr, dialer, DefaultCacheServiceClientFactory)
+}
+
+// NewRedisClientWithOptions creates a new Redis cache client with custom options
+func NewRedisClientWithOptions(redisServiceAddr string, dialer DialerFunc, clientFactory CacheServiceClientFactory) (*RedisClientStruct, error) {
 	// Validate input arguments
 	if redisServiceAddr == "" {
 		return nil, fmt.Errorf("redis service address cannot be empty")
 	}
 
-	conn, err := grpc.NewClient(
+	conn, err := dialer(
 		redisServiceAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -43,7 +69,7 @@ func NewRedisClient(redisServiceAddr string) (*RedisClientStruct, error) {
 		return nil, fmt.Errorf("failed to establish connection to Redis service")
 	}
 
-	client := pb.NewCacheServiceClient(conn)
+	client := clientFactory(conn)
 
 	// Validate client creation
 	if client == nil {

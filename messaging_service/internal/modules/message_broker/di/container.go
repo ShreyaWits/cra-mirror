@@ -91,13 +91,13 @@ func NewContainer() (*Container, error) {
 	}
 
 	// Create config manager service
-	configManagerService, err := service.NewConfigManager(configClient, cacheClient)
+	configManagerService, err := service.NewConfigManager(configClient, cacheClient, obs, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config manager service: %w", err)
 	}
 
 	// Fetch configuration
-	cfg, err := configManagerService.GetFromApiConfiguration()
+	cfg, err := configManagerService.GetFromApiConfiguration(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("not able to fetch config: %w", err)
 	}
@@ -171,7 +171,7 @@ func (c *Container) Reinitialize(newConfig *config.Config) error {
 	}
 
 	c.Obs.LoggerService.Info(ctx, "Critical configuration changes detected, reinitializing services", map[string]interface{}{
-		"service":      c.Env.ServiceName,
+		"service":      config.SERVICE_NAME,
 		"kafkaBrokers": newConfig.KafkaBrokers,
 	})
 
