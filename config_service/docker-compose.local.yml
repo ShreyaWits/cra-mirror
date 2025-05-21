@@ -15,17 +15,20 @@ services:
       ports:
         - "4001:4001"
       environment:
-        - PORT=4001
+        - REST_PORT=4001
         - IS_DOCKER=true
-        - DATABASE_HOST=yugabyte-db
-        - DATABASE_PORT=5433
-        - DATABASE_USER=yugabyte
-        - DATABASE_PASSWORD=yugabyte
-        - DATABASE_NAME=yugabyte
-        - ETCD_ENDPOINT=etcd:2379
-        - TEMPORAL_ENDPOINT=temporal:7233
-        - ADMIN_SECRET=abd5f3e65f1f1e40f5cbdac1ef0344519ab7b0b569313c97db13cb9cce4bcf7d
-        - JWT_SECRET=aklsdjflk
+
+        - YUGABYTE_DATABASE_HOST=yugabyte-db
+        - YUGABYTE_DATABASE_PORT=5433
+        - YUGABYTE_DATABASE_USER=yugabyte
+        - YUGABYTE_DATABASE_PASSWORD=yugabyte
+        - CONFIG_SERVICE_YUGABYTE_DATABASE_NAME=yugabyte
+
+        - ETCD_SERVER_ENDPOINT=etcd:2379
+        - TEMPORAL_SERVER_ENDPOINT=temporal:7233
+
+        - CONFIG_SERVICE_ADMIN_SECRET=abd5f3e65f1f1e40f5cbdac1ef0344519ab7b0b569313c97db13cb9cce4bcf7d
+        - CONFIG_SERVICE_JWT_SECRET=aklsdjflk
      
   worker:
     build:
@@ -34,7 +37,7 @@ services:
     # restart: always
     environment:
       - IS_DOCKER=true
-      - TEMPORAL_ENDPOINT=temporal:7233
+      - TEMPORAL_SERVER_ENDPOINT=temporal:7233
     networks:
       - nps2.0
       - temporal-network
