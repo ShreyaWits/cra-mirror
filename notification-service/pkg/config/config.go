@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	KAFKA_SERVER_URL string
+	KAFKA_BROKER_URL string
 	REDIS_HOST       string
 	REDIS_PORT       string
 	REDIS_USERNAME   string
@@ -30,7 +30,7 @@ func LoadConfig() *Config {
 		}
 
 		cfg = &Config{
-			KAFKA_SERVER_URL: GetEnv("KAFKA_SERVER_URL", "kafka:29092"),
+			KAFKA_BROKER_URL: GetEnv("KAFKA_BROKER_URL", "kafka:29092"),
 			REDIS_HOST:       GetEnv("REDIS_HOST", "localhost"),
 			REDIS_PORT:       GetEnv("REDIS_PORT", "6379"),
 			REDIS_USERNAME:   GetEnv("REDIS_USERNAME", ""),

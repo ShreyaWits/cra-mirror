@@ -124,7 +124,7 @@ func TestRunServer_Success(t *testing.T) {
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return grpcServer },
-		func(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
+		func(brokers []string, topics []string) (KafkaConsumer, error) {
 			return kafkaConsumer, nil
 		},
 		logger,
@@ -145,7 +145,7 @@ func TestRunServer_KafkaError(t *testing.T) {
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return &testGRPCServer{} },
-		func(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
+		func(brokers []string, topics []string) (KafkaConsumer, error) {
 			return nil, errors.New("kafka error")
 		},
 		logger,
@@ -167,7 +167,7 @@ func TestRunServer_GRPCError(t *testing.T) {
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return grpcServer },
-		func(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
+		func(brokers []string, topics []string) (KafkaConsumer, error) {
 			return kafkaConsumer, nil
 		},
 		logger,
@@ -195,7 +195,7 @@ func TestRunServer_GracefulShutdown(t *testing.T) {
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return grpcServer },
-		func(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
+		func(brokers []string, topics []string) (KafkaConsumer, error) {
 			return kafkaConsumer, nil
 		},
 		logger,
@@ -218,7 +218,7 @@ func TestRunServer_KafkaErrorWithShutdown(t *testing.T) {
 		func(key, def string) string { return def },
 		func() {},
 		func(port string) GRPCServer { return &testGRPCServer{} },
-		func(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
+		func(brokers []string, topics []string) (KafkaConsumer, error) {
 			return nil, errors.New("kafka error")
 		},
 		logger,

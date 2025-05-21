@@ -60,19 +60,18 @@ func InitDependency() {
 	CASSANDRA_PORT, err := strconv.Atoi(config.GetEnv("CASSANDRA_PORT", "9042"))
 	REDIS_HOST := config.GetEnv("REDIS_HOST", "localhost")
 	REDIS_PORT := config.GetEnv("REDIS_PORT", "6379")
-	TEMPORAL_SERVER_URL := config.GetEnv("TEMPORAL_SERVER_URL", "localhost:7233")
-	TEMPORAL_QUEUE := config.GetEnv("TEMPORAL_QUEUE", "notification-service-queue")
-	KAFKA_BROKER := config.GetEnv("KAFKA_BROKERS", "kafka:29092")
+	TEMPORAL_SERVER_ENDPOINT := config.GetEnv("TEMPORAL_SERVER_ENDPOINT", "localhost:7233")
 	if err != nil {
 		panic(err)
 	}
+	KAFKA_BROKER_URL := config.GetEnv("KAFKA_BROKER_URL", "kafka:29092")
 
 	log.Println("cassandra host", CASSANDRA_HOST)
 	log.Println("cassandra port", CASSANDRA_PORT)
 	log.Println("cassandra keyspace", CASSANDRA_KEYSPACE)
 	log.Println("cassandra username", CASSANDRA_USERNAME)
 	log.Println("cassandra password", CASSANDRA_PASSWORD)
-	log.Println("kafka broker", KAFKA_BROKER)
+	log.Println("kafka broker", KAFKA_BROKER_URL)
 
 	session := newCassandraDB(CASSANDRA_HOST, CASSANDRA_PORT, CASSANDRA_KEYSPACE, CASSANDRA_USERNAME, CASSANDRA_PASSWORD)
 
@@ -91,9 +90,9 @@ func InitDependency() {
 	notificationRedisRepo := newRedisService(redisRepo)
 
 	notificationRepo := newNotificationRepository(wrappedSession)
-	kafkaProducer := initKafkaPublisher(KAFKA_BROKER)
+	kafkaProducer := initKafkaPublisher(KAFKA_BROKER_URL)
 
-	temporalClient, err := initTemporal(TEMPORAL_SERVER_URL, TEMPORAL_QUEUE, "notification-service", notificationRepo, kafkaProducer)
+	temporalClient, err := initTemporal(TEMPORAL_SERVER_ENDPOINT, "notification-service", notificationRepo, kafkaProducer)
 	if err != nil {
 		panic(err)
 	}

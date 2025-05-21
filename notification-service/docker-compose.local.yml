@@ -73,7 +73,7 @@ services:
       - CASSANDRA_LOCAL_DC=dc1
       - CASSANDRA_RACK=rack1
       - CASSANDRA_HOSTS=cassandra:9042
-      - KAFKA_SERVER_URL=kafka:29092
+      - KAFKA_BROKER_URL=kafka:29092
     depends_on:
       cassandra:
         condition: service_healthy

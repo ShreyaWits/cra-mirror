@@ -114,16 +114,14 @@ func setEnvVars(vars map[string]string) func() {
 
 func TestInitDependency_Success(t *testing.T) {
 	reset := setEnvVars(map[string]string{
-		"CASSANDRA_HOST":      "localhost",
-		"CASSANDRA_KEYSPACE":  "ks",
-		"CASSANDRA_USERNAME":  "user",
-		"CASSANDRA_PASSWORD":  "pass",
-		"CASSANDRA_PORT":      "9042",
-		"REDIS_HOST":          "localhost",
-		"REDIS_PORT":          "6379",
-		"TEMPORAL_SERVER_URL": "localhost:7233",
-		"TEMPORAL_QUEUE":      "queue",
-		"KAFKA_BROKERS":       "localhost:9092",
+		"CASSANDRA_HOST":           "localhost",
+		"CASSANDRA_KEYSPACE":       "ks",
+		"CASSANDRA_USERNAME":       "user",
+		"CASSANDRA_PASSWORD":       "pass",
+		"CASSANDRA_PORT":           "9042",
+		"REDIS_HOST":               "localhost",
+		"REDIS_PORT":               "6379",
+		"TEMPORAL_SERVER_ENDPOINT": "localhost:7233",
 	})
 	defer reset()
 
@@ -172,7 +170,7 @@ func TestInitDependency_Success(t *testing.T) {
 	defer func() { initKafkaPublisher = origInitKafkaPublisher }()
 
 	origInitTemporal := initTemporal
-	initTemporal = func(url, queue, svc string, repo repositories.NotificationRepositoryInterface, kafka *kafka.KafkaPublisher) (*temporal.TemporalClient, error) {
+	initTemporal = func(url, svc string, repo repositories.NotificationRepositoryInterface, kafka *kafka.KafkaPublisher) (*temporal.TemporalClient, error) {
 		return &temporal.TemporalClient{}, nil
 	}
 	defer func() { initTemporal = origInitTemporal }()
