@@ -2,35 +2,26 @@ package opentelemetry
 
 import (
 	"context"
+	"io"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
+	logsdk "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"thirdparty_service/internal/config"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-// Mock config for testing
-type mockConfig struct{}
-
-func (m *mockConfig) GetOTELCollectorURL() string {
-	return ""
-}
-
-func (m *mockConfig) GetServiceName() string {
-	return "test-service"
-}
-
-func (m *mockConfig) GetDeploymentEnv() string {
-	return "test"
-}
 
 func TestSetupOTelSDK(t *testing.T) {
 	// Save original environment variables
@@ -216,3 +207,233 @@ func TestSetupOTelSDK(t *testing.T) {
 		}
 	})
 }
+
+func TestNewPropagator(t *testing.T) {
+	prop := newPropagator()
+	assert.NotNil(t, prop)
+
+	// Verify it implements TextMapPropagator
+	_, ok := prop.(propagation.TextMapPropagator)
+	assert.True(t, ok, "Expected a TextMapPropagator")
+
+	// Use a carrier and inject context with baggage
+	ctx := context.Background()
+	b, err := baggage.NewMember("user", "alice")
+	assert.NoError(t, err)
+
+	bg, err := baggage.New(b)
+	assert.NoError(t, err)
+
+	ctx = baggage.ContextWithBaggage(ctx, bg)
+	carrier := propagation.MapCarrier{}
+
+	prop.Inject(ctx, carrier)
+
+	// Check if baggage was injected
+	assert.Contains(t, carrier, "baggage", "Expected 'baggage' header in carrier")
+	assert.Contains(t, carrier["baggage"], "user=alice")
+}
+
+func TestNewResource(t *testing.T) {
+	t.Run("successful creation", func(t *testing.T) {
+		// Save original config values
+		originalServiceName := config.AppConfig.ServiceName
+		originalEnvironment := config.AppConfig.Environment
+
+		// Set test config values
+		config.AppConfig.ServiceName = "test-service"
+		config.AppConfig.Environment = "test"
+
+		defer func() {
+			config.AppConfig.ServiceName = originalServiceName
+			config.AppConfig.Environment = originalEnvironment
+		}()
+
+		res, err := NewResource()
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+
+		// Verify resource attributes
+		attrs := res.Attributes()
+		serviceNameFound := false
+		environmentFound := false
+
+		for i := 0; i < len(attrs); i++ {
+			attr := attrs[i]
+			if attr.Key == semconv.ServiceNameKey {
+				serviceNameFound = true
+				assert.Equal(t, "test-service", attr.Value.AsString())
+			}
+			if attr.Key == semconv.DeploymentEnvironmentKey {
+				environmentFound = true
+				assert.Equal(t, "test", attr.Value.AsString())
+			}
+		}
+
+		assert.True(t, serviceNameFound, "Service name attribute not found")
+		assert.True(t, environmentFound, "Environment attribute not found")
+	})
+
+	t.Run("empty service name", func(t *testing.T) {
+		// Save original config values
+		originalServiceName := config.AppConfig.ServiceName
+		originalEnvironment := config.AppConfig.Environment
+
+		// Set test config values
+		config.AppConfig.ServiceName = ""
+		config.AppConfig.Environment = "test"
+
+		defer func() {
+			config.AppConfig.ServiceName = originalServiceName
+			config.AppConfig.Environment = originalEnvironment
+		}()
+
+		res, err := NewResource()
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+	})
+}
+
+func TestStdoutExporter(t *testing.T) {
+	t.Run("export records", func(t *testing.T) {
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+		defer func() { os.Stdout = oldStdout }()
+
+		exporter := &stdoutExporter{}
+		record := logsdk.Record{} // cannot set body/severity in v0.11.0
+
+		err := exporter.Export(context.Background(), []logsdk.Record{record})
+		assert.NoError(t, err)
+
+		w.Close()
+		output, _ := io.ReadAll(r)
+		assert.Contains(t, string(output), "] : \n") // minimal check for output format
+	})
+
+	t.Run("shutdown", func(t *testing.T) {
+		exporter := &stdoutExporter{}
+		err := exporter.Shutdown(context.Background())
+		assert.NoError(t, err)
+	})
+
+	t.Run("force flush", func(t *testing.T) {
+		exporter := &stdoutExporter{}
+		err := exporter.ForceFlush(context.Background())
+		assert.NoError(t, err)
+	})
+}
+
+func TestNewTracerProvider(t *testing.T) {
+	t.Run("successful creation", func(t *testing.T) {
+		// Save original config values
+		originalServiceName := config.AppConfig.ServiceName
+		originalEnvironment := config.AppConfig.Environment
+
+		// Set test config values
+		config.AppConfig.ServiceName = "test-service"
+		config.AppConfig.Environment = "test"
+
+		defer func() {
+			config.AppConfig.ServiceName = originalServiceName
+			config.AppConfig.Environment = originalEnvironment
+		}()
+
+		// Test with valid endpoint
+		tp, err := newTracerProvider(context.Background(), "localhost:4317")
+		assert.NoError(t, err)
+		assert.NotNil(t, tp)
+	})
+
+	t.Run("empty endpoint", func(t *testing.T) {
+		tp, err := newTracerProvider(context.Background(), "")
+		assert.Error(t, err)
+		assert.Nil(t, tp)
+		assert.Equal(t, "OTEL_COLLECTOR_URL is not set", err.Error())
+	})
+
+	t.Run("invalid endpoint", func(t *testing.T) {
+		tp, err := newTracerProvider(context.Background(), "invalid://endpoint")
+		assert.NoError(t, err)
+		assert.NotNil(t, tp)
+	})
+}
+
+func TestNewMeterProvider(t *testing.T) {
+	t.Run("successful creation", func(t *testing.T) {
+		// Save original config values
+		originalServiceName := config.AppConfig.ServiceName
+		originalEnvironment := config.AppConfig.Environment
+
+		// Set test config values
+		config.AppConfig.ServiceName = "test-service"
+		config.AppConfig.Environment = "test"
+
+		defer func() {
+			config.AppConfig.ServiceName = originalServiceName
+			config.AppConfig.Environment = originalEnvironment
+		}()
+
+		mp, err := newMeterProvider("localhost:4317")
+		assert.NoError(t, err)
+		assert.NotNil(t, mp)
+	})
+
+	t.Run("invalid endpoint", func(t *testing.T) {
+		mp, err := newMeterProvider("invalid://endpoint")
+		assert.NoError(t, err)
+		assert.NotNil(t, mp)
+	})
+}
+
+func TestNewLoggerProvider(t *testing.T) {
+	t.Run("successful creation", func(t *testing.T) {
+		// Save original config values
+		originalServiceName := config.AppConfig.ServiceName
+		originalEnvironment := config.AppConfig.Environment
+
+		// Set test config values
+		config.AppConfig.ServiceName = "test-service"
+		config.AppConfig.Environment = "test"
+
+		defer func() {
+			config.AppConfig.ServiceName = originalServiceName
+			config.AppConfig.Environment = originalEnvironment
+		}()
+
+		lp, err := newLoggerProvider("localhost:4317")
+		assert.NoError(t, err)
+		assert.NotNil(t, lp)
+	})
+
+	t.Run("invalid endpoint", func(t *testing.T) {
+		lp, err := newLoggerProvider("invalid://endpoint")
+		assert.NoError(t, err)
+		assert.NotNil(t, lp)
+	})
+}
+
+// func TestSetupOTelSDK_resourceNewError(t *testing.T) {
+// 	orig := resourceNew
+// 	defer func() { resourceNew = orig }()
+// 	resourceNew = func(ctx context.Context, opts ...resource.Option) (*resource.Resource, error) {
+// 		return nil, errors.New("forced error")
+// 	}
+// 	shutdown, err := SetupOTelSDK(context.Background())
+// 	assert.Nil(t, shutdown)
+// 	assert.Error(t, err)
+// 	assert.Equal(t, "forced error", err.Error())
+// }
+
+// func TestNewResource_resourceNewError(t *testing.T) {
+// 	orig := resourceNew
+// 	defer func() { resourceNew = orig }()
+// 	resourceNew = func(ctx context.Context, opts ...resource.Option) (*resource.Resource, error) {
+// 		return nil, errors.New("forced error")
+// 	}
+// 	res, err := NewResource()
+// 	assert.Nil(t, res)
+// 	assert.Error(t, err)
+// 	assert.Equal(t, "forced error", err.Error())
+// }

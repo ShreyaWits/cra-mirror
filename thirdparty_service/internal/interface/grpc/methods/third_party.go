@@ -2,7 +2,6 @@ package methods
 
 import (
 	"context"
-	"thirdparty_service/internal/interface/grpc/mock"
 	"thirdparty_service/internal/modules/execute/dtos"
 	"thirdparty_service/internal/modules/execute/services"
 	"thirdparty_service/internal/utils"
@@ -170,7 +169,7 @@ func (h *ThirdPartyServer) VerifyAadhaar(ctx context.Context, req *protos.Aadhar
 		}, nil
 	}
 
-	ok, result, err := mock.VerifyAadhar(payload.AadharNumber)
+	ok, name, dob, err := h.svc.VerifyAadhaar(payload.AadharNumber)
 
 	if err != nil || !ok {
 		return &protos.AadharVerifyResponse{
@@ -185,8 +184,8 @@ func (h *ThirdPartyServer) VerifyAadhaar(ctx context.Context, req *protos.Aadhar
 		Message:  codes.SuccessMessage(codes.TS0001),
 		Verified: true,
 		Data: &protos.AadharResult{
-			Name: result["name"],
-			Dob:  result["dob"],
+			Name: name,
+			Dob:  dob,
 		},
 	}, nil
 }
@@ -207,7 +206,7 @@ func (h *ThirdPartyServer) VerifyPAN(ctx context.Context, req *protos.PANVerifyR
 		}, nil
 	}
 
-	ok, result, err := mock.VerifyAadhar(payload.PANNumber)
+	ok, name, panType, err := h.svc.VerifyPAN(payload.PANNumber)
 
 	if err != nil || !ok {
 		return &protos.PANVerifyResponse{
@@ -222,9 +221,9 @@ func (h *ThirdPartyServer) VerifyPAN(ctx context.Context, req *protos.PANVerifyR
 		Message:  codes.SuccessMessage(codes.TS0001),
 		Verified: true,
 		Data: &protos.PanResult{
-			Name:    result["name"],
-			Dob:     result["dob"],
-			PanType: result["pan_type"],
+			Name:    name,
+			Dob:     "", // The service layer doesn't return Dob for PAN, only Name and PanType
+			PanType: panType,
 		},
 	}, nil
 }

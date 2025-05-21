@@ -7,7 +7,7 @@ import (
 
 type Repository interface {
 	VerifyAadhaar(aadhaar string) (bool, string, string, error)
-	VerifyPAN(pan string) (bool, string, error)
+	VerifyPAN(pan string) (bool, string, string, error)
 	SendSMS(phone, message string) (string, error)
 	SendEmail(to, subject, body string) (string, error)
 	InitiatePayment(userID string, amount float64) (string, string, error)
@@ -27,12 +27,12 @@ func (r *repository) VerifyAadhaar(aadhaar string) (bool, string, string, error)
 	return false, "", "", errors.New("invalid Aadhaar")
 }
 
-func (r *repository) VerifyPAN(pan string) (bool, string, error) {
+func (r *repository) VerifyPAN(pan string) (bool, string, string, error) {
 	// Integrate PAN verification API here
 	if pan == "ABCDE1234F" {
-		return true, "John Doe", nil
+		return true, "John Doe", "Individual", nil
 	}
-	return false, "", errors.New("invalid PAN")
+	return false, "", "", errors.New("invalid PAN")
 }
 
 func (r *repository) SendSMS(phone, message string) (string, error) {

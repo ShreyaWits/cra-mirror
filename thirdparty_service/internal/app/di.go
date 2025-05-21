@@ -49,7 +49,7 @@ func InitDependencyInjection() error {
 		return err
 	}
 
-	if err := Container.Provide(func() *service.ConfigService {
+	if err := Container.Provide(func() service.ConfigService {
 		return configService
 	}); err != nil {
 		return err

@@ -82,11 +82,12 @@ func TestRepository_VerifyPAN(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			valid, name, err := repo.VerifyPAN(tt.pan)
+			valid, name, _, err := repo.VerifyPAN(tt.pan)
 
 			if valid != tt.expectedValid {
 				t.Errorf("Expected valid %v, got %v", tt.expectedValid, valid)
 			}
+			
 			if name != tt.expectedName {
 				t.Errorf("Expected name %s, got %s", tt.expectedName, name)
 			}

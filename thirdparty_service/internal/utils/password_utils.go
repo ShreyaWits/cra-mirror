@@ -6,16 +6,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	passwordCost = 12
-)
+const passwordCost = 12
 
 var (
-	ErrHashingPassword = fmt.Errorf("failed to hash the password")
+	ErrHashingPassword    = fmt.Errorf("failed to hash the password")
+	hashPasswordGenerator = bcrypt.GenerateFromPassword // injected for testing
 )
 
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), passwordCost)
+	hash, err := hashPasswordGenerator([]byte(password), passwordCost)
 	if err != nil {
 		return "", ErrHashingPassword
 	}
