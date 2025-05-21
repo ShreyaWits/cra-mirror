@@ -14,7 +14,7 @@ services:
     environment:
       - PORT=${PORT:-8080}
       - GRPC_PORT=${GRPC_PORT:-50051}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - KAFKA_HOST=${KAFKA_HOST:-kafka}
@@ -32,11 +32,11 @@ services:
   redis:
     image: redis:latest
     container_name: redis
-    command: redis-server --requirepass ${DB_PASSWORD:-password}
+    command: redis-server --appendonly yes
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT}:6379"
     environment:
-      - REDIS_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis}
     restart: unless-stopped
     networks:
       - protected-link-network

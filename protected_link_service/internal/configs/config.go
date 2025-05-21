@@ -1,6 +1,7 @@
 package configEnv
 
 import (
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -9,7 +10,7 @@ import (
 // Config holds all configuration for the application
 type Config struct {
 	// Server settings
-	ServerPort string
+	ServerPort        string
 	OtpExpiryDuration string
 
 	// Database settings
@@ -36,16 +37,19 @@ type Config struct {
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(".env file not found, falling back to system env")
+	}
 
 	// Default values
 	config := &Config{
 		ServerPort:         getEnv("PORT", "9090"),
 		GRPCPort:           getEnv("GRPC_PORT", "50051"),
-		REDIS_HOST:         getEnv("DB_PORT", "localhost:6379"),
-		REDIS_PORT:         getEnv("DB_PORT", "6379"),
-		REDIS_PASSWORD:     getEnv("DB_PASSWORD", "sarb"),
-		REDIS_USERNAME:     getEnv("REDIS_USERNAME", "sarb"),
+		REDIS_HOST:         getEnv("REDIS_HOST", "localhost"),
+		REDIS_PORT:         getEnv("REDIS_PORT", "6379"),
+		REDIS_PASSWORD:     getEnv("REDIS_PASSWORD", ""),
+		REDIS_USERNAME:     getEnv("REDIS_USERNAME", ""),
 		OtpExpiryDuration:  getEnv("REDIS_TTL", "5m"),
 		KafkaProducer:      getEnv("PROTECTED_LINK_SERVICE_KAFKA_PRODUCER_TOPIC", "send_notification"),
 		AppEnv:             getEnv("APP_ENV", "local"),
