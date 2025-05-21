@@ -37,7 +37,6 @@ func TestNewCassandraDB(t *testing.T) {
 	session := newCassandraDB(
 		CASSANDRA_HOST, CASSANDRA_PORT, CASSANDRA_KEYSPACE, CASSANDRA_USERNAME, CASSANDRA_PASSWORD,
 		func(h string) *gocql.ClusterConfig { return &gocql.ClusterConfig{} },
-		func(cluster *gocql.ClusterConfig) (*gocql.Session, error) { return &gocql.Session{}, nil },
 		mockRunner.RunMigrations,
 	)
 
@@ -49,9 +48,6 @@ func TestNewCassandraDB_SessionError(t *testing.T) {
 	mockRunner := &mockMigrationRunner{}
 	mockNewCluster := func(host string) *gocql.ClusterConfig {
 		return &gocql.ClusterConfig{}
-	}
-	mockCreateSession := func(cluster *gocql.ClusterConfig) (*gocql.Session, error) {
-		return nil, assert.AnError
 	}
 
 	calledFatal := false
@@ -69,7 +65,7 @@ func TestNewCassandraDB_SessionError(t *testing.T) {
 		}
 	}()
 
-	newCassandraDBWithFatalf("localhost", 9042, "ks", "user", "pass", mockNewCluster, mockCreateSession, mockRunner.RunMigrations, mockFatalf)
+	newCassandraDBWithFatalf("localhost", 9042, "ks", "user", "pass", mockNewCluster, mockRunner.RunMigrations, mockFatalf)
 }
 
 func TestNewCassandraDB_DependencyInjection(t *testing.T) {
@@ -77,11 +73,8 @@ func TestNewCassandraDB_DependencyInjection(t *testing.T) {
 	mockNewCluster := func(host string) *gocql.ClusterConfig {
 		return &gocql.ClusterConfig{Keyspace: "ks"}
 	}
-	mockCreateSession := func(cluster *gocql.ClusterConfig) (*gocql.Session, error) {
-		return &gocql.Session{}, nil
-	}
 
-	session := newCassandraDB("localhost", 9042, "ks", "user", "pass", mockNewCluster, mockCreateSession, mockRunner.RunMigrations)
+	session := newCassandraDB("localhost", 9042, "ks", "user", "pass", mockNewCluster, mockRunner.RunMigrations)
 	assert.NotNil(t, session)
 	assert.True(t, mockRunner.called, "Expected RunMigrations to be called")
 }
