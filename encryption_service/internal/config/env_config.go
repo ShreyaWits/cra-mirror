@@ -29,26 +29,26 @@ func LoadConfig() (*Config, error) {
 
 	// Default values
 	config := &Config{
-		ServerPort: getEnv("PORT", "8082"),
+		ServerPort: getEnv("REST_PORT", "8082"),
 
 		UserServiceURL: getEnv("USER_SERVICE_URL", "http://localhost:8080"),
 
 		// Load Vault configuration
-		VaultAddr:  getEnv("VAULT_ADDR", "https://localhost:8200"),
-		VaultToken: getEnv("VAULT_TOKEN", "root"),
-		VaultPath:  getEnv("VAULT_PATH", "transit"),
+		VaultAddr:  getEnv("HASHICORP_VAULT_ADDR", "https://localhost:8200"),
+		VaultToken: getEnv("HASHICORP_VAULT_TOKEN", "root"),
+		VaultPath:  getEnv("HASHICORP_VAULT_PATH", "transit"),
 		GrpcPort:   getEnv("GRPC_PORT", "50051"),
 	}
 
 	// Validate required Vault configuration
 	if config.VaultAddr == "" {
-		return nil, fmt.Errorf("VAULT_ADDR environment variable is required")
+		return nil, fmt.Errorf("HASHICORP_VAULT_ADDR environment variable is required")
 	}
 	if config.VaultToken == "" {
-		return nil, fmt.Errorf("VAULT_TOKEN environment variable is required")
+		return nil, fmt.Errorf("HASHICORP_VAULT_TOKEN environment variable is required")
 	}
 	if config.VaultPath == "" {
-		return nil, fmt.Errorf("VAULT_PATH environment variable is required")
+		return nil, fmt.Errorf("HASHICORP_VAULT_PATH environment variable is required")
 	}
 	if config.GrpcPort == "" {
 		return nil, fmt.Errorf("GRPC_PORT environment variable is required")
