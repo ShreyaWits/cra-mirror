@@ -36,7 +36,7 @@ type Recipient struct {
 	Data           map[string]string `json:"data" validate:"required,min=1"`
 }
 
-func InitTemporal(TemporalUrl string, TaskQueue string, ID string, notificationRepo repositories.NotificationRepositoryInterface, kafkaClient *kafka.KafkaPublisher) (*TemporalClient, error) {
+func InitTemporal(TemporalUrl string, ID string, notificationRepo repositories.NotificationRepositoryInterface, kafkaClient *kafka.KafkaPublisher) (*TemporalClient, error) {
 
 	log.Println("TemporalUrl", TemporalUrl)
 
@@ -56,7 +56,7 @@ func InitTemporal(TemporalUrl string, TaskQueue string, ID string, notificationR
 
 	return &TemporalClient{
 		TemporalUrl: TemporalUrl,
-		TaskQueue:   TaskQueue,
+		TaskQueue:   "notification-service-queue",
 		ID:          ID,
 		client:      c,
 		workflows:   temporalWorkflows,

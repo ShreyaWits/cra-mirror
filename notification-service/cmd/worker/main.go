@@ -51,7 +51,7 @@ func runWorkerWithDeps(
 
 	config.LoadEnv()
 
-	TemporalUrl := os.Getenv("TEMPORAL_SERVER_URL")
+	TemporalUrl := os.Getenv("TEMPORAL_SERVER_ENDPOINT")
 	LOKI_URL := config.GetEnv("LOKI_URL", "http://localhost:5000")
 	logger.InitLogger(LOKI_URL)
 
@@ -68,20 +68,20 @@ func runWorkerWithDeps(
 	CASSANDRA_USERNAME := config.GetEnv("CASSANDRA_USERNAME", "cassandra")
 	CASSANDRA_PASSWORD := config.GetEnv("CASSANDRA_PASSWORD", "cassandra")
 	CASSANDRA_PORT, err := strconv.Atoi(config.GetEnv("CASSANDRA_PORT", "9042"))
-	KAFKA_BROKER := config.GetEnv("KAFKA_BROKERS", "kafka:29092")
+	KAFKA_BROKER_URL := config.GetEnv("KAFKA_BROKER_URL", "kafka:29092")
 
 	log.Println("cassandra host", CASSANDRA_HOST)
 	log.Println("cassandra port", CASSANDRA_PORT)
 	log.Println("cassandra keyspace", CASSANDRA_KEYSPACE)
 	log.Println("cassandra username", CASSANDRA_USERNAME)
 	log.Println("cassandra password", CASSANDRA_PASSWORD)
-	log.Println("kafka broker", KAFKA_BROKER)
+	log.Println("kafka broker", KAFKA_BROKER_URL)
 
 	if err != nil {
 		return err
 	}
 
-	kafkaProducer := kafkaInit(KAFKA_BROKER)
+	kafkaProducer := kafkaInit(KAFKA_BROKER_URL)
 	dbSession := cassandraInit(CASSANDRA_HOST, CASSANDRA_PORT, CASSANDRA_KEYSPACE, CASSANDRA_USERNAME, CASSANDRA_PASSWORD)
 	wrappedSession := &cassandraSessionWrapper{dbSession.(*gocql.Session)}
 	notificationRepo := repositories.NewNotificationRepository(wrappedSession)

@@ -3,6 +3,7 @@ package opentelemetry
 import (
 	"context"
 	"errors"
+	"redis-service/internal/constant"
 	"redis-service/pkg/config"
 	"time"
 
@@ -52,8 +53,8 @@ func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	// Create a resource with service information
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.ServiceNameKey.String(constant.ServiceName),
+			semconv.ServiceVersionKey.String(constant.Version),
 			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 	)
@@ -138,8 +139,8 @@ func newTracerProvider(ctx context.Context, endpoint string) (*trace.TracerProvi
 	// Create a resource with service information
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.ServiceNameKey.String(constant.ServiceName),
+			semconv.ServiceVersionKey.String(constant.Version),
 			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 	)
@@ -174,8 +175,8 @@ func newMeterProvider(grpcEndpoint string) (*metric.MeterProvider, error) {
 			metric.WithInterval(3*time.Second))),
 		metric.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.ServiceNameKey.String(constant.ServiceName),
+			semconv.ServiceVersionKey.String(constant.Version),
 			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 		),
@@ -206,8 +207,8 @@ func newLoggerProvider(endpoint string) (*log.LoggerProvider, error) {
 		log.WithProcessor(log.NewBatchProcessor(logStoutExporter)),
 		log.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(config.SERVICE_NAME),
-			semconv.ServiceVersionKey.String(config.SERVICE_VERSION),
+			semconv.ServiceNameKey.String(constant.ServiceName),
+			semconv.ServiceVersionKey.String(constant.Version),
 			semconv.DeploymentEnvironmentKey.String(config.ENVIRONMENT),
 		),
 		),

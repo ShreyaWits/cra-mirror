@@ -23,13 +23,13 @@ type KafkaConsumer struct {
 
 // InitKafkaConsumer initializes and returns a KafkaConsumer.
 // In test environments, an optional mock reader can be provided (though we'll handle mock injection differently now).
-func InitKafkaConsumer(brokers []string, groupID string, topics []string) (*KafkaConsumer, error) {
+func InitKafkaConsumer(brokers []string, topics []string) (*KafkaConsumer, error) {
 
-	log.Println("Initializing Kafka reader...", brokers, groupID, topics)
+	log.Println("Initializing Kafka reader...", brokers, topics)
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     brokers,
-		GroupID:     groupID,
+		GroupID:     "notification-service-group",
 		MinBytes:    1,
 		MaxBytes:    10e6,
 		GroupTopics: topics,

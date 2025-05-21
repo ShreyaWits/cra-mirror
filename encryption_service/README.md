@@ -149,7 +149,7 @@ The service can be configured using environment variables:
 
 ```env
 # Server Configuration
-PORT=50051
+REST_PORT=50051
 ENV=development
 ```
 
@@ -190,14 +190,14 @@ The service can be deployed using Docker and Docker Compose, which includes both
 The Docker Compose setup includes:
 
 1. **Encryption Service**
-   - Port: 8082 (mapped to container port 8080)
+   - REST_PORT: 8082 (mapped to container REST_PORT 8080)
    - Environment variables:
-     - `VAULT_ADDR`: Vault server address
-     - `VAULT_TOKEN`: Vault authentication token
-     - `VAULT_PATH`: Vault secrets engine path
+     - `HASHICORP_VAULT_ADDR`: Vault server address
+     - `HASHICORP_VAULT_TOKEN`: Vault authentication token
+     - `HASHICORP_VAULT_PATH`: Vault secrets engine path
 
 2. **HashiCorp Vault**
-   - Port: 8200
+   - REST_PORT: 8200
    - Development mode with root token
    - Transit secrets engine enabled
    - Persistent volume for data storage
@@ -212,15 +212,15 @@ The service uses a multi-stage build process:
 2. Final stage:
    - Uses minimal `alpine` image
    - Contains only the compiled binary
-   - Exposes port 8080
+   - Exposes REST_PORT 8080
 
 ### Environment Variables
 
 When running in Docker, the following environment variables are required:
 ```env
-VAULT_ADDR=http://vault:8200
-VAULT_TOKEN=root
-VAULT_PATH=transit
+HASHICORP_VAULT_ADDR=http://vault:8200
+HASHICORP_VAULT_TOKEN=root
+HASHICORP_VAULT_PATH=transit
 ```
 
 ## Security Considerations
@@ -273,12 +273,12 @@ VAULT_PATH=transit
 
 4. **Key Generation**
    - `GenerateKEK`: Creates a new Key Encryption Key (KEK)
-   - Supports different key types based on role (private or public)
+   - SupREST_PORTs different key types based on role (private or public)
 
 
 ### Key Management System (KMS) Implementation
 
-The KMS package provides a flexible interface for key management operations. It supports different KMS implementations through a common interface:
+The KMS package provides a flexible interface for key management operations. It supREST_PORTs different KMS implementations through a common interface:
 
 ```go
 type KmsService interface {
@@ -302,7 +302,7 @@ type KmsService interface {
 
 #### Role-Based Access Control
 
-The KMS implementation supports two main roles:
+The KMS implementation supREST_PORTs two main roles:
 - `private`: For end-to-end encryption keys
 - `public`: For public encryption keys
 
@@ -312,7 +312,7 @@ Each operation is role-aware and ensures proper access control based on the key'
 
 MIT License
 
-## Support
+## SupREST_PORT
 
-For support and questions, please contact the development team.
+For supREST_PORT and questions, please contact the development team.
 
