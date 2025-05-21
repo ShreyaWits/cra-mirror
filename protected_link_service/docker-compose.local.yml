@@ -14,7 +14,7 @@ services:
     environment:
       - PORT=${PORT:-8080}
       - GRPC_PORT=${GRPC_PORT:-50051}
-      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - KAFKA_HOST=${KAFKA_HOST:-kafka}

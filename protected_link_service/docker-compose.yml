@@ -17,7 +17,7 @@ services:
       - PORT=${PORT}
       - GRPC_PORT=${GRPC_PORT}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=${DB_HOST}
+      - REd=${DB_HOST}
       - REDIS_PORT=${DB_PORT}
       - KAFKA_HOST=${KAFKA_HOST}
       - KAFKA_PORT=${KAFKA_PORT}

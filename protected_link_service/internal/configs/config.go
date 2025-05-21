@@ -12,12 +12,10 @@ type Config struct {
 	ServerPort string
 
 	// Database settings
-	DBHost           string
-	DBPort           string
-	DBUser           string
-	DBPassword       string
-	DBName           string
-	DBSSLMode        string
+	REDIS_HOST     string
+	REDIS_PORT     string
+	REDIS_PASSWORD string
+
 	JWTSecret        string
 	RedirectionURL   string
 	Kafka_Broker_Url string
@@ -42,10 +40,9 @@ func LoadConfig() (*Config, error) {
 	config := &Config{
 		ServerPort:         getEnv("PORT", "9090"),
 		GRPCPort:           getEnv("GRPC_PORT", "50051"),
-		DBHost:             getEnv("DB_HOST", "localhost"),
-		DBPort:             getEnv("DB_PORT", "6379"),
-		DBUser:             getEnv("DB_USER", "sarbjeet"),
-		DBPassword:         getEnv("DB_PASSWORD", "sarb"),
+		REDIS_HOST:         getEnv("DB_PORT", "localhost:6379"),
+		REDIS_PORT:         getEnv("DB_PORT", "6379"),
+		REDIS_PASSWORD:     getEnv("DB_PASSWORD", "sarb"),
 		KafkaProducer:      getEnv("KAFKA_PRODUCER_TOPIC", "send_notification"),
 		AppEnv:             getEnv("APP_ENV", "local"),
 		Kafka_Broker_Url:   getEnv("KAFKA_BROKER_URL", "localhost:9092"),
