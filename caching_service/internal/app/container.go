@@ -2,6 +2,7 @@ package app
 
 import (
 	"log/slog"
+	"redis-service/internal/constant"
 	"redis-service/internal/repository"
 	"redis-service/internal/service"
 	"redis-service/pkg/config"
@@ -34,9 +35,9 @@ func InitContainer() {
 		otel.SetTracerProvider(tracerProvider)
 	}
 
-	tracer := tracerProvider.Tracer(config.SERVICE_NAME)
-	logger := otelslog.NewLogger(config.SERVICE_NAME)
-	metric := otel.Meter(config.SERVICE_NAME)
+	tracer := tracerProvider.Tracer(constant.ServiceName)
+	logger := otelslog.NewLogger(constant.ServiceName)
+	metric := otel.Meter(constant.ServiceName)
 
 	redisDb, err := strconv.Atoi(config.REDIS_DB)
 	if err != nil {
