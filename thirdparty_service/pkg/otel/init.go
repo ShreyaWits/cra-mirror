@@ -188,7 +188,7 @@ func NewResource() (*resource.Resource, error) {
 	return resource.New(context.Background(),
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(config.AppConfig.ServiceName),
-			semconv.ServiceVersionKey.String("v0.1.0"), // Add version for consistency
+			semconv.ServiceVersionKey.String("v0.1.0"),                            // Add version for consistency
 			semconv.DeploymentEnvironmentKey.String(config.AppConfig.Environment), // Add environment for consistency
 		),
 	)

@@ -16,3 +16,4 @@ services:
       - CONFIG_SERVICE_URL=http://host.docker.internal:4001/api/v1
       - CONFIG_SERVICE_USERNAME=adminTest
       - CONFIG_SERVICE_PASSWORD=Test@1234
+      - OTEL_COLLECTOR_URL=host.docker.internal:4317

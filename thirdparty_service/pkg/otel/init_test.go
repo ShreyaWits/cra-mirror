@@ -212,10 +212,6 @@ func TestNewPropagator(t *testing.T) {
 	prop := newPropagator()
 	assert.NotNil(t, prop)
 
-	// Verify it implements TextMapPropagator
-	_, ok := prop.(propagation.TextMapPropagator)
-	assert.True(t, ok, "Expected a TextMapPropagator")
-
 	// Use a carrier and inject context with baggage
 	ctx := context.Background()
 	b, err := baggage.NewMember("user", "alice")
@@ -233,6 +229,7 @@ func TestNewPropagator(t *testing.T) {
 	assert.Contains(t, carrier, "baggage", "Expected 'baggage' header in carrier")
 	assert.Contains(t, carrier["baggage"], "user=alice")
 }
+
 
 func TestNewResource(t *testing.T) {
 	t.Run("successful creation", func(t *testing.T) {
