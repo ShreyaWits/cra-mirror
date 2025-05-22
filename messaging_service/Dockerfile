@@ -18,12 +18,14 @@
     
     # Set Go environment
     WORKDIR /app
-    COPY go.work go.work.sum ./
+    COPY messaging_service/docker-go.work ./go.work
+    # We no longer need go.work.sum as we're using a custom go.work file
     COPY messaging_service/go.mod messaging_service/go.sum ./messaging_service/
     COPY protos/go.mod protos/go.sum ./protos/
     COPY messaging_service ./messaging_service
     COPY protos ./protos
-    COPY messaging_service/.env ./.env
+    # COPY encryption_service ./encryption_service
+    # COPY messaging_service/.env ./.env
     
     WORKDIR /app/messaging_service
     RUN go mod tidy
@@ -43,6 +45,9 @@
     # Copy built binary and env
     COPY --from=builder /app/messaging_service/messaging_service .
     COPY --from=builder /app/.env .
+
+    EXPOSE 8007
+    EXPOSE 50507
     
     RUN chmod +x ./messaging_service
     

@@ -95,9 +95,11 @@ func GetMockConfig() *Config {
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Env, error) {
 	// Load .env file if it exists
-	err := godotenv.Load()
-	if err != nil {
-		return nil, fmt.Errorf("error loading .env file: %w", err)
+	if getEnvString("IS_DOCKER", "false") == "false" {
+		err := godotenv.Load()
+		if err != nil {
+			return nil, fmt.Errorf("error loading .env file: %w", err)
+		}
 	}
 
 	// Load environment variables into struct
@@ -105,10 +107,9 @@ func LoadConfig() (*Env, error) {
 		ConfigServiceUrl:            getEnvString("CONFIG_SERVICE_URL", ""),
 		ConfigServiceToken:          getEnvString("MESSAGING_CONFIG_SERVICE_TOKEN", ""),
 		Environment:                 getEnvString("ENVIRONMENT", ""),
-		HttpPort:                    getEnvString("REST_PORT", ""),
-		GrpcPort:                    getEnvString("GRPC_PORT", ""),
+		HttpPort:                    getEnvString("MESSAGING_SERVICE_REST_PORT", ""),
+		GrpcPort:                    getEnvString("MESSAGING_SERVICE_GRPC_PORT", ""),
 		CacheUrl:                    getEnvString("CACHING_SERVICE_GRPC_URL", ""),
-		ObservabilityUrl:            getEnvString("OTLEL_COLLECTOR_GRPC_ENDPOINT", ""),
 		MESSAGING_SERVICE_REDIS_TTL: getEnvInt("MESSAGING_SERVICE_REDIS_TTL", 240), // Default 24 hours
 	}
 
