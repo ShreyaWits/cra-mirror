@@ -44,7 +44,7 @@ func LoadConfig() error {
 
 	// Load values into AppConfig
 	AppConfig = Config{
-		Port:             os.Getenv("REST_PORT"),
+		Port:             os.Getenv("CONFIG_SERVICE_REST_PORT"),
 		EtcdEndpoint:     os.Getenv("ETCD_SERVER_ENDPOINT"),
 		TemporalEndpoint: os.Getenv("TEMPORAL_SERVER_ENDPOINT"),
 		DatabaseHost:     os.Getenv("YUGABYTE_DATABASE_HOST"),
@@ -102,13 +102,13 @@ var EnvRules = map[string]func(string) error{
 		}
 		return nil
 	},
-	"REST_PORT": func(value string) error {
+	"CONFIG_SERVICE_REST_PORT": func(value string) error {
 		if value == "" {
-			return fmt.Errorf("REST_PORT cannot be empty")
+			return fmt.Errorf("CONFIG_SERVICE_REST_PORT cannot be empty")
 		}
 		port, err := strconv.Atoi(value)
 		if err != nil || port < 1 || port > 65535 {
-			return fmt.Errorf("REST_PORT must be an integer between 1 and 65535")
+			return fmt.Errorf("CONFIG_SERVICE_REST_PORT must be an integer between 1 and 65535")
 		}
 		return nil
 	},
@@ -125,7 +125,6 @@ var EnvRules = map[string]func(string) error{
 		return nil
 	},
 }
-
 
 // ValidateEnv iterates over EnvRules and checks each variable
 func ValidateEnv() error {

@@ -28,5 +28,7 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /build/main /main
 COPY --from=builder /build/.env .env
 
+EXPOSE 8001
+EXPOSE 50051
 # Command to run the executable
 ENTRYPOINT ["/main"]

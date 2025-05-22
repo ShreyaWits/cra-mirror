@@ -7,9 +7,9 @@ services:
 
       restart: always
       ports:
-        - "${REST_PORT}:${REST_PORT}"
+        - "${CONFIG_SERVICE_REST_PORT}:${CONFIG_SERVICE_REST_PORT}"
       environment:
-        - REST_PORT=${REST_PORT}
+        - CONFIG_SERVICE_REST_PORT=${CONFIG_SERVICE_REST_PORT}
         - IS_DOCKER=${IS_DOCKER}
 
         - YUGABYTE_DATABASE_HOST=${YUGABYTE_DATABASE_HOST}
