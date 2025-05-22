@@ -1,10 +1,13 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
+	"nps-config-service/internal/modules/config-manager/models"
 	repoMock "nps-config-service/internal/modules/config-manager/repositories/mocks"
 	serviceMock "nps-config-service/internal/modules/config-manager/services/mocks"
+	"nps-config-service/pkg/observability"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,11 +15,35 @@ import (
 	clientMocks "go.temporal.io/sdk/mocks"
 )
 
-func TestStoreConfigService_Success(t *testing.T) {
-	mockRepo := new(repoMock.MockRepository)
-	mockWebhook := new(serviceMock.MockWebhookService)
+// Update mock interfaces to include context
+type MockRepositoryWithContext struct {
+	*repoMock.MockRepository
+}
+
+func (m *MockRepositoryWithContext) CreateAdmin(ctx context.Context, admin *models.Admin) (*models.Admin, error) {
+	return m.MockRepository.CreateAdmin(admin)
+}
+
+type MockWebhookServiceWithContext struct {
+	*serviceMock.MockWebhookService
+}
+
+func (m *MockWebhookServiceWithContext) DeleteAllWebhooks(ctx context.Context, env, serviceName string) error {
+	return m.MockWebhookService.DeleteAllWebhooks(env, serviceName)
+}
+
+func setupTestService(t *testing.T) (IConfigService, *MockRepositoryWithContext, *MockWebhookServiceWithContext, *clientMocks.Client, *observability.ObservabilityStack) {
+	mockRepo := &MockRepositoryWithContext{MockRepository: new(repoMock.MockRepository)}
+	mockWebhook := &MockWebhookServiceWithContext{MockWebhookService: new(serviceMock.MockWebhookService)}
 	mockTemporalClient := new(clientMocks.Client)
-	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
+	obsStack := observability.NewObservabilityStack("config-service-test")
+	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient, obsStack)
+	return service, mockRepo, mockWebhook, mockTemporalClient, obsStack
+}
+
+func TestStoreConfigService_Success(t *testing.T) {
+	service, mockRepo, mockWebhook, mockTemporalClient, _ := setupTestService(t)
+	ctx := context.Background()
 
 	env := "dev"
 	serviceName := "test-service"
@@ -30,20 +57,17 @@ func TestStoreConfigService_Success(t *testing.T) {
 
 	mockWebhook.On("NotifyWebhook", mock.Anything, req)
 	mockTemporalClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&clientMocks.WorkflowRun{}, nil)
-	result, err := service.StoreConfigService(env, serviceName, req)
+	result, err := service.StoreConfigService(ctx, env, serviceName, req)
 
 	assert.Nil(t, err)
 	assert.Equal(t, storedResponse.StatusCode, result.StatusCode)
 
 	mockRepo.AssertExpectations(t)
-
 }
 
 func TestStoreConfigService_InvalidWebhookData(t *testing.T) {
-	mockRepo := new(repoMock.MockRepository)
-	mockWebhook := new(serviceMock.MockWebhookService)
-	mockTemporalClient := new(clientMocks.Client)
-	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
+	service, mockRepo, mockWebhook, _, _ := setupTestService(t)
+	ctx := context.Background()
 
 	env := "dev"
 	serviceName := "test-service"
@@ -54,49 +78,38 @@ func TestStoreConfigService_InvalidWebhookData(t *testing.T) {
 	// Invalid webhook data (malformed JSON)
 	webhookData := `[{"url":"http://example.com/webhook"` // Missing closing bracket
 
-	// Set up the mocks
 	mockRepo.On("StoreConfig", serviceName, env, req).Return(storedResponse, nil)
 	mockRepo.On("Get", mock.Anything, "/webhooks/dev/test-service").Return(webhookData, nil)
 
-	// Run the service method
-	result, err := service.StoreConfigService(env, serviceName, req)
+	result, err := service.StoreConfigService(ctx, env, serviceName, req)
 
-	// Assert error occurs due to invalid JSON unmarshalling
 	assert.NotNil(t, err)
-	// assert.Error(t, err)
 	assert.Nil(t, result)
-	// assert.Contains(t, err.ErrorMessage, "invalid webhook data stored for /webhooks/dev/test-service")
 
-	// Ensure expectations for mockRepo are met
 	mockRepo.AssertExpectations(t)
 	mockWebhook.AssertExpectations(t)
 }
 
 func TestStoreConfigService_StoreError(t *testing.T) {
-	mockRepo := new(repoMock.MockRepository)
-	mockWebhook := new(serviceMock.MockWebhookService)
-	mockTemporalClient := new(clientMocks.Client)
-	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
+	service, mockRepo, _, _, _ := setupTestService(t)
+	ctx := context.Background()
 
 	env := "dev"
 	serviceName := "test-service"
 	req := map[string]interface{}{"key": "value"}
 
 	mockRepo.On("StoreConfig", serviceName, env, req).Return(nil, errors.New("store failed"))
-	result, err := service.StoreConfigService(env, serviceName, req)
+	result, err := service.StoreConfigService(ctx, env, serviceName, req)
 
 	assert.Nil(t, result)
 	assert.NotNil(t, err)
-	// assert.Contains(t, err.ErrorMessage, "no webhook registered")
 
 	mockRepo.AssertExpectations(t)
 }
 
 func TestStoreConfigService_NoWebhookFound(t *testing.T) {
-	mockRepo := new(repoMock.MockRepository)
-	mockWebhook := new(serviceMock.MockWebhookService)
-	mockTemporalClient := new(clientMocks.Client)
-	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
+	service, mockRepo, _, _, _ := setupTestService(t)
+	ctx := context.Background()
 
 	env := "dev"
 	serviceName := "test-service"
@@ -105,23 +118,19 @@ func TestStoreConfigService_NoWebhookFound(t *testing.T) {
 	storedResponse := map[string]interface{}{"status": "success"}
 
 	mockRepo.On("StoreConfig", serviceName, env, req).Return(storedResponse, nil)
-	
 	mockRepo.On("Get", mock.Anything, "/webhooks/dev/test-service").Return("", errors.New("not found"))
 
-	result, err := service.StoreConfigService(env, serviceName, req)
+	result, err := service.StoreConfigService(ctx, env, serviceName, req)
 
 	assert.Nil(t, result)
 	assert.NotNil(t, err)
-	// assert.Contains(t, err.ErrorMessage, "no webhook registered")
 
 	mockRepo.AssertExpectations(t)
 }
 
 func TestGetConfigService_Success(t *testing.T) {
-	mockRepo := new(repoMock.MockRepository)
-	mockWebhook := new(serviceMock.MockWebhookService)
-	mockTemporalClient := new(clientMocks.Client)
-	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
+	service, mockRepo, _, _, _ := setupTestService(t)
+	ctx := context.Background()
 
 	serviceName := "test-service"
 	env := "dev"
@@ -129,7 +138,7 @@ func TestGetConfigService_Success(t *testing.T) {
 
 	mockRepo.On("GetConfig", serviceName, env).Return(expectedConfig, nil)
 
-	result, err := service.GetConfigService(serviceName, env)
+	result, err := service.GetConfigService(ctx, serviceName, env)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedConfig, result)
@@ -138,10 +147,8 @@ func TestGetConfigService_Success(t *testing.T) {
 }
 
 func TestGetConfigValueService_Success(t *testing.T) {
-	mockRepo := new(repoMock.MockRepository)
-	mockWebhook := new(serviceMock.MockWebhookService)
-	mockTemporalClient := new(clientMocks.Client)
-	service := NewConfigService(mockRepo, mockWebhook, mockTemporalClient)
+	service, mockRepo, _, _, _ := setupTestService(t)
+	ctx := context.Background()
 
 	serviceName := "test-service"
 	env := "dev"
@@ -150,7 +157,7 @@ func TestGetConfigValueService_Success(t *testing.T) {
 
 	mockRepo.On("GetConfigValue", serviceName, env, key).Return(expectedValue, nil)
 
-	result, err := service.GetConfigValueService(serviceName, env, key)
+	result, err := service.GetConfigValueService(ctx, serviceName, env, key)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedValue, result)
