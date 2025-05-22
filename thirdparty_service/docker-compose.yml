@@ -7,11 +7,12 @@ services:
 
     restart: always
     ports:
-      - "8080:8080"  # Replace with actual REST_PORT if needed
+      - "8080:8080"  
+      - "9090:9090"
 
     environment:
       - ENVIRONMENT=development
       - SERVICE_NAME=thirdparty-service
-      - CONFIG_SERVICE_URL=http://localhost:4001/api/v1
+      - CONFIG_SERVICE_URL=http://host.docker.internal:4001/api/v1
       - CONFIG_SERVICE_USERNAME=adminTest
       - CONFIG_SERVICE_PASSWORD=Test@1234
