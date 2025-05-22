@@ -26,8 +26,6 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/main /main
 
-# Expose the necessary port
-EXPOSE 3000
 
 # Command to run the executable
 ENTRYPOINT ["/main"]

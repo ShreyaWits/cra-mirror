@@ -50,16 +50,16 @@ func BootstrapServices() *grpcServer.GrpcServer {
 		log.Fatalf("Invalid REDIS_PORT: %v", err)
 	}
 
-	config.InitRedis(redisHost, redisUsername, redisPassword, redisTTL)
+	config.InitRedis(redisHost, redisPort, redisUsername, redisPassword, redisTTL)
 
 	// gRPC setup
-	grpcAddr := os.Getenv("GRPC_PORT")
+	grpcAddr := os.Getenv("RECEIPT_SERVICE_GRPC_PORT")
 	if grpcAddr == "" {
-		log.Fatal("GRPC_PORT is not set")
+		log.Fatal("RECEIPT_SERVICE_GRPC_PORT is not set")
 	}
 	grpcPort, err := strconv.Atoi(grpcAddr)
 	if err != nil {
-		log.Fatalf("Invalid GRPC_PORT: %v", err)
+		log.Fatalf("Invalid RECEIPT_SERVICE_GRPC_PORT: %v", err)
 	}
 
 	return grpcServer.NewGrpcServer(grpcPort)

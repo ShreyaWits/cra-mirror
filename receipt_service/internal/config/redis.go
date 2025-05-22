@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -11,7 +12,8 @@ import (
 var redisClient *redis.Client
 
 // InitRedis initializes the Redis client with the given configuration
-func InitRedis(host, username, password, ttl string) {
+func InitRedis(host, port, username, password, ttl string) {
+
 	// Validate TTL format
 	_, err := time.ParseDuration(ttl)
 	if err != nil {
@@ -19,7 +21,8 @@ func InitRedis(host, username, password, ttl string) {
 	}
 
 	redisClient = redis.NewClient(&redis.Options{
-		Addr:     host,
+		Addr:     fmt.Sprintf("%s:%s", host, port),
+
 		Username: username,
 		Password: password,
 		DB:       0,

@@ -15,7 +15,7 @@ func TestInitRedisAndGetRedisClient(t *testing.T) {
 	defer mr.Close() // Stop the server when the test finishes
 
 	// Initialize Redis with the miniredis server address and test credentials
-	InitRedis(mr.Addr(), "test_user", "test_password", "24h")
+	InitRedis(mr.Addr(), "test_user", "redis", "test_password", "24h")
 
 	// Get the Redis client
 	client := GetRedisClient()

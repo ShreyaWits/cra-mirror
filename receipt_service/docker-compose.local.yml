@@ -4,39 +4,42 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: cra-receipt-service
-    restart: always
+    # restart: always
+    depends_on:
+      redis-service:
+        condition: service_healthy
     networks:
       - nps2.0
     ports:
-      - "${REST_PORT}:${REST_PORT}"
+      - "${RECEIPT_SERVICE_REST_PORT}:${RECEIPT_SERVICE_REST_PORT}"
     environment:
-      - REST_PORT=${REST_PORT}
+      - RECEIPT_SERVICE_REST_PORT=${RECEIPT_SERVICE_REST_PORT}
       - IS_DOCKER=${IS_DOCKER}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_USERNAME=${REDIS_USERNAME}
+      - REDIS_HOST=redis-service
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis
+      - REDIS_USERNAME=default
       - RECEIPT_SERVICE_REDIS_TTL=${RECEIPT_SERVICE_REDIS_TTL}
-      - GRPC_PORT=${GRPC_PORT}
-
+      - RECEIPT_SERVICE_GRPC_PORT=${RECEIPT_SERVICE_GRPC_PORT}
 
   redis-service:
     container_name: redis-service
-    image: redis
+    image: redis:7.0-alpine
     restart: always
-    ports:
-      - "6379:6379"
+    command: >
+      redis-server
+      --requirepass redis
+      --appendonly yes
     volumes:
       - user-redis:/data
-    environment:
-      - REDIS_PASSWORD=redis
-      - REDIS_USERNAME=redis
     networks:
       - nps2.0
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "redis-cli", "-a", "redis", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
 volumes:
   user-redis:
@@ -44,3 +47,6 @@ volumes:
 
 networks:
   nps2.0:
+    name: nps2.0
+    driver: bridge
+    external: true
