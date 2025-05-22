@@ -27,6 +27,7 @@ func BootstrapServices() *grpcServer.GrpcServer {
 	redisPassword := os.Getenv("REDIS_PASSWORD")
 	redisUsername := os.Getenv("REDIS_USERNAME")
 	redisTTL := os.Getenv("RECEIPT_SERVICE_REDIS_TTL")
+	redisPort := os.Getenv("REDIS_PORT")
 
 	if redisHost == "" {
 		log.Fatal("REDIS_HOST is not set")
@@ -39,6 +40,14 @@ func BootstrapServices() *grpcServer.GrpcServer {
 	}
 	if redisTTL == "" {
 		log.Fatal("RECEIPT_SERVICE_REDIS_TTL is not set")
+	}
+	if redisPort == "" {
+		log.Fatal("REDIS_PORT is not set")
+	}
+
+	// Validate Redis port is a valid number
+	if _, err := strconv.Atoi(redisPort); err != nil {
+		log.Fatalf("Invalid REDIS_PORT: %v", err)
 	}
 
 	config.InitRedis(redisHost, redisUsername, redisPassword, redisTTL)
