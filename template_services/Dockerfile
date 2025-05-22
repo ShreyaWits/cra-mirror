@@ -1,6 +1,13 @@
 FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
+
+# Install git
+RUN apk add --no-cache git
+
+# Set GOPROXY to use a more reliable proxy
+ENV GOPROXY=https://goproxy.io,direct
+
 COPY . .
 COPY go.mod go.sum ./
 RUN go mod download

@@ -6,12 +6,12 @@ import (
 
 // CreateTemplateRequest represents the request body for creating a template
 type CreateTemplateRequest struct {
-	Name           string   `json:"name" validate:"required" error_code:"TmpErrmissingName"`
-	Channel        string   `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
-	Language       string   `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
-	RequiredFields []string `json:"required_fields" validate:"required" error_code:"TmpErrmissingRequiredFields"`
-	Content        string   `json:"content" validate:"required" error_code:"TmpErrmissingContent"`
-	IsActive       bool     `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
+	Name           string   `json:"name" validate:"required" error_code:"TMP009"`
+	Channel        string   `json:"channel" validate:"required,oneof=email sms push" error_code:"TMP0010"`
+	Language       string   `json:"language" validate:"required,len=2" error_code:"TMP0011"`
+	RequiredFields []string `json:"required_fields" validate:"required" error_code:"TMP0017"`
+	Content        string   `json:"content" validate:"required" error_code:"TMP0012"`
+	IsActive       bool     `json:"is_active" validate:"required" error_code:"TMP0013"`
 }
 
 // CreateTemplateResponse represents the response for template creation
@@ -25,16 +25,16 @@ type CreateTemplateResponse struct {
 
 // GetTemplateRequest represents the request for getting a template
 type GetTemplateRequest struct {
-	Name     string `json:"name" validate:"required" error_code:"TmpErrmissingName"`
-	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
-	Language string `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
+	Name     string `json:"name" validate:"required" error_code:"TMP009"`
+	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TMP0010"`
+	Language string `json:"language" validate:"required,len=2" error_code:"TMP0011"`
 }
 
 // GetTemplateRequestV1 represents the request for getting a template via gRPC
 type GetTemplateRequestV1 struct {
-	Name     string `json:"name" validate:"required" error_code:"TmpErrmissingName"`
-	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TmpErrmissingChannel"`
-	Language string `json:"language" validate:"required,len=2" error_code:"TmpErrmissingLanguage"`
+	Name     string `json:"name" validate:"required" error_code:"TMP009"`
+	Channel  string `json:"channel" validate:"required,oneof=email sms push" error_code:"TMP0010"`
+	Language string `json:"language" validate:"required,len=2" error_code:"TMP0011"`
 }
 
 // TemplateResponse represents the template data in responses
@@ -60,8 +60,8 @@ type GetTemplateResponse struct {
 
 // UpdateTemplateRequest represents the request body for updating a template
 type UpdateTemplateRequest struct {
-	TemplateID string `json:"template_id" validate:"required" error_code:"TmpErrmissingTemplateID"`
-	IsActive   *bool  `json:"is_active" validate:"required" error_code:"TmpErrmissingIsActive"`
+	TemplateID string `json:"template_id" validate:"required" error_code:"TMP0014"`
+	IsActive   *bool  `json:"is_active" validate:"required" error_code:"TMP0013"`
 }
 
 // UpdateTemplateResponse represents the response for template update
@@ -73,7 +73,7 @@ type UpdateTemplateResponse struct {
 
 // DeleteTemplateRequest represents the request for deleting a template
 type DeleteTemplateRequest struct {
-	TemplateID string `json:"template_id" validate:"required" error_code:"TmpErrmissingTemplateID"`
+	TemplateID string `json:"template_id" validate:"required" error_code:"TMP0014"`
 }
 
 // DeleteTemplateResponse represents the response for template deletion
@@ -103,4 +103,11 @@ type ErrorResponse struct {
 	ErrorMessage string      `json:"message"`
 	ErrorCode    string      `json:"error_code"`
 	Data         interface{} `json:"data,omitempty"`
+}
+
+// ListTemplatesResponse represents the response for listing templates
+type ListTemplatesResponse struct {
+	Success bool               `json:"success"`
+	Message string             `json:"message"`
+	Data    []TemplateResponse `json:"data"`
 }

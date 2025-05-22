@@ -1,12 +1,19 @@
 package di
 
 import (
+	"fmt"
+	configEnv "template-services/internal/configs"
 	configs "template-services/internal/configs"
-	"template-services/internal/pkg/cache"
-	"template-services/internal/pkg/db"
+	"template-services/internal/constants"
 	"template-services/internal/template/handler"
 	"template-services/internal/template/repository"
 	"template-services/internal/template/service"
+	cacheclient "template-services/pkg/client/cache_client"
+	"template-services/pkg/db"
+	"template-services/pkg/logger"
+	"template-services/pkg/metrics"
+	"template-services/pkg/observability"
+	"template-services/pkg/tracer"
 )
 
 type Container struct {
@@ -15,55 +22,73 @@ type Container struct {
 	TemplateHandler     *handler.TemplateHandler
 	TemplateGRPCHandler *handler.TemplateGRPCHandler
 	YugabyteDB          db.DBModeler
-	RedisCache          *cache.RedisCache
+	Observability       *observability.ObservabilityStack
+	ConfigService       *service.ConfigServiceImpl
+	RedisCache          *cacheclient.RedisClientStruct
+}
+
+var GlobalContainer *Container
+
+func InitCacheConfig() {
+	// Initialize Redis cache
+	redisCache, err := cacheclient.NewRedisClient(configEnv.ImmutableConfigs.CacheSrvAddr)
+	fmt.Println("Redis cache initialized", redisCache)
+	if err != nil {
+		panic("failed to initialize Redis cache")
+	}
+
+	GlobalContainer = &Container{}
+	GlobalContainer.RedisCache = redisCache
+
+	obs := &observability.ObservabilityStack{
+		TracerService:  tracer.NewTracer(constants.ServiceName, true),
+		MetricsService: metrics.NewMetricsService(constants.ServiceName, true),
+		LoggerService:  logger.NewLogger(constants.ServiceName, true),
+	}
+	GlobalContainer.ConfigService = service.NewConfigService(redisCache, obs)
 }
 
 func NewContainer() (*Container, error) {
-	container := &Container{}
-
-	// Load config
-	configEnv, err := configs.LoadConfig()
+	cacheService, err := cacheclient.NewRedisClient(configs.Configs.CacheUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create Redis client: %w", err)
+	}
+
+	obs := &observability.ObservabilityStack{
+		TracerService:  tracer.NewTracer(constants.ServiceName, true),
+		MetricsService: metrics.NewMetricsService(constants.ServiceName, true),
+		LoggerService:  logger.NewLogger(constants.ServiceName, true),
 	}
 
 	// Initialize database
 	yugabyteDB := db.NewYugabyteDB(
-		configEnv.YugabyteDBHost,
-		configEnv.YugabyteDBPort,
-		configEnv.YugabyteDBUser,
-		configEnv.YugabyteDBPassword,
-		configEnv.YugabyteDBName,
+		configs.Configs.YugabyteDBHost,
+		configs.Configs.YugabyteDBPort,
+		configs.Configs.YugabyteDBUser,
+		configs.Configs.YugabyteDBPassword,
+		configs.Configs.YugabyteDBName,
 	)
 	if yugabyteDB == nil {
 		return nil, err
 	}
-	container.YugabyteDB = yugabyteDB
-
-	// Initialize Redis cache
-	redisCache := cache.NewRedisCache(
-		configEnv.RedisHost,
-		configEnv.RedisPort,
-		configEnv.RedisPassword,
-	)
-	container.RedisCache = redisCache
+	GlobalContainer.YugabyteDB = yugabyteDB
 
 	// Initialize repository
-	templateRepo := repository.NewTemplateRepository(yugabyteDB)
-	container.TemplateRepo = templateRepo
+	templateRepo := repository.NewTemplateRepository(yugabyteDB, obs)
+	GlobalContainer.TemplateRepo = templateRepo
 
 	// Initialize service
-	templateService := service.NewTemplateService(templateRepo, redisCache)
-	container.TemplateService = templateService
+	templateService := service.NewTemplateService(templateRepo, cacheService, obs, configs.Configs)
+	GlobalContainer.TemplateService = templateService
 
 	// Initialize handlers
-	templateHandler := handler.NewTemplateHandler(templateService)
-	container.TemplateHandler = templateHandler
+	templateHandler := handler.NewTemplateHandler(templateService, obs, GlobalContainer.ConfigService)
+	GlobalContainer.TemplateHandler = templateHandler
 
-	templateGRPCHandler := handler.NewTemplateGRPCHandler(templateService)
-	container.TemplateGRPCHandler = templateGRPCHandler
+	templateGRPCHandler := handler.NewTemplateGRPCHandler(templateService, obs)
+	GlobalContainer.TemplateGRPCHandler = templateGRPCHandler
 
-	return container, nil
+	return GlobalContainer, nil
 }
 
 func InitHandlers(container *Container) (*handler.TemplateHandler, *handler.TemplateGRPCHandler, error) {

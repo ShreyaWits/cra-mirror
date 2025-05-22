@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	configEnv "template-services/internal/configs"
 	"template-services/internal/models"
 
 	"github.com/google/uuid"
@@ -56,4 +57,9 @@ func (m *MockTemplateService) DeleteTemplate(ctx context.Context, id string) (*m
 		return tmpl, args.Error(1)
 	}
 	return nil, args.Error(1)
+}
+
+func (m *MockTemplateService) UpdateConfig(ctx context.Context, config *configEnv.Config) error {
+	args := m.Called(ctx, config)
+	return args.Error(0)
 }

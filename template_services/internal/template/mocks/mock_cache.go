@@ -2,7 +2,7 @@ package mocks
 
 import (
 	"time"
-	"template-services/internal/pkg/cache"
+	"template-services/pkg/cache"
 )
 
 // MockCache is a mock implementation of CacheInterface

@@ -3,8 +3,7 @@ package middleware
 import (
 	"reflect"
 	"strings"
-	appErrors "template-services/internal/pkg/errors"
-
+	appErrors "template-services/pkg/errors"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 )
@@ -28,7 +27,8 @@ func ValidateBody[T any]() fiber.Handler {
 
 		// Step 1: Parse JSON body
 		if err := c.BodyParser(&body); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			c.Status(fiber.StatusBadRequest)
+			return c.JSON(fiber.Map{
 				"success":    false,
 				"message":    "Invalid or malformed JSON",
 				"error_code": appErrors.TmpErrInvalidRequestBody,
@@ -70,7 +70,8 @@ func ValidateBody[T any]() fiber.Handler {
 					errMap[fieldName] = errMsg
 				}
 
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				c.Status(fiber.StatusBadRequest)
+				return c.JSON(fiber.Map{
 					"success":    false,
 					"message":    errMap,
 					"error_code": appErrors.TmpErrInvalidRequestBody,
@@ -78,7 +79,8 @@ func ValidateBody[T any]() fiber.Handler {
 			}
 
 			// Unexpected validation error
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			c.Status(fiber.StatusBadRequest)
+			return c.JSON(fiber.Map{
 				"success":    false,
 				"message":    "An unknown error occurred",
 				"error_code": appErrors.TmpErrInvalidRequestBody,

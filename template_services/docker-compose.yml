@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   cra-template-service:
     build: .
@@ -16,3 +17,9 @@ services:
       - YUGABYTEDB_USER=${YUGABYTEDB_USER}
       - YUGABYTEDB_PASSWORD=${YUGABYTEDB_PASSWORD}
       - YUGABYTEDB_NAME=${YUGABYTEDB_NAME}
+      - CACHE_URL=${CACHE_URL}
+      - CACHE_TTL=${CACHE_TTL}
+      - OBSERVABILITY_URL=${OBSERVABILITY_URL}
+      - SERVICE_NAME=${SERVICE_NAME}
+      - SERVICE_VERSION=${SERVICE_VERSION}
+      - ENVIRONMENT=${ENVIRONMENT}

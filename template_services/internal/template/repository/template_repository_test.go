@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"template-services/internal/models"
-	"template-services/internal/pkg/db"
+	"template-services/pkg/db"
+	"template-services/pkg/observability"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,7 @@ import (
 // MockDBModeler is a testify mock for db.DBModeler
 type MockDBModeler struct {
 	mock.Mock
+
 }
 
 func (m *MockDBModeler) Model(value interface{}) db.DBModeler {
@@ -57,7 +59,7 @@ func (m *MockDBModeler) Error() error {
 
 func TestCreate(t *testing.T) {
 	mockDB := new(MockDBModeler)
-	repo := NewTemplateRepository(mockDB)
+	repo := NewTemplateRepository(mockDB,&observability.ObservabilityStack{})
 	id := uuid.New()
 	template := &models.Template{ID: id, Name: "Test"}
 
@@ -73,7 +75,7 @@ func TestCreate(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	mockDB := new(MockDBModeler)
-	repo := NewTemplateRepository(mockDB)
+	repo := NewTemplateRepository(mockDB,&observability.ObservabilityStack{})
 	id := uuid.New()
 	name := "Test"
 	channel := "email"
@@ -106,7 +108,7 @@ func TestGet(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	mockDB := new(MockDBModeler)
-	repo := NewTemplateRepository(mockDB)
+	repo := NewTemplateRepository(mockDB,&observability.ObservabilityStack{})
 	id := uuid.New()
 	template := &models.Template{ID: id, Name: "Updated"}
 
@@ -123,7 +125,7 @@ func TestUpdate(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	mockDB := new(MockDBModeler)
-	repo := NewTemplateRepository(mockDB)
+	repo := NewTemplateRepository(mockDB,&observability.ObservabilityStack{})
 	id := uuid.New()
 
 	mockDB.On("Model", mock.AnythingOfType("*models.Template")).Return(mockDB)
@@ -139,7 +141,7 @@ func TestDelete(t *testing.T) {
 
 func TestList(t *testing.T) {
 	mockDB := new(MockDBModeler)
-	repo := NewTemplateRepository(mockDB)
+	repo := NewTemplateRepository(mockDB,&observability.ObservabilityStack{})
 	templates := []models.Template{
 		{ID: uuid.New(), Name: "A"},
 		{ID: uuid.New(), Name: "B"},
