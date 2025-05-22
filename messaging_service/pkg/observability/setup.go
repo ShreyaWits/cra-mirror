@@ -40,11 +40,11 @@ func formatEndpoint(url string) string {
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
-func SetupOTelSDK(ctx context.Context, env *models.EnvConfig) (shutdown func(context.Context) error, err error) {
+func SetupOTelSDK(ctx context.Context, env *models.EnvConfig, cfg *config.Config) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
 	// Print environment info for debugging
-	fmt.Printf("Setting up OpenTelemetry SDK with observability URL: %s\n", env.ObservabilityUrl)
+	fmt.Printf("Setting up OpenTelemetry SDK with observability URL: %s\n", cfg.ObservabilityUrl)
 
 	// shutdown calls cleanup functions registered via shutdownFuncs.
 	// The errors from the calls are joined.
@@ -81,7 +81,7 @@ func SetupOTelSDK(ctx context.Context, env *models.EnvConfig) (shutdown func(con
 	otel.SetTextMapPropagator(prop)
 
 	// Set up trace provider.
-	tracerProvider, err := newTracerProvider(ctx, env, res)
+	tracerProvider, err := newTracerProvider(ctx, env, res, cfg)
 	if err != nil {
 		fmt.Printf("Warning: Failed to create tracer provider: %v\n", err)
 		// Fallback to a noop tracer provider
@@ -94,7 +94,7 @@ func SetupOTelSDK(ctx context.Context, env *models.EnvConfig) (shutdown func(con
 	}
 
 	// Set up meter provider.
-	meterProvider, err := newMeterProvider(env, res)
+	meterProvider, err := newMeterProvider(env, res, cfg)
 	if err != nil {
 		fmt.Printf("Warning: Failed to create meter provider: %v\n", err)
 		// Fallback to a noop meter provider
@@ -107,7 +107,7 @@ func SetupOTelSDK(ctx context.Context, env *models.EnvConfig) (shutdown func(con
 	}
 
 	// Set up logger provider.
-	loggerProvider, err := newLoggerProvider(ctx, env, res)
+	loggerProvider, err := newLoggerProvider(ctx, env, res, cfg)
 	if err != nil {
 		fmt.Printf("Warning: Failed to create logger provider: %v\n", err)
 		// Fallback to a noop logger provider
@@ -129,8 +129,8 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTracerProvider(ctx context.Context, env *models.EnvConfig, res *resource.Resource) (*trace.TracerProvider, error) {
-	endpoint := formatEndpoint(env.ObservabilityUrl)
+func newTracerProvider(ctx context.Context, env *models.EnvConfig, res *resource.Resource, cfg *config.Config) (*trace.TracerProvider, error) {
+	endpoint := formatEndpoint(cfg.ObservabilityUrl)
 	fmt.Printf("Setting up trace provider with endpoint: %s\n", endpoint)
 
 	traceExporter, err := otlptracegrpc.New(
@@ -154,8 +154,8 @@ func newTracerProvider(ctx context.Context, env *models.EnvConfig, res *resource
 	return tracerProvider, nil
 }
 
-func newMeterProvider(env *models.EnvConfig, res *resource.Resource) (*metric.MeterProvider, error) {
-	endpoint := formatEndpoint(env.ObservabilityUrl)
+func newMeterProvider(env *models.EnvConfig, res *resource.Resource, cfg *config.Config) (*metric.MeterProvider, error) {
+	endpoint := formatEndpoint(cfg.ObservabilityUrl)
 	fmt.Printf("Setting up meter provider with endpoint: %s\n", endpoint)
 
 	metricExporter, err := otlpmetricgrpc.New(
@@ -199,8 +199,8 @@ func (e *StdoutExporter) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-func newLoggerProvider(ctx context.Context, env *models.EnvConfig, res *resource.Resource) (*log.LoggerProvider, error) {
-	endpoint := formatEndpoint(env.ObservabilityUrl)
+func newLoggerProvider(ctx context.Context, env *models.EnvConfig, res *resource.Resource, cfg *config.Config) (*log.LoggerProvider, error) {
+	endpoint := formatEndpoint(cfg.ObservabilityUrl)
 	fmt.Printf("Setting up logger provider with endpoint: %s\n", endpoint)
 
 	// Create OTLP log exporter for sending to collector
