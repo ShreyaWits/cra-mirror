@@ -30,6 +30,7 @@ COPY --from=builder /build/.env .env
 
 # Expose port 8005 to the outside world
 EXPOSE 8005
+EXPOSE 50505
 
 # Command to run the executable
 ENTRYPOINT ["/main"]
