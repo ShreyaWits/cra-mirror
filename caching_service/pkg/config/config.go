@@ -24,7 +24,6 @@ func LoadEnv() {
 	if os.Getenv("IS_DOCKER") != "true" {
         if err := godotenv.Load(); err != nil {
             log.Printf("Warning: No .env file found. Proceeding without it. Error: %v AND IS_DOCKER not true", err)
-            return err
         } else {
             log.Println("Loaded .env file")
         }
