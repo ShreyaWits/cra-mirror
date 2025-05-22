@@ -25,9 +25,8 @@ FROM scratch
 # Copy CA certificates and compiled binary from the builder stage
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/main /main
+COPY --from=builder /app/.env .env
 
-# Expose the necessary port
-EXPOSE 3000
 
 # Command to run the executable
 ENTRYPOINT ["/main"]

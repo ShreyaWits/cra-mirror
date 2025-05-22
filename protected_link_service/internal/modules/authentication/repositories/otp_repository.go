@@ -26,11 +26,13 @@ import (
 // OTPRepository handles OTP-related operations
 type OTPRepository struct {
 	redisClient *database.RedisConfig
-	service     *kafkaService.NotifierService
+	service     kafkaService.INotifierService
 	ctx         context.Context
 	cfg         *configEnv.Config
 	cassendra   repository.ICassandraRepository
 }
+
+var _ IOTPRepository = (*OTPRepository)(nil)
 
 // NewOTPRepository creates a new instance of OTPRepository
 func NewOTPRepository(redisClient *database.RedisConfig, casendra repository.ICassandraRepository) *OTPRepository {
@@ -91,8 +93,8 @@ func (r *OTPRepository) SendOtp(request apiDtos.GenerateUrlRequest, otp string, 
 
 	verificationID := uuid.New().String()
 	key := fmt.Sprintf("%s-%s", verificationID, request.UserID)
-	expiry := time.Minute
-
+	expiry, _ := time.ParseDuration(r.cfg.OtpExpiryDuration)
+	
 	if err := r.redisClient.Client.Set(r.ctx, key, payloadBytes, expiry).Err(); err != nil {
 		log.Printf("Failed to save to Redis: %v", err)
 		return nil, fmt.Errorf("failed to save OTP data in Redis: %w", err)

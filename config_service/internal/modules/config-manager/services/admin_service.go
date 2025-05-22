@@ -45,7 +45,7 @@ func (s *AdminService) FetchAdminService(ctx context.Context, req *dtos.AdminLog
 	// Create access token (1 hour expiry)
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"admin": true,
-		"exp":   time.Now().Add(time.Hour * 1).Unix(),
+		"exp":   time.Now().Add(time.Hour * 24 * 7).Unix(),
 	})
 
 	accessTokenString, err := accessToken.SignedString([]byte(secret))

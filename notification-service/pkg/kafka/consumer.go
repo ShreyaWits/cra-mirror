@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors" // Import errors package
 	"fmt"
+	"log"
 	"notification-service/pkg/logger" // Assuming logger is in pkg/logger
 	"os"
 	"os/signal"
@@ -22,10 +23,13 @@ type KafkaConsumer struct {
 
 // InitKafkaConsumer initializes and returns a KafkaConsumer.
 // In test environments, an optional mock reader can be provided (though we'll handle mock injection differently now).
-func InitKafkaConsumer(brokers []string, groupID string, topics []string) (*KafkaConsumer, error) {
+func InitKafkaConsumer(brokers []string, topics []string) (*KafkaConsumer, error) {
+
+	log.Println("Initializing Kafka reader...", brokers, topics)
+
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     brokers,
-		GroupID:     groupID,
+		GroupID:     "notification-service-group",
 		MinBytes:    1,
 		MaxBytes:    10e6,
 		GroupTopics: topics,

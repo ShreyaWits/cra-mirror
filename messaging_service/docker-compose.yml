@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  messaging_service:
+    build:
+      context: ../
+      dockerfile: ./messaging_service/Dockerfile
+    ports:
+      - "${GRPC_PORT}:${GRPC_PORT}"
+      - "${REST_PORT}:${REST_PORT}"
+    networks: [messaging-service-network]
+    environment:
+      GRPC_PORT: ${GRPC_PORT}
+      CONFIG_SERVICE_URL: ${CONFIG_SERVICE_URL}
+      MESSAGING_CONFIG_SERVICE_TOKEN: ${MESSAGING_CONFIG_SERVICE_TOKEN}
+      ENVIRONMENT: ${ENVIRONMENT}
+      REST_PORT: ${REST_PORT}
+      MESSAGING_SERVICE_REDIS_TTL: ${MESSAGING_SERVICE_REDIS_TTL}
+      CACHING_SERVICE_GRPC_URL: ${CACHING_SERVICE_GRPC_URL}
+      OTLEL_COLLECTOR_GRPC_ENDPOINT: ${OTLEL_COLLECTOR_GRPC_ENDPOINT}
+      Environment: ${Environment}
+
+    restart: on-failure
+
+networks:
+  messaging-service-network:
+    external: true
+
+# Command to start the service:
+# docker compose -f 'messaging_service/docker-compose.yml' up --build 'messaging_service'

@@ -79,14 +79,13 @@ func TestMain(t *testing.T) {
 	// Save original environment variables
 	originalEnv := make(map[string]string)
 	envVars := []string{
-		"TEMPORAL_SERVER_URL",
+		"TEMPORAL_SERVER_ENDPOINT",
 		"LOKI_URL",
 		"CASSANDRA_HOST",
 		"CASSANDRA_KEYSPACE",
 		"CASSANDRA_USERNAME",
 		"CASSANDRA_PASSWORD",
 		"CASSANDRA_PORT",
-		"KAFKA_BROKERS",
 	}
 
 	for _, envVar := range envVars {
@@ -96,14 +95,13 @@ func TestMain(t *testing.T) {
 	}
 
 	// Set test environment variables
-	os.Setenv("TEMPORAL_SERVER_URL", "localhost:7233")
+	os.Setenv("TEMPORAL_SERVER_ENDPOINT", "localhost:7233")
 	os.Setenv("LOKI_URL", "http://localhost:5000")
 	os.Setenv("CASSANDRA_HOST", "localhost")
 	os.Setenv("CASSANDRA_KEYSPACE", "test_keyspace")
 	os.Setenv("CASSANDRA_USERNAME", "test_user")
 	os.Setenv("CASSANDRA_PASSWORD", "test_password")
 	os.Setenv("CASSANDRA_PORT", "9042")
-	os.Setenv("KAFKA_BROKERS", "localhost:9092")
 
 	// Create mock worker
 	mockWorker := new(MockTemporalWorker)
@@ -115,14 +113,13 @@ func TestMain(t *testing.T) {
 
 	// Test environment variable loading
 	t.Run("Test environment variables", func(t *testing.T) {
-		assert.Equal(t, "localhost:7233", os.Getenv("TEMPORAL_SERVER_URL"))
+		assert.Equal(t, "localhost:7233", os.Getenv("TEMPORAL_SERVER_ENDPOINT"))
 		assert.Equal(t, "http://localhost:5000", os.Getenv("LOKI_URL"))
 		assert.Equal(t, "localhost", os.Getenv("CASSANDRA_HOST"))
 		assert.Equal(t, "test_keyspace", os.Getenv("CASSANDRA_KEYSPACE"))
 		assert.Equal(t, "test_user", os.Getenv("CASSANDRA_USERNAME"))
 		assert.Equal(t, "test_password", os.Getenv("CASSANDRA_PASSWORD"))
 		assert.Equal(t, "9042", os.Getenv("CASSANDRA_PORT"))
-		assert.Equal(t, "localhost:9092", os.Getenv("KAFKA_BROKERS"))
 	})
 
 	// Test default values
@@ -139,7 +136,6 @@ func TestMain(t *testing.T) {
 		assert.Equal(t, "cassandra", config.GetEnv("CASSANDRA_USERNAME", "cassandra"))
 		assert.Equal(t, "cassandra", config.GetEnv("CASSANDRA_PASSWORD", "cassandra"))
 		assert.Equal(t, "9042", config.GetEnv("CASSANDRA_PORT", "9042"))
-		assert.Equal(t, "localhost:9092", config.GetEnv("KAFKA_BROKERS", "localhost:9092"))
 	})
 
 	// Test Cassandra port conversion
@@ -224,14 +220,13 @@ func TestCassandraInitialization(t *testing.T) {
 }
 
 func TestMain_Coverage(t *testing.T) {
-	os.Setenv("TEMPORAL_SERVER_URL", "dummy")
+	os.Setenv("TEMPORAL_SERVER_ENDPOINT", "dummy")
 	os.Setenv("LOKI_URL", "http://localhost:5000")
 	os.Setenv("CASSANDRA_HOST", "localhost")
 	os.Setenv("CASSANDRA_KEYSPACE", "test_keyspace")
 	os.Setenv("CASSANDRA_USERNAME", "test_user")
 	os.Setenv("CASSANDRA_PASSWORD", "test_password")
 	os.Setenv("CASSANDRA_PORT", "9042")
-	os.Setenv("KAFKA_BROKERS", "localhost:9092")
 
 	err := runWorker()
 	// We expect an error because the dummy temporal server will fail
@@ -239,28 +234,26 @@ func TestMain_Coverage(t *testing.T) {
 }
 
 func TestMain_ErrorPath_InvalidCassandraPort(t *testing.T) {
-	os.Setenv("TEMPORAL_SERVER_URL", "dummy")
+	os.Setenv("TEMPORAL_SERVER_ENDPOINT", "dummy")
 	os.Setenv("LOKI_URL", "http://localhost:5000")
 	os.Setenv("CASSANDRA_HOST", "localhost")
 	os.Setenv("CASSANDRA_KEYSPACE", "test_keyspace")
 	os.Setenv("CASSANDRA_USERNAME", "test_user")
 	os.Setenv("CASSANDRA_PASSWORD", "test_password")
 	os.Setenv("CASSANDRA_PORT", "notanint")
-	os.Setenv("KAFKA_BROKERS", "localhost:9092")
 
 	err := runWorker()
 	assert.Error(t, err)
 }
 
 func TestMain_ErrorPath_TemporalInitError(t *testing.T) {
-	os.Setenv("TEMPORAL_SERVER_URL", "invalid-url")
+	os.Setenv("TEMPORAL_SERVER_ENDPOINT", "invalid-url")
 	os.Setenv("LOKI_URL", "http://localhost:5000")
 	os.Setenv("CASSANDRA_HOST", "localhost")
 	os.Setenv("CASSANDRA_KEYSPACE", "test_keyspace")
 	os.Setenv("CASSANDRA_USERNAME", "test_user")
 	os.Setenv("CASSANDRA_PASSWORD", "test_password")
 	os.Setenv("CASSANDRA_PORT", "9042")
-	os.Setenv("KAFKA_BROKERS", "localhost:9092")
 
 	err := runWorker()
 	assert.Error(t, err)
@@ -274,14 +267,13 @@ func TestCassandraPortConversion(t *testing.T) {
 }
 
 func TestRunWorkerWithDeps_Success(t *testing.T) {
-	os.Setenv("TEMPORAL_SERVER_URL", "dummy")
+	os.Setenv("TEMPORAL_SERVER_ENDPOINT", "dummy")
 	os.Setenv("LOKI_URL", "http://localhost:5000")
 	os.Setenv("CASSANDRA_HOST", "localhost")
 	os.Setenv("CASSANDRA_KEYSPACE", "test_keyspace")
 	os.Setenv("CASSANDRA_USERNAME", "test_user")
 	os.Setenv("CASSANDRA_PASSWORD", "test_password")
 	os.Setenv("CASSANDRA_PORT", "9042")
-	os.Setenv("KAFKA_BROKERS", "localhost:9092")
 
 	mockTemporal := &mockTemporalWorker{}
 	mockCassandra := &gocql.Session{} // must be *gocql.Session for wrapper

@@ -1,6 +1,7 @@
 package configEnv
 
 import (
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -9,15 +10,15 @@ import (
 // Config holds all configuration for the application
 type Config struct {
 	// Server settings
-	ServerPort string
+	ServerPort        string
+	OtpExpiryDuration string
 
 	// Database settings
-	DBHost           string
-	DBPort           string
-	DBUser           string
-	DBPassword       string
-	DBName           string
-	DBSSLMode        string
+	REDIS_HOST     string
+	REDIS_PORT     string
+	REDIS_PASSWORD string
+	REDIS_USERNAME string
+
 	JWTSecret        string
 	RedirectionURL   string
 	Kafka_Broker_Url string
@@ -36,17 +37,21 @@ type Config struct {
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(".env file not found, falling back to system env")
+	}
 
 	// Default values
 	config := &Config{
 		ServerPort:         getEnv("PORT", "9090"),
 		GRPCPort:           getEnv("GRPC_PORT", "50051"),
-		DBHost:             getEnv("DB_HOST", "localhost"),
-		DBPort:             getEnv("DB_PORT", "6379"),
-		DBUser:             getEnv("DB_USER", "sarbjeet"),
-		DBPassword:         getEnv("DB_PASSWORD", "sarb"),
-		KafkaProducer:      getEnv("KAFKA_PRODUCER_TOPIC", "send_notification"),
+		REDIS_HOST:         getEnv("REDIS_HOST", "localhost"),
+		REDIS_PORT:         getEnv("REDIS_PORT", "6379"),
+		REDIS_PASSWORD:     getEnv("REDIS_PASSWORD", ""),
+		REDIS_USERNAME:     getEnv("REDIS_USERNAME", ""),
+		OtpExpiryDuration:  getEnv("REDIS_TTL", "5m"),
+		KafkaProducer:      getEnv("PROTECTED_LINK_SERVICE_KAFKA_PRODUCER_TOPIC", "send_notification"),
 		AppEnv:             getEnv("APP_ENV", "local"),
 		Kafka_Broker_Url:   getEnv("KAFKA_BROKER_URL", "localhost:9092"),
 		JWTSecret:          getEnv("JWT_SECRET", "mySuperSecureKey1234567890@GoLan"),

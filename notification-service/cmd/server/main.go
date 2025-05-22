@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"notification-service/internal/app"
 	"notification-service/internal/common/api/handlers"
 	"notification-service/internal/common/services"
@@ -12,7 +13,6 @@ import (
 	"notification-service/pkg/grpc"
 	"notification-service/pkg/kafka"
 	"notification-service/pkg/logger"
-	"notification-service/pkg/tracer"
 	"notification-service/proto"
 	"os"
 	"os/signal"
@@ -79,40 +79,26 @@ func (a *KafkaConsumerAdapter) Consume(topic string, handler interface{}) {
 func (a *KafkaConsumerAdapter) Start(ctx context.Context) { a.inner.Start(ctx) }
 
 func runServer(
-	tracerInit func(string) (func(context.Context) error, error),
 	getEnv func(string, string) string,
 	initDependency func(),
 	grpcServerFactory func(string) GRPCServer,
-	kafkaConsumerFactory func([]string, string, []string) (KafkaConsumer, error),
+	kafkaConsumerFactory func([]string, []string) (KafkaConsumer, error),
 	loggerLog Logger,
 	signalNotify func(chan<- os.Signal, ...os.Signal),
 	sleep func(time.Duration),
 ) error {
 
-	shutdown, err := tracerInit("notification-service")
-	if err != nil {
-		loggerLog.Fatalf("Cannot initialize tracer: %v", err)
-		return err
-	}
-	defer func() {
-		if shutdown != nil {
-			_ = shutdown(context.Background())
-		}
-	}()
 	initDependency()
-	grpcPort := getEnv("GRPC_PORT", ":50051")
+	grpcPort := getEnv("GRPC_PORT", "50051")
 	loggerLog.Println("GRPC_PORT", grpcPort)
 
-	grpcInstance := grpcServerFactory(grpcPort)
+	grpcInstance := grpcServerFactory(fmt.Sprintf(":%s", grpcPort))
 
-	KAFKA_SERVER_URL := getEnv("KAFKA_SERVER_URL", "kafka:29092")
-	KAFKA_GROUP_ID := getEnv("KAFKA_GROUP_ID", "notification-service-group")
-	loggerLog.Println("KAFKA_SERVER_URL", KAFKA_SERVER_URL)
-	loggerLog.Println("KAFKA_GROUP_ID", KAFKA_GROUP_ID)
+	KAFKA_BROKER_URL := getEnv("KAFKA_BROKER_URL", "kafka:29092")
+	loggerLog.Println("KAFKA_BROKER_URL", KAFKA_BROKER_URL)
 
 	consumer, err := kafkaConsumerFactory(
-		[]string{KAFKA_SERVER_URL},
-		KAFKA_GROUP_ID,
+		[]string{KAFKA_BROKER_URL},
 		[]string{string(constant.NOTIFICATION_TOPIC)},
 	)
 
@@ -175,9 +161,9 @@ func grpcServerAdapter(port string) GRPCServer {
 	return &GRPCServerAdapter{inner: grpc.NewGRPCServer(port)}
 }
 
-func kafkaConsumerAdapter(brokers []string, groupID string, topics []string) (KafkaConsumer, error) {
-	logger.Log.Println("Initializing Kafka consumer...", brokers, groupID, topics)
-	kc, err := kafka.InitKafkaConsumer(brokers, groupID, topics)
+func kafkaConsumerAdapter(brokers []string, topics []string) (KafkaConsumer, error) {
+	logger.Log.Println("Initializing Kafka consumer...", brokers, topics)
+	kc, err := kafka.InitKafkaConsumer(brokers, topics)
 	if err != nil {
 		return nil, err
 	}
@@ -187,8 +173,8 @@ func kafkaConsumerAdapter(brokers []string, groupID string, topics []string) (Ka
 func main() {
 	LOKI_URL := config.GetEnv("LOKI_URL", "http://localhost:5000")
 	logger.InitLogger(LOKI_URL)
+	config.LoadEnv()
 	runServer(
-		tracer.InitTracer,
 		config.GetEnv,
 		app.InitDependency,
 		grpcServerAdapter,

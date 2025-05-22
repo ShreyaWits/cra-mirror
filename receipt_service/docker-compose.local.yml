@@ -1,0 +1,52 @@
+services:
+  cra-receipt-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cra-receipt-service
+    # restart: always
+    depends_on:
+      redis-service:
+        condition: service_healthy
+    networks:
+      - nps2.0
+    ports:
+      - "${RECEIPT_SERVICE_REST_PORT}:${RECEIPT_SERVICE_REST_PORT}"
+    environment:
+      - RECEIPT_SERVICE_REST_PORT=${RECEIPT_SERVICE_REST_PORT}
+      - IS_DOCKER=${IS_DOCKER}
+      - REDIS_HOST=redis-service
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis
+      - REDIS_USERNAME=default
+      - RECEIPT_SERVICE_REDIS_TTL=${RECEIPT_SERVICE_REDIS_TTL}
+      - RECEIPT_SERVICE_GRPC_PORT=${RECEIPT_SERVICE_GRPC_PORT}
+
+  redis-service:
+    container_name: redis-service
+    image: redis:7.0-alpine
+    restart: always
+    command: >
+      redis-server
+      --requirepass redis
+      --appendonly yes
+    volumes:
+      - user-redis:/data
+    networks:
+      - nps2.0
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  user-redis:
+    driver: local
+
+networks:
+  nps2.0:
+    name: nps2.0
+    driver: bridge
+    external: true

@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	common "nps-config-service/internal/common/errors"
+	"nps-config-service/internal/configs"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services"
 	"nps-config-service/pkg/observability"
@@ -38,7 +39,7 @@ func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF014")) // Secret is required
 	}
 	// Load the admin secret from .env
-	adminSecret := os.Getenv("ADMIN_SECRET")
+	adminSecret := configs.AppConfig.AdminSecret
 	if adminSecret == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF005")) // Admin secret not configured
 	}
@@ -82,7 +83,7 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 	// }
 
 	// Load JWT secret
-	jwtSecret := os.Getenv("JWT_SECRET")
+	jwtSecret := configs.AppConfig.JWTSecret
 	if jwtSecret == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF007"))
 	}

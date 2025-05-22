@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package documentprocessing;
+
+option go_package = "Document-Processing/proto";
+
+// Health check service definition
+service HealthService {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+// Health check request message
+message HealthCheckRequest {
+  string service = 1;
+}
+
+// Health check response message
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+  }
+  ServingStatus status = 1;
+}
+
+// File processing request message
+message FileProcessingRequest {
+  FileData file = 1;
+  repeated string extraction_fields = 2;
+}
+
+// File data message
+message FileData {
+  string base64file = 1;
+  string file_type = 2;
+}
+
+// Batch file processing request
+message BatchFileProcessingRequest {
+  repeated FileProcessingRequest files = 1;
+  string batch_id = 2;  // Unique identifier for the batch
+  string classifier = 3;
+}
+
+// Batch processing acknowledgment
+message BatchProcessingAck {
+  string batch_id = 1;
+  string status = 2;  // "ACCEPTED", "PROCESSING", "COMPLETED", "FAILED"
+  string message = 3;
+  repeated string file_urls = 4;  // URLs of all processed files in Minio
+}
+
+// Batch processing status request
+message BatchStatusRequest {
+  string batch_id = 1;
+}
+
+// Processed file data
+message ProcessedFileData {
+  string file_id = 1;
+  string file_url = 2;
+  map<string, string> extracted_data = 3;
+  float confidence = 4;  // Confidence score for this file (0-100)
+}
+
+// Batch file processing response
+message BatchFileProcessingResponse {
+  bool success = 1;
+  string message = 2;
+  repeated ProcessedFileData processed_files = 3;
+  string created_at = 4;
+}
+
+// Document processing service definition with versioning
+service DocumentProcessingServiceV1 {
+  // V1 methods
+  rpc ProcessBatchFilesV1(BatchFileProcessingRequest) returns (BatchProcessingAck) {}
+  rpc GetBatchStatusV1(BatchStatusRequest) returns (BatchFileProcessingResponse) {}
+}
+
+// Future V2 service definition (commented out for now)
+// service DocumentProcessingServiceV2 {
+//   // V2 methods will be added here
+//   // rpc ProcessBatchFilesV2(BatchFileProcessingRequest) returns (BatchProcessingAck) {}
+//   // rpc GetBatchStatusV2(BatchStatusRequest) returns (BatchFileProcessingResponse) {}
+// } 

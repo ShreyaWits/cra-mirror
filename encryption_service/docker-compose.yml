@@ -34,11 +34,11 @@ services:
       - "8082:8082"
       - "50051:50051"
     environment:
-      - SERVER_PORT=8082
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_TOKEN=root
-      - VAULT_PATH=transit
-      - GRPC_PORT=50051
+      - REST_PORT=${REST_PORT:-8082}
+      - HASHICORP_VAULT_ADDR=${HASHICORP_VAULT_ADDR:-http://vault:8200}
+      - HASHICORP_VAULT_TOKEN=${HASHICORP_VAULT_TOKEN:-root}
+      - HASHICORP_VAULT_PATH=${HASHICORP_VAULT_PATH:-secret/data/path}
+      - GRPC_PORT=${GRPC_PORT:-50051}
     depends_on:
       vault:
         condition: service_healthy

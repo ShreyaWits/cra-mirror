@@ -23,9 +23,7 @@ func TestLoadConfig(t *testing.T) {
 	os.Setenv("GRPC_PORT", ":50055")
 	os.Setenv("HTTP_PORT", ":8085")
 	os.Setenv("LOKI_URL", "http://localhost:5005")
-	os.Setenv("KAFKA_SERVER_URL", "test_kafka:29092")
-	os.Setenv("KAFKA_GROUP_ID", "test_group")
-	os.Setenv("KAFKA_BROKERS", "localhost:9095")
+	os.Setenv("KAFKA_BROKER_URL", "test_kafka:29092")
 	os.Setenv("CASSANDRA_HOST", "test_cassandra")
 	os.Setenv("CASSANDRA_PORT", "9045")
 	os.Setenv("CASSANDRA_KEYSPACE", "test_keyspace")
@@ -35,7 +33,7 @@ func TestLoadConfig(t *testing.T) {
 	os.Setenv("REDIS_PORT", "6385")
 	os.Setenv("REDIS_USERNAME", "test_redis_user")
 	os.Setenv("REDIS_PASSWORD", "test_redis_password")
-	os.Setenv("TEMPORAL_SERVER_URL", "test_temporal:7235")
+	os.Setenv("TEMPORAL_SERVER_ENDPOINT", "test_temporal:7235")
 	os.Setenv("SMTP_HOST", "test_smtp")
 	os.Setenv("SMTP_PORT", "585")
 	os.Setenv("SMTP_USERNAME", "test_smtp_user")
@@ -51,9 +49,7 @@ func TestLoadConfig(t *testing.T) {
 		os.Unsetenv("GRPC_PORT")
 		os.Unsetenv("HTTP_PORT")
 		os.Unsetenv("LOKI_URL")
-		os.Unsetenv("KAFKA_SERVER_URL")
-		os.Unsetenv("KAFKA_GROUP_ID")
-		os.Unsetenv("KAFKA_BROKERS")
+		os.Unsetenv("KAFKA_BROKER_URL")
 		os.Unsetenv("CASSANDRA_HOST")
 		os.Unsetenv("CASSANDRA_PORT")
 		os.Unsetenv("CASSANDRA_KEYSPACE")
@@ -63,7 +59,7 @@ func TestLoadConfig(t *testing.T) {
 		os.Unsetenv("REDIS_PORT")
 		os.Unsetenv("REDIS_USERNAME")
 		os.Unsetenv("REDIS_PASSWORD")
-		os.Unsetenv("TEMPORAL_SERVER_URL")
+		os.Unsetenv("TEMPORAL_SERVER_ENDPOINT")
 		os.Unsetenv("SMTP_HOST")
 		os.Unsetenv("SMTP_PORT")
 		os.Unsetenv("SMTP_USERNAME")
@@ -77,8 +73,8 @@ func TestLoadConfig(t *testing.T) {
 
 	c := LoadConfig()
 
-	if c.KAFKA_SERVER_URL != "test_kafka:29092" {
-		t.Errorf("Expected KAFKA_SERVER_URL to be test_kafka:29092, but got %s", c.KAFKA_SERVER_URL)
+	if c.KAFKA_BROKER_URL != "test_kafka:29092" {
+		t.Errorf("Expected KAFKA_BROKER_URL to be test_kafka:29092, but got %s", c.KAFKA_BROKER_URL)
 	}
 }
 
@@ -103,9 +99,7 @@ func TestLoadConfigSingleton(t *testing.T) {
 	os.Setenv("GRPC_PORT", ":50056")
 	os.Setenv("HTTP_PORT", ":8086")
 	os.Setenv("LOKI_URL", "http://localhost:5006")
-	os.Setenv("KAFKA_SERVER_URL", "test_kafka_singleton:9096")
-	os.Setenv("KAFKA_GROUP_ID", "test_group_singleton")
-	os.Setenv("KAFKA_BROKERS", "localhost:9097")
+	os.Setenv("KAFKA_BROKER_URL", "test_kafka_singleton:9096")
 	os.Setenv("CASSANDRA_HOST", "test_cassandra_singleton")
 	os.Setenv("CASSANDRA_PORT", "9046")
 	os.Setenv("CASSANDRA_KEYSPACE", "test_keyspace_singleton")
@@ -115,7 +109,7 @@ func TestLoadConfigSingleton(t *testing.T) {
 	os.Setenv("REDIS_PORT", "6386")
 	os.Setenv("REDIS_USERNAME", "test_redis_user_singleton")
 	os.Setenv("REDIS_PASSWORD", "test_redis_password_singleton")
-	os.Setenv("TEMPORAL_SERVER_URL", "test_temporal_singleton:7236")
+	os.Setenv("TEMPORAL_SERVER_ENDPOINT", "test_temporal_singleton:7236")
 	os.Setenv("SMTP_HOST", "test_smtp_singleton")
 	os.Setenv("SMTP_PORT", "586")
 	os.Setenv("SMTP_USERNAME", "test_smtp_user_singleton")
@@ -131,9 +125,7 @@ func TestLoadConfigSingleton(t *testing.T) {
 		os.Unsetenv("GRPC_PORT")
 		os.Unsetenv("HTTP_PORT")
 		os.Unsetenv("LOKI_URL")
-		os.Unsetenv("KAFKA_SERVER_URL")
-		os.Unsetenv("KAFKA_GROUP_ID")
-		os.Unsetenv("KAFKA_BROKERS")
+		os.Unsetenv("KAFKA_BROKER_URL")
 		os.Unsetenv("CASSANDRA_HOST")
 		os.Unsetenv("CASSANDRA_PORT")
 		os.Unsetenv("CASSANDRA_KEYSPACE")
@@ -143,7 +135,7 @@ func TestLoadConfigSingleton(t *testing.T) {
 		os.Unsetenv("REDIS_PORT")
 		os.Unsetenv("REDIS_USERNAME")
 		os.Unsetenv("REDIS_PASSWORD")
-		os.Unsetenv("TEMPORAL_SERVER_URL")
+		os.Unsetenv("TEMPORAL_SERVER_ENDPOINT")
 		os.Unsetenv("SMTP_HOST")
 		os.Unsetenv("SMTP_PORT")
 		os.Unsetenv("SMTP_USERNAME")
@@ -165,7 +157,7 @@ func TestLoadConfigSingleton(t *testing.T) {
 
 func TestLoadConfig_EnvFile(t *testing.T) {
 	envContent := `
-KAFKA_SERVER_URL=env_file_kafka:29092
+KAFKA_BROKER_URL=env_file_kafka:29092
 REDIS_HOST=env_file_redis
 CASSANDRA_PORT=9042
 SMTP_PORT=587
@@ -184,9 +176,7 @@ SMTP_PORT=587
 	os.Unsetenv("GRPC_PORT")
 	os.Unsetenv("HTTP_PORT")
 	os.Unsetenv("LOKI_URL")
-	os.Unsetenv("KAFKA_SERVER_URL")
-	os.Unsetenv("KAFKA_GROUP_ID")
-	os.Unsetenv("KAFKA_BROKERS")
+	os.Unsetenv("KAFKA_BROKER_URL")
 	os.Unsetenv("CASSANDRA_HOST")
 	os.Unsetenv("CASSANDRA_PORT")
 	os.Unsetenv("CASSANDRA_KEYSPACE")
@@ -196,7 +186,7 @@ SMTP_PORT=587
 	os.Unsetenv("REDIS_PORT")
 	os.Unsetenv("REDIS_USERNAME")
 	os.Unsetenv("REDIS_PASSWORD")
-	os.Unsetenv("TEMPORAL_SERVER_URL")
+	os.Unsetenv("TEMPORAL_SERVER_ENDPOINT")
 	os.Unsetenv("SMTP_HOST")
 	os.Unsetenv("SMTP_PORT")
 	os.Unsetenv("SMTP_USERNAME")
@@ -213,7 +203,7 @@ SMTP_PORT=587
 	c := LoadConfig()
 
 	// Set environment variables directly to simulate loading from .env for assertion
-	os.Setenv("KAFKA_SERVER_URL", "env_file_kafka:29092")
+	os.Setenv("KAFKA_BROKER_URL", "env_file_kafka:29092")
 	os.Setenv("REDIS_HOST", "env_file_redis")
 	os.Setenv("CASSANDRA_PORT", "9042")
 	os.Setenv("SMTP_PORT", "587")
@@ -222,8 +212,8 @@ SMTP_PORT=587
 	resetSingleton()
 	c = LoadConfig()
 
-	if c.KAFKA_SERVER_URL != "env_file_kafka:29092" {
-		t.Errorf("Expected KAFKA_SERVER_URL to be env_file_kafka:29092, got %s", c.KAFKA_SERVER_URL)
+	if c.KAFKA_BROKER_URL != "env_file_kafka:29092" {
+		t.Errorf("Expected KAFKA_BROKER_URL to be env_file_kafka:29092, got %s", c.KAFKA_BROKER_URL)
 	}
 	if c.REDIS_HOST != "env_file_redis" {
 		t.Errorf("Expected REDIS_HOST to be env_file_redis, got %s", c.REDIS_HOST)
@@ -236,7 +226,7 @@ func TestLoadConfig_FallbackToDefaults(t *testing.T) {
 	envFilePath := filepath.Join(currentDir, ".env")
 	os.Remove(envFilePath)
 
-	os.Unsetenv("KAFKA_SERVER_URL")
+	os.Unsetenv("KAFKA_BROKER_URL")
 	os.Unsetenv("REDIS_HOST")
 	os.Unsetenv("REDIS_PORT")
 	os.Unsetenv("REDIS_USERNAME")
@@ -249,8 +239,8 @@ func TestLoadConfig_FallbackToDefaults(t *testing.T) {
 	defer os.Unsetenv("NOTIFICATION_SERVICE_TEST_ENV")
 	c := LoadConfig()
 
-	if c.KAFKA_SERVER_URL != "kafka:29092" {
-		t.Errorf("Expected KAFKA_SERVER_URL to be default kafka:29092, got %s", c.KAFKA_SERVER_URL)
+	if c.KAFKA_BROKER_URL != "kafka:29092" {
+		t.Errorf("Expected KAFKA_BROKER_URL to be default kafka:29092, got %s", c.KAFKA_BROKER_URL)
 	}
 	if c.REDIS_HOST != "localhost" {
 		t.Errorf("Expected REDIS_HOST to be default localhost, got %s", c.REDIS_HOST)
