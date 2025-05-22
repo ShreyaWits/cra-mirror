@@ -1,0 +1,60 @@
+services:
+  document-processing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 50508:50508
+      - ${DOCUMENT_SERVICE_REST_PORT}:${DOCUMENT_SERVICE_REST_PORT}
+    environment:
+      - DOCUMENT_CONFIG_SERVICE_TOKEN=${DOCUMENT_CONFIG_SERVICE_TOKEN}
+      - CONFIG_SERVICE_URL=${CONFIG_SERVICE_URL}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - IS_DOCKER=${IS_DOCKER}
+      - DOCUMENT_SERVICE_REST_PORT=${DOCUMENT_SERVICE_REST_PORT}
+    depends_on:
+      - yugabyte1
+      - minio
+    networks:
+      - config_service_nps2.0
+
+  yugabyte1:
+    image: yugabytedb/yugabyte:latest
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    command: [
+      "bin/yugabyted", "start",
+      "--base_dir=/home/yugabyte/yb_data",
+      "--background=false",
+      "--listen=0.0.0.0"
+    ]
+    ports:
+      - "5434:5433"  # YSQL
+    volumes:
+      - yugabyte_data:/home/yugabyte/yb_data
+    networks:
+      - config_service_nps2.0
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - config_service_nps2.0
+
+volumes:
+  yugabyte_data:
+  minio_data:
+
+networks:
+  config_service_nps2.0:
+    external: true

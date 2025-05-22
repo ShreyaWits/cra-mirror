@@ -1,6 +1,7 @@
 package services
 
 import (
+	"Document-Processing/pkg/observability"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -28,55 +29,64 @@ type GeminiService struct {
 	client    *genai.Client
 	model     GeminiModelInterface
 	minioRepo MinioRepositoryInterface
+	observability observability.ObservabilityStack
 }
 
-func NewGeminiService(apiKey string, minioRepo MinioRepositoryInterface) (*GeminiService, error) {
+func NewGeminiService(apiKey string, minioRepo MinioRepositoryInterface, observability observability.ObservabilityStack) (*GeminiService, error) {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Gemini client: %v", err)
 	}
 
-	model := client.GenerativeModel("gemini-1.5-flash")
+	model := client.GenerativeModel("gemini-2.0-flash")
 	return &GeminiService{
 		client:    client,
 		model:     model,
 		minioRepo: minioRepo,
+		observability: observability,
 	}, nil
 }
 
 func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, extractionFields []string, fileUrl string) (map[string]string, float32, error) {
-	// Step 1: Clean and validate base64 string
-	base64Data, mimeType, err := cleanAndValidateBase64(base64Image)
+	traceCtx, span := s.observability.TracerService.StartTracer(ctx, "GeminiService.ProcessImage")
+	defer span.End()
+
+	s.observability.TracerService.SetAttributes(span, map[string]string{
+		"handler":    "ProcessImage",
+		"fileUrl":    fileUrl,
+		"fieldCount": fmt.Sprintf("%d", len(extractionFields)),
+	})
+
+	s.observability.LoggerService.Info(traceCtx, "Started Gemini image processing", fmt.Sprintf("base64Length=%d", len(base64Image)))
+
+	base64Data, mimeType, err := s.cleanAndValidateBase64(ctx, base64Image)
 	if err != nil {
+		s.observability.LoggerService.Error(traceCtx, "Base64 validation failed", err.Error())
+		s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.error", 1, map[string]string{"reason": "base64_validation"})
+		span.RecordError(err)
 		return nil, 0, fmt.Errorf("base64 validation failed: %v", err)
 	}
 
-	// Log base64 data details for debugging
-	fmt.Printf("Processing image with base64 length: %d, MIME type: %s\n", len(base64Data), mimeType)
+	s.observability.LoggerService.Debug(traceCtx, "Validated base64 image", fmt.Sprintf("mimeType=%s", mimeType))
 
-	// Step 2: Decode base64 image
 	imageData, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
-		fmt.Printf("Base64 decoding failed: %v\n", err)
-		fmt.Printf("Base64 data length: %d\n", len(base64Data))
-		fmt.Printf("First 100 chars: %s\n", base64Data[:min(100, len(base64Data))])
-		return nil, 0, fmt.Errorf("base64 decoding failed: %v (input length: %d)", err, len(base64Data))
+		s.observability.LoggerService.Error(traceCtx, "Base64 decoding failed", err.Error())
+		s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.error", 1, map[string]string{"reason": "decode_failure"})
+		span.RecordError(err)
+		return nil, 0, fmt.Errorf("base64 decoding failed: %v", err)
 	}
 
-	fmt.Printf("Successfully decoded image, size: %d bytes\n", len(imageData))
+	s.observability.LoggerService.Info(traceCtx, "Successfully decoded image", fmt.Sprintf("size=%d bytes", len(imageData)))
 
-	// Step 3: Create image data for Gemini
 	img := genai.ImageData(mimeType, imageData)
-
-	// Step 4: Create extraction prompt
 	prompt := fmt.Sprintf(`Extract these fields from the document: %s. 
 		Return ONLY valid JSON with these exact field names and an overall confidence score.
 		If a field is missing, use empty string.
 		Example: {"data":{"name":"John Doe","email":"john@example.com"},"confidence":0.95}`,
 		strings.Join(extractionFields, ", "))
 
-	// Step 5: Call Gemini with retry logic and exponential backoff
 	var resp *genai.GenerateContentResponse
 	maxRetries := 2
 	baseDelay := 1 * time.Second
@@ -84,10 +94,13 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 	for i := 0; i < maxRetries; i++ {
 		select {
 		case <-ctx.Done():
-			return nil, 0, fmt.Errorf("context canceled while processing with Gemini: %v", ctx.Err())
+			err := fmt.Errorf("context canceled while processing with Gemini: %v", ctx.Err())
+			s.observability.LoggerService.Warn(traceCtx, "Context canceled", err.Error())
+			s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.error", 1, map[string]string{"reason": "context_cancel"})
+			span.RecordError(err)
+			return nil, 0, err
 		default:
-			// Create a new context with timeout for this attempt
-			attemptCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			attemptCtx, cancel := context.WithTimeout(traceCtx, 30*time.Second)
 			resp, err = s.model.GenerateContent(attemptCtx, img, genai.Text(prompt))
 			cancel()
 
@@ -95,15 +108,19 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 				break
 			}
 
-			fmt.Printf("Gemini API attempt %d failed: %v\n", i+1, err)
+			s.observability.LoggerService.Warn(traceCtx, "Gemini API attempt failed", err.Error())
+			span.RecordError(err)
 
 			if i < maxRetries-1 {
-				// Calculate delay with exponential backoff
 				delay := baseDelay * time.Duration(1<<uint(i))
-				fmt.Printf("Retrying in %v...\n", delay)
+				s.observability.LoggerService.Debug(traceCtx, "Retrying Gemini API", fmt.Sprintf("delay=%v, attempt=%d", delay, i+2))
 				select {
 				case <-ctx.Done():
-					return nil, 0, fmt.Errorf("context canceled while waiting to retry: %v", ctx.Err())
+					err := fmt.Errorf("context canceled during retry delay: %v", ctx.Err())
+					s.observability.LoggerService.Warn(traceCtx, "Retry context canceled", err.Error())
+					s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.error", 1, map[string]string{"reason": "retry_cancel"})
+					span.RecordError(err)
+					return nil, 0, err
 				case <-time.After(delay):
 					continue
 				}
@@ -112,15 +129,22 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 	}
 
 	if err != nil {
-		if err := s.minioRepo.DeleteFile(ctx, fileUrl); err != nil {
-			fmt.Printf("Failed to delete file from MinIO: %v", err)
+		s.observability.LoggerService.Error(traceCtx, "Gemini API failed after retries", err.Error())
+		s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.error", 1, map[string]string{"reason": "gemini_api_failure"})
+		span.RecordError(err)
+		if delErr := s.minioRepo.DeleteFile(ctx, fileUrl); delErr != nil {
+			s.observability.LoggerService.Warn(traceCtx, "Failed to delete file from MinIO", delErr.Error())
 		}
 		return nil, 0, fmt.Errorf("gemini API failed after %d retries: %v", maxRetries, err)
 	}
 
-	// Step 6: Parse response
+	// Parse response
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return nil, 0, fmt.Errorf("empty response from Gemini")
+		err := fmt.Errorf("empty response from Gemini")
+		s.observability.LoggerService.Error(traceCtx, err.Error(), "")
+		s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.error", 1, map[string]string{"reason": "empty_response"})
+		span.RecordError(err)
+		return nil, 0, err
 	}
 
 	var responseText string
@@ -136,74 +160,92 @@ func (s *GeminiService) ProcessImage(ctx context.Context, base64Image string, ex
 	responseText = strings.TrimSuffix(responseText, "```")
 	responseText = strings.TrimSpace(responseText)
 
-	fmt.Printf("Gemini response: %s\n", responseText)
+	s.observability.LoggerService.Debug(traceCtx, "Gemini raw response", responseText)
 
-	// Parse JSON
 	type Response struct {
 		Data       map[string]string `json:"data"`
 		Confidence float32           `json:"confidence"`
 	}
 	var response Response
 	if err := json.Unmarshal([]byte(responseText), &response); err != nil {
+		s.observability.LoggerService.Error(traceCtx, "Failed to parse Gemini response", err.Error())
+		s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.error", 1, map[string]string{"reason": "json_parse_failure"})
+		span.RecordError(err)
 		return nil, 0, fmt.Errorf("failed to parse Gemini response: %v\nResponse: %s", err, responseText)
 	}
 
-	// Ensure all requested fields are present
 	for _, field := range extractionFields {
 		if _, exists := response.Data[field]; !exists {
 			response.Data[field] = ""
 		}
 	}
 
-	return response.Data, response.Confidence * 100, nil // Convert to percentage
+	s.observability.LoggerService.Info(traceCtx, "Gemini processing complete", fmt.Sprintf("confidence=%.2f", response.Confidence*100))
+	s.observability.MetricsService.IncrementCounter(traceCtx, "gemini_process_image.success", 1, nil)
+
+	return response.Data, response.Confidence * 100, nil
 }
 
-func cleanAndValidateBase64(base64Str string) (string, string, error) {
-	// Handle empty input
+func (s *GeminiService) cleanAndValidateBase64(ctx context.Context, base64Str string) (string, string, error) {
+	traceCtx, span := s.observability.TracerService.StartTracer(ctx, "GeminiService.cleanAndValidateBase64")
+	defer span.End()
+
+	s.observability.LoggerService.Debug(traceCtx, "Starting base64 validation", fmt.Sprintf("inputLength=%d", len(base64Str)))
+
 	if base64Str == "" {
-		return "", "", fmt.Errorf("empty input")
+		err := fmt.Errorf("empty input")
+		s.observability.LoggerService.Error(traceCtx, "Validation failed", err.Error())
+		s.observability.MetricsService.IncrementCounter(traceCtx, "base64_validation.error", 1, map[string]string{"reason": "empty_input"})
+		span.RecordError(err)
+		return "", "", err
 	}
 
-	// Handle data URL format
 	if strings.HasPrefix(base64Str, "data:") {
 		parts := strings.SplitN(base64Str, ",", 2)
 		if len(parts) != 2 {
-			return "", "", fmt.Errorf("invalid data URL format")
+			err := fmt.Errorf("invalid data URL format")
+			s.observability.LoggerService.Error(traceCtx, "Validation failed", err.Error())
+			s.observability.MetricsService.IncrementCounter(traceCtx, "base64_validation.error", 1, map[string]string{"reason": "invalid_data_url"})
+			span.RecordError(err)
+			return "", "", err
 		}
 
-		// Extract MIME type
 		mimeParts := strings.Split(parts[0], ";")
 		if len(mimeParts) == 0 {
-			return "", "", fmt.Errorf("missing MIME type in data URL")
+			err := fmt.Errorf("missing MIME type in data URL")
+			s.observability.LoggerService.Error(traceCtx, "Validation failed", err.Error())
+			s.observability.MetricsService.IncrementCounter(traceCtx, "base64_validation.error", 1, map[string]string{"reason": "missing_mime"})
+			span.RecordError(err)
+			return "", "", err
 		}
-		mimeType := strings.TrimPrefix(mimeParts[0], "data:")
 
-		// Clean base64 data
+		mimeType := strings.TrimPrefix(mimeParts[0], "data:")
 		base64Data := strings.TrimSpace(parts[1])
 		base64Data = strings.ReplaceAll(base64Data, "\n", "")
 		base64Data = strings.ReplaceAll(base64Data, "\r", "")
 		base64Data = strings.ReplaceAll(base64Data, " ", "")
 
-		// Add padding if necessary
 		if mod := len(base64Data) % 4; mod != 0 {
 			base64Data += strings.Repeat("=", 4-mod)
 		}
 
+		s.observability.LoggerService.Debug(traceCtx, "Data URL format validated", fmt.Sprintf("mimeType=%s", mimeType))
+		s.observability.MetricsService.IncrementCounter(traceCtx, "base64_validation.success", 1, map[string]string{"format": "data_url"})
 		return base64Data, mimeType, nil
 	}
 
-	// For raw base64 without data URL prefix
+	// Raw base64 format
 	base64Data := strings.TrimSpace(base64Str)
 	base64Data = strings.ReplaceAll(base64Data, "\n", "")
 	base64Data = strings.ReplaceAll(base64Data, "\r", "")
 	base64Data = strings.ReplaceAll(base64Data, " ", "")
 
-	// Add padding if necessary
 	if mod := len(base64Data) % 4; mod != 0 {
 		base64Data += strings.Repeat("=", 4-mod)
 	}
 
-	// Default MIME type for raw base64
+	s.observability.LoggerService.Debug(traceCtx, "Raw base64 format validated", "")
+	s.observability.MetricsService.IncrementCounter(traceCtx, "base64_validation.success", 1, map[string]string{"format": "raw_base64"})
 	return base64Data, "image/jpeg", nil
 }
 

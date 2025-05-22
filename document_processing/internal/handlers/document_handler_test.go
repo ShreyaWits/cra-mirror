@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"Document-Processing/internal/handlers"
+	"Document-Processing/pkg/observability"
 	pb "Document-Processing/proto"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,8 @@ func (m *MockDocumentService) GetBatchStatusV1(ctx context.Context, req *pb.Batc
 func TestProcessBatchFilesV1(t *testing.T) {
 	mockService := new(MockDocumentService)
 	var _ handlers.DocumentServiceHandlerInterface = (*MockDocumentService)(nil) // Interface assertion
-	handler := handlers.NewDocumentHandler(mockService)
+	obs := *observability.NewObservabilityStack()
+	handler := handlers.NewDocumentHandler(mockService, obs)
 
 	req := &pb.BatchFileProcessingRequest{
 		Files: []*pb.FileProcessingRequest{
@@ -70,7 +72,8 @@ func TestProcessBatchFilesV1(t *testing.T) {
 // TestGetBatchStatusV1 tests the GetBatchStatusV1 handler method
 func TestGetBatchStatusV1(t *testing.T) {
 	mockService := new(MockDocumentService)
-	handler := handlers.NewDocumentHandler(mockService)
+	obs := *observability.NewObservabilityStack()
+	handler := handlers.NewDocumentHandler(mockService, obs)
 
 	req := &pb.BatchStatusRequest{
 		BatchId: "test-batch-id",

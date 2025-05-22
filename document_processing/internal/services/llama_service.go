@@ -19,19 +19,22 @@ type LlamaService struct {
 	client    *http.Client
 }
 
-func NewLlamaService() *LlamaService {
+// modelName: "llama3.2-vision",
+// apiURL:    "http://localhost:11434/api/chat",
+
+func NewLlamaService(modelName string, apiURL string) *LlamaService {
 	return &LlamaService{
-		modelName: "llama3.2-vision",
-		apiURL:    "http://localhost:11434/api/chat",
+		modelName: modelName,
+		apiURL:    apiURL,
 		client:    &http.Client{Timeout: 2 * time.Minute},
 	}
 }
 
 // NewLlamaServiceWithClient creates a new LlamaService with a custom HTTP client
-func NewLlamaServiceWithClient(client *http.Client) *LlamaService {
+func NewLlamaServiceWithClient(modelName string, apiURL string, client *http.Client) *LlamaService {
 	return &LlamaService{
-		modelName: "llama3.2-vision",
-		apiURL:    "http://localhost:11434/api/chat",
+		modelName: modelName,
+		apiURL:    apiURL,
 		client:    client,
 	}
 }

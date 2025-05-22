@@ -1,4 +1,5 @@
 //go:build !test
+
 // build +test
 package config
 
@@ -9,10 +10,22 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"os"
 	"strings"
 	"sync"
+	"github.com/joho/godotenv"
+	"github.com/go-playground/validator/v10"
 )
+
+var (
+	configChangeChan = make(chan struct{})
+	configMutex      sync.RWMutex
+	currentConfig    *Config
+	ImmutableConfigs *ImmutableConfig
+	validate 		 *validator.Validate
+)
+
 
 type Config struct {
 	ServerPort       int
@@ -26,12 +39,36 @@ type Config struct {
 	YugabytePassWord string
 	YugabyteName     string
 	YugabytePort     string
+	LlamaModelName   string
+	LlamaApiURL      string
+	ObservabilityUrl string
+}
+
+func init() {
+	// Initialize validator
+	validate = validator.New()
+
+	// Register field name function for better error messages
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return fld.Name
+		}
+		return name
+	})
 }
 
 type ConfigResponse struct {
 	StatusCode int               `json:"status_code"`
 	Message    string            `json:"message"`
 	Data       map[string]string `json:"data"`
+}
+type ImmutableConfig struct {
+    ConfigServiceUrl   string
+    ConfigServiceToken string 
+    Environment        string 
+    CacheSrvAddr       string
+	RestPort          string
 }
 
 type ConfigWebhookData struct {
@@ -40,12 +77,6 @@ type ConfigWebhookData struct {
 	ServiceName string            `json:"serviceName"`
 	Values      map[string]string `json:"values"`
 }
-
-var (
-	configChangeChan = make(chan struct{})
-	configMutex      sync.RWMutex
-	currentConfig    *Config
-)
 
 // GetConfigChangeChan returns the channel that signals config changes
 func GetConfigChangeChan() <-chan struct{} {
@@ -107,7 +138,7 @@ func HandleConfigWebhook(w http.ResponseWriter, r *http.Request) {
 // LoadConfigFromAPI fetches config from the remote config service
 func LoadConfigFromAPI(token string) (map[string]string, error) {
 	client := &http.Client{}
-	api := fmt.Sprintf("%s/%s/document-processing", strings.TrimRight(os.Getenv("CONFIG_API"), "/"), os.Getenv("ENVIRONMENT"))
+	api := fmt.Sprintf("%s/%s/document-processing", strings.TrimRight(os.Getenv("CONFIG_SERVICE_URL"), "/"), os.Getenv("ENVIRONMENT"))
 	log.Println(api)
 	req, err := http.NewRequest("GET", api, nil)
 	if err != nil {
@@ -134,6 +165,45 @@ func LoadConfigFromAPI(token string) (map[string]string, error) {
 	return configResp.Data, nil
 }
 
+func LoadConfig() (*ImmutableConfig, error) {
+    	if os.Getenv("IS_DOCKER") != "true" {
+		if err := godotenv.Load(); err != nil {
+			log.Fatalf("error loading environment variables: %v\n", err)
+		}
+	}
+
+		ImmutableConfigs = &ImmutableConfig{
+        ConfigServiceUrl:   getEnv("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
+        ConfigServiceToken: getEnv("DOCUMENT_CONFIG_SERVICE_TOKEN", "kjdasklfjklajdkfljkl"),
+        Environment:        getEnv("ENVIRONMENT", "development"),
+        CacheSrvAddr:       getEnv("CACHE_SERVICE_ADDR", "localhost:6379"),
+		RestPort:           getEnv("DOCUMENT_SERVICE_REST_PORT", "8080"),
+		
+    	}
+
+	if err := validate.Struct(ImmutableConfigs); err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		if ok {
+			// Format validation errors more nicely
+			var errorMessages []string
+			for _, e := range validationErrors {
+				errorMessages = append(errorMessages, fmt.Sprintf("Field '%s' failed validation: %s", e.Field(), e.Tag()))
+			}
+			return nil, fmt.Errorf("environment validation failed: %s", strings.Join(errorMessages, "; "))
+		}
+		return nil, fmt.Errorf("environment validation failed: %w", err)
+	}
+    return ImmutableConfigs, nil
+}
+
+func getEnv(key, defaultValue string) string {
+    value := os.Getenv(key)
+    if value == "" {
+        return defaultValue
+    }
+    return value
+}
+
 // NewConfig validates and constructs Config from raw API data
 func NewConfig(data map[string]string) (*Config, error) {
 	requiredKeys := []string{
@@ -142,26 +212,30 @@ func NewConfig(data map[string]string) (*Config, error) {
 		"MINIO_SECRET_KEY",
 		"MINIO_BUCKET_NAME",
 		"GEMINI_API_KEY",
-		"SERVER_PORT",
-		"YUGABYTE_HOST",
-		"YUGABYTE_USER",
-		"YUGABYTE_PASSWORD",
-		"YUGABYTE_NAME",
-		"YUGABYTE_PORT",
+		"GRPC_PORT",
+		"YUGABYTE_DATABASE_HOST",
+		"YUGABYTE_DATABASE_USER",
+		"YUGABYTE_DATABASE_PASSWORD",
+		"YUGABYTE_DATABASE_NAME",
+		"YUGABYTE_DATABASE_PORT",
+		"LLAMA_MODEL_NAME",
+		"LLAMA_API_URL",
+		"OTLEL_COLLECTOR_GRPC_ENDPOINT",
 	}
 
 	// Check all required keys
 	for _, key := range requiredKeys {
 		if data[key] == "" {
+			log.Print("Config Service Token Expired")
 			return nil, fmt.Errorf("missing required config key: %s", key)
 		}
 	}
 
 	// Parse SERVER_PORT to int
 	var port int
-	_, err := fmt.Sscanf(data["SERVER_PORT"], "%d", &port)
+	_, err := fmt.Sscanf(data["GRPC_PORT"], "%d", &port)
 	if err != nil || port <= 0 {
-		return nil, errors.New("invalid SERVER_PORT value")
+		return nil, errors.New("invalid GRPC_PORT value")
 	}
 
 	return &Config{
@@ -171,10 +245,13 @@ func NewConfig(data map[string]string) (*Config, error) {
 		MinioSecretKey:   data["MINIO_SECRET_KEY"],
 		MinioBucketName:  data["MINIO_BUCKET_NAME"],
 		GeminiAPIKey:     data["GEMINI_API_KEY"],
-		YugabyteHost:     data["YUGABYTE_HOST"],
-		YugabyteUser:     data["YUGABYTE_USER"],
-		YugabytePassWord: data["YUGABYTE_PASSWORD"],
-		YugabyteName:     data["YUGABYTE_NAME"],
-		YugabytePort:     data["YUGABYTE_PORT"],
+		YugabyteHost:     data["YUGABYTE_DATABASE_HOST"],
+		YugabyteUser:     data["YUGABYTE_DATABASE_USER"],
+		YugabytePassWord: data["YUGABYTE_DATABASE_PASSWORD"],
+		YugabyteName:     data["YUGABYTE_DATABASE_NAME"],
+		YugabytePort:     data["YUGABYTE_DATABASE_PORT"],
+		LlamaModelName:   data["LLAMA_MODEL_NAME"],
+		LlamaApiURL:      data["LLAMA_API_URL"],
+		ObservabilityUrl: data["OTLEL_COLLECTOR_GRPC_ENDPOINT"],
 	}, nil
 }

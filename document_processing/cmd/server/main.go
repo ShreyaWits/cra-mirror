@@ -1,8 +1,11 @@
 //go:build !test
+
 // build +test
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,8 +14,7 @@ import (
 
 	"Document-Processing/internal/config"
 	"Document-Processing/internal/di"
-
-	"github.com/joho/godotenv"
+	"Document-Processing/pkg/observability"
 )
 
 func startServer(cfg *config.Config) (*di.Container, error) {
@@ -32,19 +34,12 @@ func startServer(cfg *config.Config) (*di.Container, error) {
 }
 
 func main() {
-	if os.Getenv("IS_DOCKER") != "true" {
-		if err := godotenv.Load(); err != nil {
-			log.Fatalf("error loading environment variables: %v\n", err)
-		}
+	env, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("failed to load configuration: %w", err)
 	}
 
-	// Load environment variables
-	token := os.Getenv("JWT_TOKEN")
-	if token == "" {
-		log.Fatalf("JWT_TOKEN is missing in .env")
-	}
-
-	rawData, err := config.LoadConfigFromAPI(token)
+	rawData, err := config.LoadConfigFromAPI(env.ConfigServiceToken)
 	if err != nil {
 		log.Fatalf("Failed to fetch config from API: %v", err)
 	}
@@ -54,6 +49,7 @@ func main() {
 		log.Fatalf("Config validation failed: %v", err)
 	}
 
+	observability.SetupOTelSDK(context.Background(), cfg)
 	// Set initial config
 	config.SetCurrentConfig(cfg)
 
@@ -66,7 +62,7 @@ func main() {
 	// Set up config webhook endpoint
 	http.HandleFunc("/config/webhook", config.HandleConfigWebhook)
 	go func() {
-		if err := http.ListenAndServe(":8081", nil); err != nil {
+		if err := http.ListenAndServe(fmt.Sprintf(":%s", env.RestPort), nil); err != nil {
 			log.Printf("Webhook server error: %v", err)
 		}
 	}()

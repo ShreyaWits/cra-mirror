@@ -34,7 +34,8 @@ COPY --from=builder /app/.env .
 COPY --from=builder /app/otel-config.yaml .
 
 # Expose the service port
-EXPOSE 8080
+EXPOSE 50508
+EXPOSE 8008
 
 # Run the application
 CMD ["./document-processing"]

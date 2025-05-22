@@ -3,38 +3,75 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"Document-Processing/pkg/observability"
 	pb "Document-Processing/proto"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type HealthHandler struct {
 	pb.UnimplementedHealthServiceServer
+	observability observability.ObservabilityStack
 }
 
-func NewHealthHandler() *HealthHandler {
-	return &HealthHandler{}
+func NewHealthHandler(obs observability.ObservabilityStack) *HealthHandler {
+	return &HealthHandler{
+		observability: obs,
+	}
 }
 
 func (h *HealthHandler) Check(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
-	// Log the health check request
-	log.Printf("Health check requested for service: %s", req.Service)
+	traceCtx, span := h.observability.TracerService.StartTracer(ctx, "HealthHandler.Check")
+	defer span.End()
 
-	// Check if the requested service is valid
+	h.observability.TracerService.SetAttributes(span, map[string]string{
+		"service.requested": req.Service,
+		"handler":           "HealthHandler",
+	})
+
+	h.observability.LoggerService.Info(traceCtx, "Received health check request", req.Service)
+
+	// Validation: service name must be provided
 	if req.Service == "" {
+		err := fmt.Errorf("service name is required")
+
+		h.observability.LoggerService.Error(traceCtx, err.Error(), req.Service)
+		h.observability.MetricsService.IncrementCounter(traceCtx, "health_check_failure", 1, map[string]string{
+			"error":   "missing_service_name",
+			"handler": "HealthHandler",
+		})
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+
 		return &pb.HealthCheckResponse{
 			Status: pb.HealthCheckResponse_UNKNOWN,
-		}, fmt.Errorf("service name is required")
+		}, err
 	}
 
-	// For now, we only support the document processing service
+	// Only documentprocessing is supported
 	if req.Service != "documentprocessing.DocumentProcessingService" {
+		err := fmt.Errorf("unsupported service: %s", req.Service)
+
+		h.observability.LoggerService.Error(traceCtx, err.Error(), req.Service)
+		h.observability.MetricsService.IncrementCounter(traceCtx, "health_check_failure", 1, map[string]string{
+			"error":   "unsupported_service",
+			"service": req.Service,
+		})
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+
 		return &pb.HealthCheckResponse{
 			Status: pb.HealthCheckResponse_NOT_SERVING,
-		}, fmt.Errorf("unsupported service: %s", req.Service)
+		}, err
 	}
 
-	// Return serving status
+	// Successful check
+	h.observability.LoggerService.Info(traceCtx, "Health check successful", req.Service)
+	h.observability.MetricsService.IncrementCounter(traceCtx, "health_check_success", 1, map[string]string{
+		"service": req.Service,
+	})
+
+	span.SetStatus(codes.Ok, "Service is healthy")
 	return &pb.HealthCheckResponse{
 		Status: pb.HealthCheckResponse_SERVING,
 	}, nil
