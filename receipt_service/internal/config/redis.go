@@ -19,12 +19,17 @@ func InitRedis(host, port, username, password, ttl string) {
 	if err != nil {
 		log.Fatalf("Invalid RECEIPT_SERVICE_REDIS_TTL: %v", err)
 	}
-
+	//print the insctance of the redis connection
+	fmt.Println("host", host)
+	fmt.Println("port", port)
+	fmt.Println("username", username)
+	fmt.Println("password", password)
+	fmt.Println("ttl", ttl)
 	redisClient = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", host, port),
+		Addr: fmt.Sprintf("%s:%s", host, port),
 
-		Username: username,
-		Password: password,
+		// Username: username,
+		// Password: password,
 		DB:       0,
 	})
 
