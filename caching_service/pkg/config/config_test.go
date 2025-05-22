@@ -32,29 +32,29 @@ func TestLoadEnv_WithEnvVars(t *testing.T) {
 	os.Setenv("REDIS_URL", "redis-host:1234")
 	os.Setenv("REDIS_PASSWORD", "pass")
 	os.Setenv("REDIS_DB", "5")
-	os.Setenv("PORT", ":9999")
-	os.Setenv("GRPC_PORT", ":8888")
-	defer unsetEnvVars("REDIS_URL", "REDIS_PASSWORD", "REDIS_DB", "PORT", "GRPC_PORT")
+	os.Setenv("CACHING_SERVICE_REST_PORT", ":9999")
+	os.Setenv("CACHING_SERVICE_GRPC_PORT", ":8888")
+	defer unsetEnvVars("REDIS_URL", "REDIS_PASSWORD", "REDIS_DB", "CACHING_SERVICE_REST_PORT", "CACHING_SERVICE_GRPC_PORT")
 
 	LoadEnv()
 
 	assert.Equal(t, "redis-host:1234", REDIS_URL)
 	assert.Equal(t, "pass", REDIS_PASSWORD)
 	assert.Equal(t, "5", REDIS_DB)
-	assert.Equal(t, ":9999", PORT)
-	assert.Equal(t, ":8888", GRPC_PORT)
+	assert.Equal(t, ":9999", CACHING_SERVICE_REST_PORT)
+	assert.Equal(t, ":8888", CACHING_SERVICE_GRPC_PORT)
 }
 
 func TestLoadEnv_UsesFallbacks(t *testing.T) {
-	unsetEnvVars("REDIS_URL", "REDIS_PASSWORD", "REDIS_DB", "PORT", "GRPC_PORT")
+	unsetEnvVars("REDIS_URL", "REDIS_PASSWORD", "REDIS_DB", "CACHING_SERVICE_REST_PORT", "CACHING_SERVICE_GRPC_PORT")
 
 	LoadEnv()
 
 	assert.Equal(t, "localhost:6379", REDIS_URL)
 	assert.Equal(t, "", REDIS_PASSWORD)
 	assert.Equal(t, "0", REDIS_DB)
-	assert.Equal(t, ":8080", PORT)
-	assert.Equal(t, ":50051", GRPC_PORT)
+	assert.Equal(t, ":8080", CACHING_SERVICE_REST_PORT)
+	assert.Equal(t, ":50051", CACHING_SERVICE_GRPC_PORT)
 }
 
 // Optionally, test that godotenv.Load is called (integration test style)

@@ -7,13 +7,12 @@ services:
     restart: always
     image: caching-service
     ports:
-      - ${REST_PORT}:8001
-      - ${GRPC_PORT}:50051
+      - ${CACHING_SERVICE_REST_PORT}:8005
+      - ${CACHING_SERVICE_GRPC_PORT}:50505
     environment:
       - OTEL_COLLECTOR_GRPC_ENDPOINT=${OTEL_COLLECTOR_GRPC_ENDPOINT}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_DB=${REDIS_DB}
-      - SERVICE_NAME=${SERVICE_NAME}
       - ENVIRONMENT=${ENVIRONMENT}

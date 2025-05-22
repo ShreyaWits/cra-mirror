@@ -13,8 +13,8 @@ var (
 	REDIS_URL                    string
 	REDIS_PASSWORD               string
 	REDIS_DB                     string
-	PORT                         string
-	GRPC_PORT                    string
+	CACHING_SERVICE_REST_PORT    string
+	CACHING_SERVICE_GRPC_PORT    string
 	OTEL_COLLECTOR_GRPC_ENDPOINT string
 	ENVIRONMENT                  string
 )
@@ -32,8 +32,8 @@ func LoadEnv() {
 	REDIS_URL = fmt.Sprintf("%s:%s", REDIS_HOST, REDIS_PORT)
 	REDIS_PASSWORD = getEnv("REDIS_PASSWORD", "")
 	REDIS_DB = getEnv("REDIS_DB", "0")
-	PORT = getEnv("PORT", ":8080")
-	GRPC_PORT = getEnv("GRPC_PORT", ":50051")
+	CACHING_SERVICE_REST_PORT = getEnv("CACHING_SERVICE_REST_PORT", ":8080")
+	CACHING_SERVICE_GRPC_PORT = getEnv("CACHING_SERVICE_GRPC_PORT", ":50051")
 	OTEL_COLLECTOR_GRPC_ENDPOINT = getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", "")
 	ENVIRONMENT = getEnv("ENVIRONMENT", "development")
 }

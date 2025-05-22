@@ -28,8 +28,8 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /build/main /main
 COPY --from=builder /build/.env .env
 
-# Expose port 3006 to the outside world
-EXPOSE 8001
+# Expose port 8005 to the outside world
+EXPOSE 8005
 
 # Command to run the executable
 ENTRYPOINT ["/main"]

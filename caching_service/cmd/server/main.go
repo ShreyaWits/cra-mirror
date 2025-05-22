@@ -47,7 +47,7 @@ func main() {
 	logger.DebugContext(context.Background(), "Creating gRPC server instance...")
 
 	// create a new grpc server instance with tracing interceptor
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.GRPC_PORT))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.CACHING_SERVICE_GRPC_PORT))
 	if err != nil {
 		logger.ErrorContext(context.Background(), "Failed to listen", "error", err.Error())
 		os.Exit(1)
@@ -75,12 +75,12 @@ func main() {
 
 	go grpcServer.Start()
 	go func() {
-		err := app.Listen(config.PORT)
+		err := app.Listen(config.CACHING_SERVICE_REST_PORT)
 		if err != nil {
 			logger.ErrorContext(context.Background(), "Failed to start HTTP server", "error", err)
 			os.Exit(1)
 		}
-		logger.InfoContext(context.Background(), "HTTP server started", "port", config.PORT)
+		logger.InfoContext(context.Background(), "HTTP server started", "port", config.CACHING_SERVICE_REST_PORT)
 	}()
 
 	<-stop
