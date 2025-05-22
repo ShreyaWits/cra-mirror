@@ -18,6 +18,7 @@ const (
 
 func ErrorMessage(code string) string {
 	codesMap := map[string]string{
+		"TS1000": "Internal Error",
 		"TS1001": "Phone Number is invalid.",
 		"TS1002": "Message required for sending sms.",
 		"TS1003": "Country code required for sending sms.",
@@ -30,6 +31,11 @@ func ErrorMessage(code string) string {
 		"TS1010": "Aadhar Number in not valid",
 		"TS1011": "Pan Number is not valid",
 		"TS1012": "WhatsApp messaging Failed",
+		"TS1013": "Missing message body for WhatsApp message",
+		"TS1014": "Missing or invalid country code for WhatsApp message",
+		"TS1015": "Missing device token for push notification",
+		"TS1016": "Missing title for push notification",
+		"TS1017": "Missing body for push notification",
 	}
 	return codesMap[code]
 }

@@ -24,7 +24,7 @@ func (c *ConfigHandler) GetConfig() (*dto.ConfigResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	
 	if err := c.service.ValidateConfig(*config); err != nil {
 		return nil, err
 	}

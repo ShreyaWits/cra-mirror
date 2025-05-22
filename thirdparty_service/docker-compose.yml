@@ -1,0 +1,17 @@
+services:
+  cra-thirdparty-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cra-thirdparty-service
+
+    restart: always
+    ports:
+      - "8080:8080"  # Replace with actual REST_PORT if needed
+
+    environment:
+      - ENVIRONMENT=development
+      - SERVICE_NAME=thirdparty-service
+      - CONFIG_SERVICE_URL=http://localhost:4001/api/v1
+      - CONFIG_SERVICE_USERNAME=adminTest
+      - CONFIG_SERVICE_PASSWORD=Test@1234

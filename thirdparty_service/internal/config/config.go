@@ -47,18 +47,12 @@ func LoadEnv() error {
 		ConfigServiceURL:      getEnv("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
 		ConfigServiceUsername: getEnv("CONFIG_SERVICE_USERNAME", "admin1"),
 		ConfigServicePassword: getEnv("CONFIG_SERVICE_PASSWORD", "Test@1234"),
-		OtelCollectorURL:      getEnv("OTEL_COLLECTOR_URL", "http://localhost:4317"),
+		OtelCollectorURL:      getEnv("OTEL_COLLECTOR_URL", "localhost:4317"),
 	}
 
 	validateErr := utils.Validate(AppConfig.StaticConfig)
 	if validateErr != nil || len(validateErr) > 0 {
 		return errors.New("invalid config")
-	}
-
-	// Skip config service in test environment
-	if AppConfig.Environment == "test" {
-		AppConfig.dynamicConfig = &dto.ConfigResponse{}
-		return nil
 	}
 
 	// fetch config from config service

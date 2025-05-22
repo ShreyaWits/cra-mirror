@@ -2,6 +2,8 @@ package twilio_sms
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -47,6 +49,8 @@ func (c *TwilioClient) SendSMS(from, to, body string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Twilio SMS] Error response: %s", string(bodyBytes))
 		return fmt.Errorf("twilio API error: status %d", resp.StatusCode)
 	}
 

@@ -100,13 +100,18 @@ func (cs *ConfigServiceImpl) FetchDynamicConfig(token string) (*dto.ConfigRespon
 		return nil, fmt.Errorf("config fetch failed: status code %d", resp.StatusCode)
 	}
 
-	var result dto.ConfigResponse
+	var result struct {
+		Token   string             `json:"token"`
+		Success bool               `json:"success"`
+		Message string             `json:"message"`
+		Data    dto.ConfigResponse `json:"data"`
+	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("decoding config response: %w", err)
 	}
 
-	return &result, nil
+	return &result.Data, nil
 
 }
 

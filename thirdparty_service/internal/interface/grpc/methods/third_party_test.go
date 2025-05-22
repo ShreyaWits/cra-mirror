@@ -198,7 +198,7 @@ func TestInvokeSendGridEmail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-			response, err := server.InvokeSendGridEmail(context.Background(), tt.request)
+			response, err := server.InvokeSendgridEmail(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedCode, response.Code)
 			assert.Equal(t, tt.expectedMsg, response.Message)
@@ -240,8 +240,8 @@ func TestInvokeWhatsAppMessage(t *testing.T) {
 				CountryCode: "US",
 			},
 			mockSetup:     func() {},
-			expectedCode:  "VALIDATION_ERROR",
-			expectedMsg:   "",
+			expectedCode:  "TS1012",
+			expectedMsg:   codes.ErrorMessage(codes.TS1012),
 			expectedError: false,
 		},
 		{

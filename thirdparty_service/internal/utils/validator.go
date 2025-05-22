@@ -40,7 +40,7 @@ func getErrorCode(structVal any, fieldName string) string {
 
 	// ✅ Add check for Struct kind before accessing fields
 	if rt.Kind() != reflect.Struct {
-		return "VALIDATION_ERROR"
+		return "TS1000"
 	}
 
 	if field, ok := rt.FieldByName(fieldName); ok {
@@ -49,7 +49,7 @@ func getErrorCode(structVal any, fieldName string) string {
 			return code
 		}
 	}
-	return "VALIDATION_ERROR" // fallback default
+	return "TS1000" // fallback default
 }
 
 

@@ -25,12 +25,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	app_module.InitDependencyInjection()
-
 	// init config service
 	if err := config.LoadEnv(); err != nil {
 		log.Fatalf("error loading env: %v", err)
 	}
+	app_module.InitDependencyInjection()
 
 	// init otel sdk
 	shutdown, err := opentelemetry.SetupOTelSDK(ctx)

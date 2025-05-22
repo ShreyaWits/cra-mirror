@@ -7,22 +7,22 @@ type TwilioSmsRequest struct {
 }
 
 type SendGridEmailRequest struct {
-	Subject string `json:"from" validate:"required,email" error_code:"TS1004"`
+	Subject string `json:"subject" validate:"required" error_code:"TS1004"`
 	To      string `json:"to" validate:"required,email" error_code:"TS1005"`
 	Body    string `json:"body" validate:"required" error_code:"TS1006"`
-	Type    string `json:"type" validate:"required,oneof=TEXT HTML" error_code:"TS1007"`
+	Type    string `json:"type" validate:"required,oneof=TEXT HTML text/html text/plain error_code:\"TS1007\""`
 }
 
 type SendWhatsAppMessageRequest struct {
-	Phone       string `json:"phone" validate:"required,e164"`          // e.g., +919876543210
-	Message     string `json:"message" validate:"required"`             // message body
-	CountryCode string `json:"country_code" validate:"required,len=2"`  // e.g., "IN"
+	Phone       string `json:"phone" validate:"required,e164" error_code:"TS1012"`         // e.g., +919876543210
+	Message     string `json:"message" validate:"required" error_code:"TS1013"`            // message body
+	CountryCode string `json:"country_code" validate:"required,len=2" error_code:"TS1014"` // e.g., "IN"
 }
 
 type PushNotificationRequest struct {
-	ToToken string `json:"toToken"` // Device token
-	Title   string `json:"title"`
-	Body    string `json:"body"`
+	ToToken string `json:"toToken" error_code:"TS1015"` // Device token
+	Title   string `json:"title" error_code:"TS1016"`
+	Body    string `json:"body" error_code:"TS1017"`
 }
 
 type VerifyAadharRequest struct {

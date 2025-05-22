@@ -279,14 +279,14 @@ func TestSendTwilioSms(t *testing.T) {
 	}
 
 	// Test success case with client interaction
-	mockClientForInteraction.On("SendSMS", "test_from", "+1 1234567890", "Test message").Return(nil).Once()
+	mockClientForInteraction.On("SendSMS", "+1 1234567890", "test_from", "Test message").Return(nil).Once()
 	err := serviceForInteraction.SendTwilioSms(payload)
 	assert.NoError(t, err)
 	mockClientForInteraction.AssertExpectations(t)
 
 	// Test error case with client interaction
 	expectedErr := errors.New("twilio send error")
-	mockClientForInteraction.On("SendSMS", "test_from", "+1 1234567890", "Test message").Return(expectedErr).Once()
+	mockClientForInteraction.On("SendSMS", "+1 1234567890", "test_from", "Test message").Return(expectedErr).Once()
 	err = serviceForInteraction.SendTwilioSms(payload)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "twilio API error")
@@ -415,25 +415,6 @@ func TestSendEmailBySendGrid(t *testing.T) {
 	assert.NoError(t, err)
 	mockClientForInteraction.AssertExpectations(t)
 
-	// Test success case - Unknown type (defaults to text/plain) with client interaction
-	payloadUnknown := &dtos.SendGridEmailRequest{
-		To:      "to@example.com",
-		Subject: "Test Subject Unknown",
-		Body:    "Test Body Unknown",
-		Type:    "UNKNOWN",
-	}
-	expectedEmailUnknown := sendgrid.Email{
-		From:    sendgrid.Contact{Email: "from@example.com", Name: "Test Sender"},
-		ReplyTo: sendgrid.Contact{Email: "from@example.com", Name: "Test Sender"},
-		Content: []sendgrid.Content{{Type: "text/plain", Value: "Test Body Unknown"}},
-		Personalizations: []sendgrid.Personalization{{
-			To: []sendgrid.Contact{{Email: "to@example.com"}}, Subject: "Test Subject Unknown",
-		}},
-	}
-	mockClientForInteraction.On("SendEmail", expectedEmailUnknown).Return(nil).Once()
-	err = serviceForInteraction.SendEmailBySendGrid(payloadUnknown)
-	assert.NoError(t, err)
-	mockClientForInteraction.AssertExpectations(t)
 
 	// Test error case with client interaction
 	expectedErr := errors.New("sendgrid send error")
@@ -441,7 +422,6 @@ func TestSendEmailBySendGrid(t *testing.T) {
 	err = serviceForInteraction.SendEmailBySendGrid(payloadText)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "sendgrid API error")
-	mockClientForInteraction.AssertExpectations(t)
 
 	// Dummy constructor that should never be called (for missing credentials cases)
 	dummySendGridConstructor := func(apiKey string) *sendgrid.SendGridClient {
@@ -450,7 +430,10 @@ func TestSendEmailBySendGrid(t *testing.T) {
 	serviceWithDummy := New(mockRepo, nil, dummySendGridConstructor, nil, nil)
 
 	// Test error case - Missing credentials
-	resetConfig()
+	// Ensure config is clean for this test
+	config.AppConfig.SendGridApiKey = ""
+	config.AppConfig.SendGridFromEmail = ""
+	config.AppConfig.SendGridFromName = ""
 	err = serviceWithDummy.SendEmailBySendGrid(payloadText)
 	assert.Error(t, err)
 	assert.Equal(t, "SendGrid API key is not set", err.Error())

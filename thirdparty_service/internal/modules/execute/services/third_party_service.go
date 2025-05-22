@@ -68,7 +68,7 @@ func (s *service) SendTwilioSms(payload *dtos.TwilioSmsRequest) error {
 	client := s.twilioClientConstructor(accountSid, authToken)
 	phoneNumber := fmt.Sprintf("%s %s", payload.CountryCode, payload.Phone)
 
-	if err := client.SendSMS(phoneNumber, formNumber, payload.Message); err != nil {
+	if err := client.SendSMS(formNumber, phoneNumber, payload.Message); err != nil {
 		return err
 	}
 	return nil
@@ -92,10 +92,12 @@ func (s *service) SendEmailBySendGrid(payload *dtos.SendGridEmailRequest) error 
 	contentType := "text/plain"
 
 	switch payload.Type {
-	case "TEXT":
+	case "TEXT", "text/plain":
 		contentType = "text/plain"
-	case "HTML":
+	case "HTML", "text/html":
 		contentType = "text/html"
+	default:
+		return fmt.Errorf("unsupported email content type: %s", payload.Type)
 	}
 
 	// new SendGrid client

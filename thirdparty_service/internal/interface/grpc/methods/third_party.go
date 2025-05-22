@@ -60,7 +60,7 @@ func (h *ThirdPartyServer) InvokeTwilioSms(ctx context.Context, req *protos.Invo
 }
 
 // Invoke SendGrid Email
-func (h *ThirdPartyServer) InvokeSendGridEmail(ctx context.Context, req *protos.InvokeSendGridRequest) (*protos.InvokeSendGridResponse, error) {
+func (h *ThirdPartyServer) InvokeSendgridEmail(ctx context.Context, req *protos.InvokeSendGridRequest) (*protos.InvokeSendGridResponse, error) {
 
 	// validate request
 	payload := &dtos.SendGridEmailRequest{
@@ -69,6 +69,7 @@ func (h *ThirdPartyServer) InvokeSendGridEmail(ctx context.Context, req *protos.
 		Body:    req.Body,
 		Type:    req.Type,
 	}
+
 	validationErr := utils.Validate(payload)
 	if validationErr != nil || len(validationErr) > 0 {
 		err := validationErr[0]
@@ -100,13 +101,13 @@ func (h *ThirdPartyServer) InvokeWhatsAppMessage(ctx context.Context, req *proto
 		CountryCode: req.CountryCode,
 	}
 	validationErr := utils.Validate(payload)
-if len(validationErr) > 0 {
-	err := validationErr[0]
-	return &protos.InvokeWhatsAppResponse{
-		Code:    err.Code,
-		Message: codes.ErrorMessage(err.Code),
-	}, nil
-}
+	if len(validationErr) > 0 {
+		err := validationErr[0]
+		return &protos.InvokeWhatsAppResponse{
+			Code:    err.Code,
+			Message: codes.ErrorMessage(err.Code),
+		}, nil
+	}
 
 	// send WhatsApp message
 	err := h.svc.SendWhatsAppMessage(payload)
@@ -134,7 +135,7 @@ func (h *ThirdPartyServer) InvokePushNotification(ctx context.Context, req *prot
 	if validationErr != nil || len(validationErr) > 0 {
 		err := validationErr[0]
 		return &protos.PushNotificationResponse{
-			Status:    err.Code,
+			Status:  err.Code,
 			Message: codes.ErrorMessage(err.Code),
 		}, nil
 	}
@@ -142,13 +143,13 @@ func (h *ThirdPartyServer) InvokePushNotification(ctx context.Context, req *prot
 	err := h.svc.SendPushNotification(payload)
 	if err != nil {
 		return &protos.PushNotificationResponse{
-			Status:    codes.TS1013, 
+			Status:  codes.TS1013,
 			Message: codes.ErrorMessage(codes.TS1013),
 		}, nil
 	}
 
 	return &protos.PushNotificationResponse{
-		Status:    codes.TS0001,
+		Status:  codes.TS0001,
 		Message: codes.SuccessMessage(codes.TS0001),
 	}, nil
 }

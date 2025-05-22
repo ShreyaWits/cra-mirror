@@ -3,7 +3,7 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil" // Import ioutil for reading response body
+	"io"
 	"net/http" // Import net/http for status codes
 	"net/http/httptest"
 	"testing"
@@ -15,8 +15,8 @@ import (
 
 // Sample struct for testing validation
 type TestStruct struct {
-	Field1 string `json:"field1" validate:"required" error_code:"VALIDATION_ERROR"` // Added error_code tag
-	Field2 int    `json:"field2" validate:"min=10" error_code:"VALIDATION_ERROR"`    // Added error_code tag
+	Field1 string `json:"field1" validate:"required" error_code:"TS1000"` // Added error_code tag
+	Field2 int    `json:"field2" validate:"min=10" error_code:"TS1000"`   // Added error_code tag
 }
 
 // Mock Fiber context for testing with a request body
@@ -78,8 +78,8 @@ func TestValidatorMiddleware_BodyParseError(t *testing.T) {
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "Status code should be 400 for body parse error")
 
 	var responseBody map[string]string
-	bodyBytes, _ := ioutil.ReadAll(resp.Body) // Read the response body
-	defer resp.Body.Close() // Close the response body
+	bodyBytes, _ := io.ReadAll(resp.Body) // Read the response body
+	defer resp.Body.Close()               // Close the response body
 	json.Unmarshal(bodyBytes, &responseBody)
 	assert.Equal(t, "Invalid request payload", responseBody["error"], "Error message should indicate invalid payload")
 }
@@ -110,8 +110,8 @@ func TestValidatorMiddleware_ValidationError(t *testing.T) {
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "Status code should be 400 for validation error")
 
 	var errorResponse dtos.Error
-	bodyBytes, _ := ioutil.ReadAll(resp.Body) // Read the response body
-	defer resp.Body.Close() // Close the response body
+	bodyBytes, _ := io.ReadAll(resp.Body) // Read the response body
+	defer resp.Body.Close()               // Close the response body
 	json.Unmarshal(bodyBytes, &errorResponse)
 
 	assert.Equal(t, http.StatusBadRequest, errorResponse.Code, "Error code should be 400")
@@ -133,6 +133,6 @@ func TestValidatorMiddleware_ValidationError(t *testing.T) {
 	}
 
 	// Assert specific field error details
-	assert.Contains(t, actualFieldErrors, dtos.FieldError{Field: "Field1", Message: "Field1 is required", Code: "VALIDATION_ERROR", Data: "required"})
-	assert.Contains(t, actualFieldErrors, dtos.FieldError{Field: "Field2", Message: "Field2 must be at least 10 characters", Code: "VALIDATION_ERROR", Data: "min"})
+	assert.Contains(t, actualFieldErrors, dtos.FieldError{Field: "Field1", Message: "Field1 is required", Code: "TS1000", Data: "required"})
+	assert.Contains(t, actualFieldErrors, dtos.FieldError{Field: "Field2", Message: "Field2 must be at least 10 characters", Code: "TS1000", Data: "min"})
 }

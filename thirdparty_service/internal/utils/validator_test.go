@@ -89,6 +89,6 @@ func TestValidate_FieldWithoutErrorCodeTag(t *testing.T) {
 
 	errs := utils.Validate(input)
 	assert.Len(t, errs, 1)
-	assert.Equal(t, "VALIDATION_ERROR", errs[0].Code) // fallback code
+	assert.Equal(t, "TS1000", errs[0].Code) // fallback code
 	assert.Equal(t, "FieldX", errs[0].Field)
 }
