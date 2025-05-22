@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+
 	// load environment variables
 	config.LoadEnv()
 
@@ -50,7 +51,6 @@ func main() {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.CACHING_SERVICE_GRPC_PORT))
 	if err != nil {
 		logger.ErrorContext(context.Background(), "Failed to listen", "error", err.Error())
-		os.Exit(1)
 	}
 
 	s := grpc.NewServer(
@@ -60,7 +60,6 @@ func main() {
 	grpcServer, err := server.NewGRPCServer(s, lis)
 	if err != nil {
 		logger.ErrorContext(context.Background(), "gRPC server failed to listen:", "error", err.Error())
-		os.Exit(1)
 	}
 
 	grpcHandler := handler.NewGRPCHandler()
@@ -75,10 +74,9 @@ func main() {
 
 	go grpcServer.Start()
 	go func() {
-		err := app.Listen(config.CACHING_SERVICE_REST_PORT)
+		err := app.Listen(fmt.Sprintf(":%s", config.CACHING_SERVICE_REST_PORT))
 		if err != nil {
 			logger.ErrorContext(context.Background(), "Failed to start HTTP server", "error", err)
-			os.Exit(1)
 		}
 		logger.InfoContext(context.Background(), "HTTP server started", "port", config.CACHING_SERVICE_REST_PORT)
 	}()

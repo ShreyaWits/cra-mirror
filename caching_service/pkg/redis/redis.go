@@ -11,12 +11,13 @@ type RedisClient struct {
 	client RedisClientInterface
 }
 
-func NewRedisService(URL, PASSWORD string, DB int) *RedisClient {
+func NewRedisService(URL, USERNAME, PASSWORD string, DB int) *RedisClient {
 	// Initialize Redis client
 	client := redis.NewClient(&redis.Options{
 		Addr:     URL,
 		Password: PASSWORD,
 		DB:       DB,
+		Username: USERNAME,
 	})
 
 	// wrap the client in a struct

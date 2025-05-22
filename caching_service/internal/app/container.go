@@ -45,7 +45,7 @@ func InitContainer() {
 		redisDb = 0 // Default to DB 0 on error
 	}
 
-	redisClient := redis.NewRedisService(config.REDIS_URL, config.REDIS_PASSWORD, redisDb)
+	redisClient := redis.NewRedisService(config.REDIS_URL, config.REDIS_USERNAME, config.REDIS_PASSWORD, redisDb)
 	redisRepo := repository.NewRedisRepository(redisClient, logger)
 	redisService := service.NewRedisService(redisRepo, logger)
 
