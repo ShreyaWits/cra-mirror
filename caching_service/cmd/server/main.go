@@ -76,7 +76,7 @@ func main() {
 	go func() {
 		err := app.Listen(fmt.Sprintf(":%s", config.CACHING_SERVICE_REST_PORT))
 		if err != nil {
-			logger.ErrorContext(context.Background(), "Failed to start HTTP server", "error", err)
+			logger.ErrorContext(context.Background(), "Failed to start HTTP server", "error", err.Error())
 		}
 		logger.InfoContext(context.Background(), "HTTP server started", "port", config.CACHING_SERVICE_REST_PORT)
 	}()
