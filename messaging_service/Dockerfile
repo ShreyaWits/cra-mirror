@@ -25,7 +25,7 @@
     COPY messaging_service ./messaging_service
     COPY protos ./protos
     # COPY encryption_service ./encryption_service
-    # COPY messaging_service/.env ./.env
+    COPY messaging_service/.env ./.env
     
     WORKDIR /app/messaging_service
     RUN go mod tidy
