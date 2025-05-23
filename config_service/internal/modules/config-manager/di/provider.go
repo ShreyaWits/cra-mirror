@@ -140,7 +140,7 @@ func WithHandlers() ContainerOption {
 			return fmt.Errorf("observability stack not initialized")
 		}
 
-		c.AdminHandler = handler.NewAdminHandler(c.AdminService, c.ObservabilityStack)
+		c.AdminHandler = handler.NewAdminHandler(c.AdminService, c.ObservabilityStack, nil)
 		c.ConfigHandler = handler.NewConfigHandler(c.ConfigService, c.ObservabilityStack)
 		c.WebhookHandler = handler.NewWebhookHandler(c.WebhookService, c.ObservabilityStack)
 

@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"context"
+	"fmt"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/utils"
 	"nps-config-service/pkg/observability"
+	"time"
 
 	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/modules/config-manager/services"
@@ -11,33 +14,110 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type WebhookHandler struct {
 	Service            services.IWebhookService
 	ObservabilityStack *observability.ObservabilityStack
+	// Metrics
+	requestCounter   metric.Int64Counter
+	requestLatency   metric.Float64Histogram
+	errorCounter     metric.Int64Counter
+	operationLatency metric.Float64Histogram
 }
 
 func NewWebhookHandler(service services.IWebhookService, observabilityStack *observability.ObservabilityStack) *WebhookHandler {
 	if observabilityStack == nil {
 		panic("ObservabilityStack cannot be nil")
 	}
-	return &WebhookHandler{Service: service, ObservabilityStack: observabilityStack}
+
+	// Initialize metrics
+	meter := observabilityStack.MetricsService
+	requestCounter, _ := meter.Int64Counter(
+		"webhook_request_total",
+		metric.WithDescription("Total number of webhook requests"),
+	)
+	requestLatency, _ := meter.Float64Histogram(
+		"webhook_request_duration_seconds",
+		metric.WithDescription("Webhook request duration in seconds"),
+	)
+	errorCounter, _ := meter.Int64Counter(
+		"webhook_error_total",
+		metric.WithDescription("Total number of webhook errors"),
+	)
+	operationLatency, _ := meter.Float64Histogram(
+		"webhook_operation_duration_seconds",
+		metric.WithDescription("Webhook operation duration in seconds"),
+	)
+
+	return &WebhookHandler{
+		Service:            service,
+		ObservabilityStack: observabilityStack,
+		requestCounter:     requestCounter,
+		requestLatency:     requestLatency,
+		errorCounter:       errorCounter,
+		operationLatency:   operationLatency,
+	}
+}
+
+func (h *WebhookHandler) recordMetrics(ctx context.Context, operation string, start time.Time, err error) {
+	// Record request count
+	h.requestCounter.Add(ctx, 1,
+		metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("service", "webhook_handler"),
+		),
+	)
+
+	// Record request latency
+	latency := time.Since(start).Seconds()
+	h.requestLatency.Record(ctx, latency,
+		metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("service", "webhook_handler"),
+		),
+	)
+
+	// Record operation latency
+	h.operationLatency.Record(ctx, latency,
+		metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("service", "webhook_handler"),
+		),
+	)
+
+	// Record error if any
+	if err != nil {
+		h.errorCounter.Add(ctx, 1,
+			metric.WithAttributes(
+				attribute.String("operation", operation),
+				attribute.String("service", "webhook_handler"),
+				attribute.String("error", err.Error()),
+			),
+		)
+	}
 }
 
 func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
+	start := time.Now()
 	ctx := c.UserContext()
 	ctx, span := h.ObservabilityStack.TracerService.Start(ctx, "WebhookHandler.RegisterWebhook")
 	defer span.End()
+	defer func() {
+		h.recordMetrics(ctx, "register_webhook", start, nil)
+	}()
 
 	h.ObservabilityStack.Logger.InfoContext(ctx, "Processing webhook registration request")
 
 	configData, ok := c.Locals("contextData").(*dtos.RegisterWebhookRequest)
 	if !ok {
-		span.SetStatus(codes.Error, "Invalid request body")
+		err := fmt.Errorf("invalid request body")
+		span.SetStatus(codes.Error, err.Error())
 		span.SetAttributes(attribute.String("error.code", common.Errors["CNF004"]))
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Invalid request body for webhook registration",
 			"error_code", common.Errors["CNF004"])
+		h.recordMetrics(ctx, "register_webhook", start, err)
 		return c.Status(fiber.StatusBadRequest).JSON(dtos.ApiResponseDto{
 			Success: false,
 			Error: &dtos.ErrorResponseDto{
@@ -63,6 +143,7 @@ func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
 			"error", err.ErrorMessage,
 			"error_code", err.ErrorCode,
 			"status_code", err.StatusCode)
+		h.recordMetrics(ctx, "register_webhook", start, err)
 		utils.SendError(c, int(err.StatusCode), err.ErrorCode, err.ErrorMessage)
 		return nil
 	}
@@ -75,9 +156,13 @@ func (h *WebhookHandler) RegisterWebhook(c *fiber.Ctx) error {
 }
 
 func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error {
+	start := time.Now()
 	ctx := c.UserContext()
 	ctx, span := h.ObservabilityStack.TracerService.Start(ctx, "WebhookHandler.GetWebhooks")
 	defer span.End()
+	defer func() {
+		h.recordMetrics(ctx, "get_webhooks", start, nil)
+	}()
 
 	env := c.Params("environment")
 	service := c.Params("service")
@@ -104,6 +189,7 @@ func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error {
 			"error", err.ErrorMessage,
 			"error_code", err.ErrorCode,
 			"status_code", err.StatusCode)
+		h.recordMetrics(ctx, "get_webhooks", start, err)
 		utils.SendError(c, int(err.StatusCode), err.ErrorCode, err.ErrorMessage)
 		return nil
 	}
@@ -118,9 +204,13 @@ func (h *WebhookHandler) GetWebhooks(c *fiber.Ctx) error {
 }
 
 func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
+	start := time.Now()
 	ctx := c.UserContext()
 	ctx, span := h.ObservabilityStack.TracerService.Start(ctx, "WebhookHandler.DeleteWebhook")
 	defer span.End()
+	defer func() {
+		h.recordMetrics(ctx, "delete_webhook", start, nil)
+	}()
 
 	env := c.Params("environment")
 	service := c.Params("service")
@@ -137,9 +227,11 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 	contextData := c.Locals("contextData")
 	bodyMap, ok := contextData.(*map[string]any)
 	if !ok {
-		span.SetStatus(codes.Error, "Invalid context data")
+		err := fmt.Errorf("invalid context data")
+		span.SetStatus(codes.Error, err.Error())
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Invalid context data for delete request",
 			"context_data", contextData)
+		h.recordMetrics(ctx, "delete_webhook", start, err)
 		utils.SendError(c, fiber.StatusBadRequest, "Invalid delete request", "Context data missing or invalid")
 		return nil
 	}
@@ -149,6 +241,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 		span.SetStatus(codes.Error, err.Error())
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to map delete request data",
 			"error", err.Error())
+		h.recordMetrics(ctx, "delete_webhook", start, err)
 		utils.SendError(c, fiber.StatusBadRequest, "Invalid delete structure", err.Error())
 		return nil
 	}
@@ -171,6 +264,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 			"error", err.ErrorMessage,
 			"error_code", err.ErrorCode,
 			"status_code", err.StatusCode)
+		h.recordMetrics(ctx, "delete_webhook", start, err)
 		utils.SendError(c, int(err.StatusCode), err.ErrorCode, err.ErrorMessage)
 		return nil
 	}

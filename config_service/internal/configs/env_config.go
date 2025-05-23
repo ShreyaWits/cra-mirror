@@ -34,7 +34,7 @@ func LoadConfig() (*Config, error) {
 	if os.Getenv("IS_DOCKER") != "true" {
 		if err := godotenv.Load(); err != nil {
 			log.Printf("Warning: No .env file found. Proceeding without it. Error: %v AND IS_DOCKER not true", err)
-			return err
+			return nil, err
 		} else {
 			log.Println("Loaded .env file")
 		}
@@ -48,16 +48,20 @@ func LoadConfig() (*Config, error) {
 
 	// Load values into AppConfig
 	AppConfig = Config{
-		Port:             os.Getenv("CONFIG_SERVICE_REST_PORT"),
-		EtcdEndpoint:     os.Getenv("ETCD_SERVER_ENDPOINT"),
-		TemporalEndpoint: os.Getenv("TEMPORAL_SERVER_ENDPOINT"),
-		DatabaseHost:     os.Getenv("YUGABYTE_DATABASE_HOST"),
-		DatabasePort:     os.Getenv("YUGABYTE_DATABASE_PORT"),
-		DatabaseUser:     os.Getenv("YUGABYTE_DATABASE_USER"),
-		DatabasePassword: os.Getenv("YUGABYTE_DATABASE_PASSWORD"),
-		DatabaseName:     os.Getenv("CONFIG_SERVICE_YUGABYTE_DATABASE_NAME"),
-		AdminSecret:      os.Getenv("CONFIG_SERVICE_ADMIN_SECRET"),
-		JWTSecret:        os.Getenv("CONFIG_SERVICE_JWT_SECRET"),
+		Port:                      os.Getenv("CONFIG_SERVICE_REST_PORT"),
+		EtcdEndpoint:              os.Getenv("ETCD_SERVER_ENDPOINT"),
+		TemporalEndpoint:          os.Getenv("TEMPORAL_SERVER_ENDPOINT"),
+		DatabaseHost:              os.Getenv("YUGABYTE_DATABASE_HOST"),
+		DatabasePort:              os.Getenv("YUGABYTE_DATABASE_PORT"),
+		DatabaseUser:              os.Getenv("YUGABYTE_DATABASE_USER"),
+		DatabasePassword:          os.Getenv("YUGABYTE_DATABASE_PASSWORD"),
+		DatabaseName:              os.Getenv("CONFIG_SERVICE_YUGABYTE_DATABASE_NAME"),
+		AdminSecret:               os.Getenv("CONFIG_SERVICE_ADMIN_SECRET"),
+		JWTSecret:                 os.Getenv("CONFIG_SERVICE_JWT_SECRET"),
+		OtelCollectorGrpcEndpoint: os.Getenv("OTEL_COLLECTOR_GRPC_ENDPOINT"),
+		ServiceName:               "config-service",
+		ServiceVersion:            "1.0.0",
+		Environment:               "development",
 	}
 	return &AppConfig, nil
 }

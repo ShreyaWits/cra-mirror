@@ -3,10 +3,8 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	common "nps-config-service/internal/common/errors"
-	"nps-config-service/internal/configs/db"
 	"nps-config-service/internal/modules/config-manager/models"
 	etcdDB "nps-config-service/pkg/etcd"
 	"nps-config-service/pkg/observability"
@@ -15,8 +13,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"gorm.io/gorm"
 
+	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -351,15 +349,38 @@ func (r *ConfigRepository) CreateAdmin(ctx context.Context, admin *models.Admin)
 	r.ObservabilityStack.Logger.InfoContext(ctx, "Creating admin user",
 		"username", admin.UserName)
 
-	var existingUser models.Admin
-	if err := db.DB.Where("user_name = ?", admin.UserName).First(&existingUser).Error; err == nil {
+	// Generate UUID if not set
+	if admin.ID == uuid.Nil {
+		admin.ID = uuid.New()
+	}
+
+	// Set timestamps
+	now := time.Now()
+	admin.CreatedAt = now
+	admin.UpdatedAt = now
+
+	// Check if admin already exists
+	key := fmt.Sprintf("/admins/%s", admin.UserName)
+	existingData, err := r.EtcdClient.GetKey(key)
+	if err == nil && existingData != "" {
 		r.ObservabilityStack.Logger.WarnContext(ctx, "Admin user already exists",
 			"username", admin.UserName)
 		return nil, common.ThrowError(fiber.StatusConflict, "ADMIN001")
 	}
 
-	if err := db.DB.Create(admin).Error; err != nil {
-		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to create admin user",
+	// Marshal admin data to JSON
+	adminData, err := json.Marshal(admin)
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to marshal admin data",
+			"error", err,
+			"username", admin.UserName)
+		return nil, err
+	}
+
+	// Store in etcd
+	err = r.EtcdClient.PutKey(key, string(adminData))
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to store admin in etcd",
 			"error", err,
 			"username", admin.UserName)
 		return nil, err
@@ -381,18 +402,29 @@ func (r *ConfigRepository) GetAdminByCredentials(ctx context.Context, username, 
 	r.ObservabilityStack.Logger.InfoContext(ctx, "Getting admin by credentials",
 		"username", username)
 
-	var admin models.Admin
-	err := db.DB.Where("user_name = ? AND password = ?", username, password).First(&admin).Error
+	// Get admin data from etcd
+	key := fmt.Sprintf("/admins/%s", username)
+	adminData, err := r.EtcdClient.GetKey(key)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			r.ObservabilityStack.Logger.WarnContext(ctx, "Admin not found",
-				"username", username)
-			return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002")
-		}
-		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to get admin",
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Admin not found",
+			"username", username)
+		return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002")
+	}
+
+	// Unmarshal admin data
+	var admin models.Admin
+	if err := json.Unmarshal([]byte(adminData), &admin); err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to unmarshal admin data",
 			"error", err,
 			"username", username)
 		return nil, err
+	}
+
+	// Verify password
+	if admin.Password != password {
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Invalid password",
+			"username", username)
+		return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002")
 	}
 
 	r.ObservabilityStack.Logger.InfoContext(ctx, "Admin retrieved successfully",

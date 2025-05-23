@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 const (
@@ -34,12 +37,22 @@ type IWebhookService interface {
 }
 
 func NewWebhookService(repo repositories.IConfigRepo, ObservabilityStack *observability.ObservabilityStack) IWebhookService {
+	if ObservabilityStack == nil {
+		panic("ObservabilityStack cannot be nil")
+	}
 	return &WebhookService{Repo: repo, ObservabilityStack: ObservabilityStack}
 }
 
 func (s *WebhookService) RegisterWebhookService(ctx context.Context, req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
-	ctx, span := s.ObservabilityStack.TracerService.Start(ctx, "WebhookService.RegisterWebhookService")
+	ctx, span := s.ObservabilityStack.TracerService.Start(ctx, "WebhookService.RegisterWebhook")
 	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("environment", req.Environment),
+		attribute.String("service", req.ServiceName),
+		attribute.String("webhook.url", req.URL),
+		attribute.String("webhook.method", req.Method),
+	)
 
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Registering webhook",
 		"environment", req.Environment,
@@ -48,11 +61,15 @@ func (s *WebhookService) RegisterWebhookService(ctx context.Context, req dtos.Re
 		"method", req.Method)
 
 	key := fmt.Sprintf("/webhooks/%s/%s", req.Environment, req.ServiceName)
+	span.SetAttributes(attribute.String("etcd.key", key))
+
 	var hooks []dtos.RegisterWebhookRequest
 
 	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err == nil && len(webHook) > 0 {
 		if err := json.Unmarshal([]byte(webHook), &hooks); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.SetAttributes(attribute.String("error", "failed to parse webhook data"))
 			s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to parse webhook data",
 				"error", err,
 				"key", key)
@@ -62,10 +79,13 @@ func (s *WebhookService) RegisterWebhookService(ctx context.Context, req dtos.Re
 				ErrorMessage: fmt.Sprintf("invalid webhook data stored for %s: %v", key, err),
 			}
 		}
+		span.SetAttributes(attribute.Int("existing_hooks_count", len(hooks)))
 	}
 
 	for _, existing := range hooks {
 		if existing.URL == req.URL && existing.Method == req.Method {
+			span.SetStatus(codes.Error, "Webhook already exists")
+			span.SetAttributes(attribute.String("error", "webhook already exists"))
 			s.ObservabilityStack.Logger.WarnContext(ctx, "Webhook already exists",
 				"url", req.URL,
 				"method", req.Method)
@@ -80,6 +100,8 @@ func (s *WebhookService) RegisterWebhookService(ctx context.Context, req dtos.Re
 	hooks = append(hooks, req)
 	data, err := json.Marshal(hooks)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error", "failed to marshal webhook data"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to marshal webhook data",
 			"error", err,
 			"key", key)
@@ -89,7 +111,10 @@ func (s *WebhookService) RegisterWebhookService(ctx context.Context, req dtos.Re
 			ErrorMessage: fmt.Sprintf("failed to marshal webhook data for %s: %v", key, err),
 		}
 	}
+
 	if err := s.Repo.SetEtcdKey(ctx, key, string(data), -1); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error", "failed to store webhook data"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to store webhook data",
 			"error", err,
 			"key", key)
@@ -100,29 +125,37 @@ func (s *WebhookService) RegisterWebhookService(ctx context.Context, req dtos.Re
 		}
 	}
 
+	span.SetStatus(codes.Ok, "Webhook registered successfully")
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Webhook registered successfully",
 		"environment", req.Environment,
 		"service", req.ServiceName)
-	response := &dtos.SuccessResponse{
+	return &dtos.SuccessResponse{
 		StatusCode: 201,
 		Message:    "Webhook registered successfully",
 		Data:       map[string]interface{}{"webhook": req},
-	}
-	return response, nil
+	}, nil
 }
 
 func (s *WebhookService) GetWebhooks(ctx context.Context, env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse) {
 	ctx, span := s.ObservabilityStack.TracerService.Start(ctx, "WebhookService.GetWebhooks")
 	defer span.End()
 
+	span.SetAttributes(
+		attribute.String("environment", env),
+		attribute.String("service", service),
+	)
+
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Getting webhooks",
 		"environment", env,
 		"service", service)
 
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
+	span.SetAttributes(attribute.String("etcd.key", key))
 
 	webHook, err := s.Repo.GetEtcdKey(ctx, key)
 	if err != nil || len(webHook) == 0 {
+		span.SetStatus(codes.Error, "No webhooks found")
+		span.SetAttributes(attribute.String("error", "no webhooks found"))
 		s.ObservabilityStack.Logger.WarnContext(ctx, "No webhooks found",
 			"environment", env,
 			"service", service,
@@ -136,6 +169,8 @@ func (s *WebhookService) GetWebhooks(ctx context.Context, env, service string) (
 
 	var hooks []dtos.RegisterWebhookRequest
 	if err := json.Unmarshal([]byte(webHook), &hooks); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error", "failed to parse webhook data"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to parse webhook data",
 			"error", err,
 			"environment", env,
@@ -147,6 +182,8 @@ func (s *WebhookService) GetWebhooks(ctx context.Context, env, service string) (
 		}
 	}
 
+	span.SetAttributes(attribute.Int("webhooks_count", len(hooks)))
+	span.SetStatus(codes.Ok, "Webhooks retrieved successfully")
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Successfully retrieved webhooks",
 		"environment", env,
 		"service", service,
@@ -158,6 +195,13 @@ func (s *WebhookService) DeleteWebhook(ctx context.Context, env, service, url, m
 	ctx, span := s.ObservabilityStack.TracerService.Start(ctx, "WebhookService.DeleteWebhook")
 	defer span.End()
 
+	span.SetAttributes(
+		attribute.String("environment", env),
+		attribute.String("service", service),
+		attribute.String("webhook.url", url),
+		attribute.String("webhook.method", method),
+	)
+
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Deleting webhook",
 		"environment", env,
 		"service", service,
@@ -165,9 +209,12 @@ func (s *WebhookService) DeleteWebhook(ctx context.Context, env, service, url, m
 		"method", method)
 
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
+	span.SetAttributes(attribute.String("etcd.key", key))
 
 	hooks, errService := s.GetWebhooks(ctx, env, service)
 	if errService != nil {
+		span.SetStatus(codes.Error, errService.ErrorMessage)
+		span.SetAttributes(attribute.String("error", "failed to get webhooks"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to get webhooks for deletion",
 			"error", errService.ErrorMessage,
 			"environment", env,
@@ -186,6 +233,8 @@ func (s *WebhookService) DeleteWebhook(ctx context.Context, env, service, url, m
 	}
 
 	if !found {
+		span.SetStatus(codes.Error, "Webhook not found")
+		span.SetAttributes(attribute.String("error", "webhook not found"))
 		s.ObservabilityStack.Logger.WarnContext(ctx, "Webhook not found for deletion",
 			"environment", env,
 			"service", service,
@@ -200,6 +249,8 @@ func (s *WebhookService) DeleteWebhook(ctx context.Context, env, service, url, m
 
 	data, err := json.Marshal(updated)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error", "failed to marshal updated webhooks"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to marshal updated webhooks",
 			"error", err,
 			"environment", env,
@@ -212,6 +263,8 @@ func (s *WebhookService) DeleteWebhook(ctx context.Context, env, service, url, m
 	}
 
 	if err := s.Repo.SetEtcdKey(ctx, key, string(data), -1); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error", "failed to store updated webhooks"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to store updated webhooks",
 			"error", err,
 			"environment", env,
@@ -223,6 +276,8 @@ func (s *WebhookService) DeleteWebhook(ctx context.Context, env, service, url, m
 		}
 	}
 
+	span.SetAttributes(attribute.Int("remaining_hooks_count", len(updated)))
+	span.SetStatus(codes.Ok, "Webhook deleted successfully")
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Webhook deleted successfully",
 		"environment", env,
 		"service", service,
@@ -235,13 +290,22 @@ func (s *WebhookService) DeleteAllWebhooks(ctx context.Context, env, service str
 	ctx, span := s.ObservabilityStack.TracerService.Start(ctx, "WebhookService.DeleteAllWebhooks")
 	defer span.End()
 
+	span.SetAttributes(
+		attribute.String("environment", env),
+		attribute.String("service", service),
+	)
+
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Deleting all webhooks",
 		"environment", env,
 		"service", service)
 
 	key := fmt.Sprintf("/webhooks/%s/%s", env, service)
+	span.SetAttributes(attribute.String("etcd.key", key))
+
 	err := s.Repo.DeleteEtcdKey(ctx, key)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error", "failed to delete all webhooks"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to delete all webhooks",
 			"error", err,
 			"environment", env,
@@ -249,6 +313,7 @@ func (s *WebhookService) DeleteAllWebhooks(ctx context.Context, env, service str
 		return err
 	}
 
+	span.SetStatus(codes.Ok, "All webhooks deleted successfully")
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Successfully deleted all webhooks",
 		"environment", env,
 		"service", service)
@@ -258,6 +323,16 @@ func (s *WebhookService) DeleteAllWebhooks(ctx context.Context, env, service str
 func (s *WebhookService) NotifyWebhook(ctx context.Context, hook dtos.RegisterWebhookRequest, data map[string]interface{}) {
 	ctx, span := s.ObservabilityStack.TracerService.Start(ctx, "WebhookService.NotifyWebhook")
 	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("environment", hook.Environment),
+		attribute.String("service", hook.ServiceName),
+		attribute.String("webhook.url", hook.URL),
+		attribute.String("webhook.method", hook.Method),
+		attribute.Int("max_retries", maxRetries),
+		attribute.Float64("retry_delay_seconds", retryDelay.Seconds()),
+		attribute.Float64("request_timeout_seconds", requestTimeout.Seconds()),
+	)
 
 	s.ObservabilityStack.Logger.InfoContext(ctx, "Notifying webhook",
 		"environment", hook.Environment,
@@ -272,6 +347,8 @@ func (s *WebhookService) NotifyWebhook(ctx context.Context, hook dtos.RegisterWe
 		"serviceName": hook.ServiceName,
 	})
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error", "failed to marshal webhook payload"))
 		s.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to marshal webhook payload",
 			"error", err)
 		return
@@ -281,35 +358,52 @@ func (s *WebhookService) NotifyWebhook(ctx context.Context, hook dtos.RegisterWe
 	if !strings.HasPrefix(fullURL, "http://") && !strings.HasPrefix(fullURL, "https://") {
 		fullURL = "http://" + fullURL
 	}
+	span.SetAttributes(attribute.String("webhook.full_url", fullURL))
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		retryCtx, retrySpan := s.ObservabilityStack.TracerService.Start(ctx, "WebhookService.NotifyWebhook.Attempt")
+		retrySpan.SetAttributes(
+			attribute.Int("attempt", attempt),
+			attribute.String("url", fullURL),
+		)
+
 		client := http.Client{Timeout: requestTimeout}
 		resp, err := client.Post(fullURL, "application/json", bytes.NewBuffer(body))
 
 		if err != nil {
-			s.ObservabilityStack.Logger.WarnContext(ctx, "Webhook notification attempt failed",
+			retrySpan.SetStatus(codes.Error, err.Error())
+			retrySpan.SetAttributes(attribute.String("error", "webhook notification attempt failed"))
+			s.ObservabilityStack.Logger.WarnContext(retryCtx, "Webhook notification attempt failed",
 				"attempt", attempt,
 				"url", fullURL,
 				"error", err)
 		} else {
 			defer resp.Body.Close()
+			retrySpan.SetAttributes(attribute.Int("status_code", resp.StatusCode))
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-				s.ObservabilityStack.Logger.InfoContext(ctx, "Webhook notification succeeded",
+				retrySpan.SetStatus(codes.Ok, "Webhook notification succeeded")
+				s.ObservabilityStack.Logger.InfoContext(retryCtx, "Webhook notification succeeded",
 					"url", fullURL,
 					"status", resp.Status)
+				retrySpan.End()
+				span.SetStatus(codes.Ok, "Webhook notification succeeded")
 				return
 			}
-			s.ObservabilityStack.Logger.WarnContext(ctx, "Webhook notification failed with non-2xx status",
+			retrySpan.SetStatus(codes.Error, fmt.Sprintf("Webhook notification failed with status: %s", resp.Status))
+			s.ObservabilityStack.Logger.WarnContext(retryCtx, "Webhook notification failed with non-2xx status",
 				"attempt", attempt,
 				"url", fullURL,
 				"status", resp.Status)
 		}
 
+		retrySpan.End()
 		if attempt < maxRetries {
 			time.Sleep(retryDelay)
 		}
 	}
 
+	span.SetStatus(codes.Error, "All webhook notification attempts failed")
+	span.SetAttributes(attribute.String("error", "all attempts failed"))
 	s.ObservabilityStack.Logger.ErrorContext(ctx, "All webhook notification attempts failed",
 		"url", fullURL,
 		"max_retries", maxRetries)

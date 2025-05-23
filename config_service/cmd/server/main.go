@@ -10,7 +10,6 @@ import (
 
 	"nps-config-service/internal/app"
 	"nps-config-service/internal/configs"
-	"nps-config-service/internal/configs/db"
 	"nps-config-service/internal/modules/config-manager/di"
 	"nps-config-service/pkg/observability"
 
@@ -43,7 +42,7 @@ func main() {
 	}()
 
 	// Initialize database
-	db.ConnectDatabase(config)
+	// db.ConnectDatabase(config)
 
 	// Initialize DI container
 	container, err := di.InitContainer()
