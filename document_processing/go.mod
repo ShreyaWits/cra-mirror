@@ -1,8 +1,8 @@
-module Document-Processing
+module document_processing
 
-go 1.23.0
+go 1.24.3
 
-toolchain go1.23.5
+toolchain go1.24.3
 
 require (
 	github.com/go-playground/validator/v10 v10.26.0
@@ -67,6 +67,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect

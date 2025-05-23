@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"Document-Processing/internal/models"
-	"Document-Processing/internal/services"
-	"Document-Processing/pkg/observability"
+	"document_processing/internal/models"
+	"document_processing/internal/services"
+	"document_processing/pkg/observability"
 
-	pb "Document-Processing/proto"
+	pb "document_processing/proto"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"Document-Processing/internal/handlers"
-	"Document-Processing/pkg/observability"
-	pb "Document-Processing/proto"
+	"document_processing/internal/handlers"
+	"document_processing/pkg/observability"
+	pb "document_processing/proto"
 
 	"github.com/stretchr/testify/assert"
 )

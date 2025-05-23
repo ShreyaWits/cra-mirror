@@ -4,18 +4,22 @@
 package config
 
 import (
+	"context"
+	"document_processing/pkg/redis"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"reflect"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
-	"github.com/joho/godotenv"
+	"time"
+
 	"github.com/go-playground/validator/v10"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -23,9 +27,8 @@ var (
 	configMutex      sync.RWMutex
 	currentConfig    *Config
 	ImmutableConfigs *ImmutableConfig
-	validate 		 *validator.Validate
+	validate         *validator.Validate
 )
-
 
 type Config struct {
 	ServerPort       int
@@ -64,11 +67,12 @@ type ConfigResponse struct {
 	Data       map[string]string `json:"data"`
 }
 type ImmutableConfig struct {
-    ConfigServiceUrl   string
-    ConfigServiceToken string 
-    Environment        string 
-    CacheSrvAddr       string
-	RestPort          string
+	ConfigServiceUrl   string
+	ConfigServiceToken string
+	Environment        string
+	CacheSrvAddr       string
+	RestPort           string
+	CacheTtl           string
 }
 
 type ConfigWebhookData struct {
@@ -102,8 +106,20 @@ func GetCurrentConfig() *Config {
 	return currentConfig
 }
 
+type ConfigWebhook struct {
+	redisClient redis.RedisClient
+	ttl         time.Duration
+}
+
+func NewConfigWebhook(redisClient redis.RedisClient, tl time.Duration) *ConfigWebhook {
+	return &ConfigWebhook{
+		redisClient: redisClient,
+		ttl:         tl,
+	}
+}
+
 // HandleConfigWebhook processes incoming webhook requests for config updates
-func HandleConfigWebhook(w http.ResponseWriter, r *http.Request) {
+func (c *ConfigWebhook) HandleConfigWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -131,20 +147,52 @@ func HandleConfigWebhook(w http.ResponseWriter, r *http.Request) {
 	// Update current config and notify listeners
 	SetCurrentConfig(newConfig)
 
+	data, err := json.Marshal(newConfig)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to marshal config: %v", err), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Attempting to cache config from webhook with TTL: %v", c.ttl)
+	if err := c.redisClient.SetCache(context.Background(), "document_processing", "config", string(data), c.ttl); err != nil {
+		log.Printf("Failed to cache config from webhook: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to cache config: %v", err), http.StatusInternalServerError)
+		return
+	}
+	log.Println("Successfully cached config from webhook in Redis")
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "Config updated successfully"})
 }
 
 // LoadConfigFromAPI fetches config from the remote config service
-func LoadConfigFromAPI(token string) (map[string]string, error) {
+func LoadConfigFromAPI(env *ImmutableConfig, redisClient redis.RedisClient) (map[string]string, error) {
+	log.Printf("Attempting to fetch config from Redis with TTL: %s", env.CacheTtl)
+	config, found, err := redisClient.GetCache(context.Background(), "document_processing", "config")
+
+	if err != nil {
+		log.Printf("Error fetching config from Redis: %v", err)
+		return nil, err
+	}
+
+	if found {
+		log.Println("Config found in Redis")
+		var configResp ConfigResponse
+		if err := json.Unmarshal([]byte(config), &configResp); err != nil {
+			log.Printf("Error unmarshalling config data: %v", err)
+			return nil, err
+		}
+		return configResp.Data, nil
+	}
+
+	log.Println("Config not found in Redis, fetching from API")
 	client := &http.Client{}
 	api := fmt.Sprintf("%s/%s/document-processing", strings.TrimRight(os.Getenv("CONFIG_SERVICE_URL"), "/"), os.Getenv("ENVIRONMENT"))
-	log.Println(api)
+	log.Printf("Fetching config from API: %s", api)
 	req, err := http.NewRequest("GET", api, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Authorization", "Bearer "+env.ConfigServiceToken)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -162,24 +210,50 @@ func LoadConfigFromAPI(token string) (map[string]string, error) {
 		return nil, err
 	}
 
+	// Convert all values to strings
+	stringData := make(map[string]string)
+	for k, v := range configResp.Data {
+		stringData[k] = fmt.Sprintf("%v", v)
+	}
+	configResp.Data = stringData
+
+	data, err := json.Marshal(configResp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal cache data: %w", err)
+	}
+
+	tl, err := time.ParseDuration(env.CacheTtl)
+	if err != nil {
+		log.Printf("Error parsing cache TTL: %v, using default 50m", err)
+		tl = 50 * time.Minute
+	}
+	log.Printf("Attempting to cache config with TTL: %v", tl)
+
+	if err := redisClient.SetCache(context.Background(), "document_processing", "config", string(data), tl); err != nil {
+		log.Printf("Failed to cache config: %v", err)
+		// Don't return error here, just log it and continue
+	} else {
+		log.Println("Successfully cached config in Redis")
+	}
+
 	return configResp.Data, nil
 }
 
 func LoadConfig() (*ImmutableConfig, error) {
-    	if os.Getenv("IS_DOCKER") != "true" {
+	if os.Getenv("IS_DOCKER") != "true" {
 		if err := godotenv.Load(); err != nil {
 			log.Fatalf("error loading environment variables: %v\n", err)
 		}
 	}
 
-		ImmutableConfigs = &ImmutableConfig{
-        ConfigServiceUrl:   getEnv("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
-        ConfigServiceToken: getEnv("DOCUMENT_CONFIG_SERVICE_TOKEN", "kjdasklfjklajdkfljkl"),
-        Environment:        getEnv("ENVIRONMENT", "development"),
-        CacheSrvAddr:       getEnv("CACHE_SERVICE_ADDR", "localhost:6379"),
+	ImmutableConfigs = &ImmutableConfig{
+		ConfigServiceUrl:   getEnv("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
+		ConfigServiceToken: getEnv("DOCUMENT_CONFIG_SERVICE_TOKEN", "sadahgdhadbnabdja"),
+		Environment:        getEnv("ENVIRONMENT", "dev"),
+		CacheSrvAddr:       getEnv("CACHING_SERVICE_GRPC_URL", "localhost:6279"),
 		RestPort:           getEnv("DOCUMENT_SERVICE_REST_PORT", "8080"),
-		
-    	}
+		CacheTtl:           getEnv("DOCUMENT_SERVICE_REDIS_TTL", "50m"),
+	}
 
 	if err := validate.Struct(ImmutableConfigs); err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
@@ -193,15 +267,15 @@ func LoadConfig() (*ImmutableConfig, error) {
 		}
 		return nil, fmt.Errorf("environment validation failed: %w", err)
 	}
-    return ImmutableConfigs, nil
+	return ImmutableConfigs, nil
 }
 
 func getEnv(key, defaultValue string) string {
-    value := os.Getenv(key)
-    if value == "" {
-        return defaultValue
-    }
-    return value
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }
 
 // NewConfig validates and constructs Config from raw API data
@@ -220,7 +294,7 @@ func NewConfig(data map[string]string) (*Config, error) {
 		"YUGABYTE_DATABASE_PORT",
 		"LLAMA_MODEL_NAME",
 		"LLAMA_API_URL",
-		"OTLEL_COLLECTOR_GRPC_ENDPOINT",
+		"OTEL_COLLECTOR_GRPC_ENDPOINT",
 	}
 
 	// Check all required keys
@@ -252,6 +326,6 @@ func NewConfig(data map[string]string) (*Config, error) {
 		YugabytePort:     data["YUGABYTE_DATABASE_PORT"],
 		LlamaModelName:   data["LLAMA_MODEL_NAME"],
 		LlamaApiURL:      data["LLAMA_API_URL"],
-		ObservabilityUrl: data["OTLEL_COLLECTOR_GRPC_ENDPOINT"],
+		ObservabilityUrl: data["OTEL_COLLECTOR_GRPC_ENDPOINT"],
 	}, nil
 }

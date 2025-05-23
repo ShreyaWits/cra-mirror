@@ -3,7 +3,7 @@ package logger_test
 import (
 	"context"
 	"io"
-	"Document-Processing/pkg/logger"
+	"document_processing/pkg/logger"
 	"os"
 	"strings"
 	"testing"

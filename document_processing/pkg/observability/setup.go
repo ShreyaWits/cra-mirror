@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	// "Document-Processing/internal/modules/message_broker/models"
-	"Document-Processing/internal/config"
-	"Document-Processing/internal/constants"
+	"document_processing/internal/config"
+	"document_processing/internal/constants"
 	"os"
 	"strings"
 	"time"

@@ -1,9 +1,9 @@
 package observability
 
 import (
-	"Document-Processing/pkg/logger"
-	metrics "Document-Processing/pkg/matrics"
-	"Document-Processing/pkg/tracer"
+	"document_processing/pkg/logger"
+	metrics "document_processing/pkg/matrics"
+	"document_processing/pkg/tracer"
 )
 
 // MockObservabilityStack is a test implementation of the ObservabilityStack

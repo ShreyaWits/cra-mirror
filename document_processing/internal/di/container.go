@@ -4,13 +4,13 @@
 package di
 
 import (
-	"Document-Processing/internal/config"
-	"Document-Processing/internal/grpc"
-	"Document-Processing/internal/handlers"
-	"Document-Processing/internal/repository"
-	"Document-Processing/internal/services"
-	"Document-Processing/pkg/observability"
-	"Document-Processing/pkg/yugabytedb"
+	"document_processing/internal/config"
+	"document_processing/internal/grpc"
+	"document_processing/internal/handlers"
+	"document_processing/internal/repository"
+	"document_processing/internal/services"
+	"document_processing/pkg/observability"
+	"document_processing/pkg/yugabytedb"
 	"log"
 )
 

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"Document-Processing/pkg/observability"
+	"document_processing/pkg/observability"
 
 	"github.com/google/generative-ai-go/genai"
 )

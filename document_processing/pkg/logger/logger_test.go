@@ -2,7 +2,7 @@ package logger_test
 
 import (
 	"context"
-	"Document-Processing/pkg/logger"
+	"document_processing/pkg/logger"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

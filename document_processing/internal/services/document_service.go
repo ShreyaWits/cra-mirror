@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"Document-Processing/internal/enums"
-	"Document-Processing/internal/models"
-	"Document-Processing/pkg/observability"
-	pb "Document-Processing/proto"
+	"document_processing/internal/enums"
+	"document_processing/internal/models"
+	"document_processing/pkg/observability"
+	pb "document_processing/proto"
 )
 
 // BatchProcessingState tracks the state of a batch processing job

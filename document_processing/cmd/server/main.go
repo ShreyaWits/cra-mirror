@@ -11,10 +11,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"Document-Processing/internal/config"
-	"Document-Processing/internal/di"
-	"Document-Processing/pkg/observability"
+	"document_processing/internal/config"
+	"document_processing/internal/di"
+	"document_processing/pkg/observability"
+	"document_processing/pkg/redis"
 )
 
 func startServer(cfg *config.Config) (*di.Container, error) {
@@ -36,10 +38,15 @@ func startServer(cfg *config.Config) (*di.Container, error) {
 func main() {
 	env, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("failed to load configuration: %w", err)
+		log.Fatalf("failed to load configuration: %v", err)
+	}
+	log.Print(env)
+	redisClient, err := redis.NewRedisClient(env.CacheSrvAddr)
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 
-	rawData, err := config.LoadConfigFromAPI(env.ConfigServiceToken)
+	rawData, err := config.LoadConfigFromAPI(env, redisClient)
 	if err != nil {
 		log.Fatalf("Failed to fetch config from API: %v", err)
 	}
@@ -59,8 +66,11 @@ func main() {
 		log.Fatalf("Failed to initialize container: %v", err)
 	}
 
+	tl, _ := time.ParseDuration(env.CacheTtl)
+
+	webHookHandler := config.NewConfigWebhook(redisClient, tl)
 	// Set up config webhook endpoint
-	http.HandleFunc("/config/webhook", config.HandleConfigWebhook)
+	http.HandleFunc("/config/webhook", webHookHandler.HandleConfigWebhook)
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%s", env.RestPort), nil); err != nil {
 			log.Printf("Webhook server error: %v", err)

@@ -1,7 +1,7 @@
 package services
 
 import (
-	"Document-Processing/pkg/observability"
+	"document_processing/pkg/observability"
 	"context"
 	"encoding/base64"
 	"encoding/json"

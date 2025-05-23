@@ -2,10 +2,10 @@ package observability
 
 import (
 	// "Document-Processing/internal/config"
-	"Document-Processing/internal/constants"
-	"Document-Processing/pkg/logger"
-	metrics "Document-Processing/pkg/matrics"
-	"Document-Processing/pkg/tracer"
+	"document_processing/internal/constants"
+	"document_processing/pkg/logger"
+	metrics "document_processing/pkg/matrics"
+	"document_processing/pkg/tracer"
 )
 
 type ObservabilityStack struct {

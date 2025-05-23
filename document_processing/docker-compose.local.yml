@@ -1,8 +1,8 @@
 services:
-  document-processing:
+  document_processing:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: ./document_processing/Dockerfile
     ports:
       - 50508:50508
       - ${DOCUMENT_SERVICE_REST_PORT}:${DOCUMENT_SERVICE_REST_PORT}
@@ -11,7 +11,9 @@ services:
       - CONFIG_SERVICE_URL=${CONFIG_SERVICE_URL}
       - ENVIRONMENT=${ENVIRONMENT}
       - IS_DOCKER=${IS_DOCKER}
+      - CACHING_SERVICE_GRPC_URL=${CACHING_SERVICE_GRPC_URL}
       - DOCUMENT_SERVICE_REST_PORT=${DOCUMENT_SERVICE_REST_PORT}
+      - DOCUMENT_SERVICE_CACHE_TTL=${DOCUMENT_SERVICE_CACHE_TTL}
     depends_on:
       - yugabyte1
       - minio
@@ -31,7 +33,7 @@ services:
       "--listen=0.0.0.0"
     ]
     ports:
-      - "5434:5433"  # YSQL
+      - "5435:5433"  # YSQL
     volumes:
       - yugabyte_data:/home/yugabyte/yb_data
     networks:

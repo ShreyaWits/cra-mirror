@@ -2,7 +2,7 @@ package metrics_test
 
 import (
 	"context"
-	metrics "Document-Processing/pkg/matrics"
+	metrics "document_processing/pkg/matrics"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

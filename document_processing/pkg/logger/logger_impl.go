@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"Document-Processing/internal/config"
+	"document_processing/internal/config"
 	"context"
 	"fmt"
 	"log/slog"

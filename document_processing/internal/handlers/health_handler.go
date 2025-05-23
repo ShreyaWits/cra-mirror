@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"Document-Processing/pkg/observability"
-	pb "Document-Processing/proto"
+	"document_processing/pkg/observability"
+	pb "document_processing/proto"
 	"go.opentelemetry.io/otel/codes"
 )
 

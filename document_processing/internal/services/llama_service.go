@@ -1,7 +1,7 @@
 package services
 
 import (
-	"Document-Processing/internal/utils"
+	"document_processing/internal/utils"
 	"bytes"
 	"context"
 	"encoding/base64"

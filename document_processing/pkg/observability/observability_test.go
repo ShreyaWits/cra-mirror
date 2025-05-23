@@ -2,10 +2,10 @@ package observability_test
 
 import (
 	"context"
-	"Document-Processing/pkg/logger"
-	metrics "Document-Processing/pkg/matrics"
-	"Document-Processing/pkg/observability"
-	"Document-Processing/pkg/tracer"
+	"document_processing/pkg/logger"
+	metrics "document_processing/pkg/matrics"
+	"document_processing/pkg/observability"
+	"document_processing/pkg/tracer"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

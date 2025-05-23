@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"Document-Processing/pkg/tracer"
+	"document_processing/pkg/tracer"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/codes"
