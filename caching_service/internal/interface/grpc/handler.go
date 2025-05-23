@@ -40,7 +40,7 @@ func NewGRPCHandler() *GRPCServer {
 	tracer := app.Di.Tracer
 	logger := app.Di.Logger
 
-	redisClient := redis.NewRedisService(config.REDIS_URL, config.REDIS_PASSWORD, redisDb)
+	redisClient := redis.NewRedisService(config.REDIS_URL, config.REDIS_USERNAME, config.REDIS_PASSWORD, redisDb)
 	redisRepo := repository.NewRedisRepository(redisClient, logger)
 	redisService := service.NewRedisService(redisRepo, logger)
 	return &GRPCServer{service: redisService, tracer: tracer, logger: logger}
