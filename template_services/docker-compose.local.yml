@@ -7,8 +7,8 @@ services:
   template-service:
     build: .
     ports:
-      - "50053:50053"  # gRPC
-      - "5000:8080"    # REST
+      - "${TEMPLATE_SERVICE_GRPC_PORT}:${TEMPLATE_SERVICE_GRPC_PORT}"
+      - "${TEMPLATE_SERVICE_REST_PORT}:${TEMPLATE_SERVICE_REST_PORT}"
     depends_on:
       yugabyte:
         condition: service_started
@@ -17,20 +17,16 @@ services:
     environment:
       - CONFIG_SERVICE_URL=${CONFIG_SERVICE_URL}
       - ENVIRONMENT=${ENVIRONMENT}
-      - CONFIG_SERVICE_TOKEN=${CONFIG_SERVICE_TOKEN}
-      - CACHE_SERVICE_ADDR=${CACHE_SERVICE_ADDR}
-      - OTEL_COLLECTOR_GRPC_ENDPOINT=${OTEL_COLLECTOR_GRPC_ENDPOINT}
-
+      - CONFIG_SERVICE_TOKEN=${TEMPLATE_CONFIG_SERVICE_TOKEN}
+      - CACHE_SERVICE_ADDR=${CACHING_SERVICE_GRPC_URL}
+      - ENVIRONMENT=${ENVIRONMENT}
+    restart: on-failure
   yugabyte:
     container_name: yugabyte
     image: yugabytedb/yugabyte:latest
     command: ["bin/yugabyted", "start", "--background=false"]
     ports:
       - "5435:5433"
-      # - "9042:9042"
-      # - "15433:15433"
-      # - "7001:7000"
-      # - "9000:9000"
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5433"]
       interval: 5s

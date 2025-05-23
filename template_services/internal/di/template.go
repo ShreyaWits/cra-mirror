@@ -32,7 +32,6 @@ var GlobalContainer *Container
 func InitCacheConfig() {
 	// Initialize Redis cache
 	redisCache, err := cacheclient.NewRedisClient(configEnv.ImmutableConfigs.CacheSrvAddr)
-	fmt.Println("Redis cache initialized", redisCache)
 	if err != nil {
 		panic("failed to initialize Redis cache")
 	}

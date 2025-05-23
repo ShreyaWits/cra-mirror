@@ -522,15 +522,16 @@ func (h *TemplateHandler) ListTemplates(c *fiber.Ctx) error {
 	templateResponses := make([]dto.TemplateResponse, len(templates))
 	for i, template := range templates {
 		templateResponses[i] = dto.TemplateResponse{
-			ID:        template.ID.String(),
-			Name:      template.Name,
-			Channel:   template.Channel,
-			Language:  template.Language,
-			Version:   int(template.Version),
-			IsActive:  template.IsActive,
-			Content:   template.Content,
-			CreatedAt: template.CreatedAt,
-			UpdatedAt: template.UpdatedAt,
+			ID:             template.ID.String(),
+			Name:           template.Name,
+			Channel:        template.Channel,
+			Language:       template.Language,
+			Version:        int(template.Version),
+			IsActive:       template.IsActive,
+			Content:        template.Content,
+			RequiredFields: template.RequiredFields, // Add RequiredFields to the response
+			CreatedAt:      template.CreatedAt,
+			UpdatedAt:      template.UpdatedAt,
 		}
 	}
 
