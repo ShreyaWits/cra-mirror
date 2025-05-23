@@ -4,180 +4,132 @@ import (
 	"context"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/models"
+	repoMock "nps-config-service/internal/modules/config-manager/repositories/mocks"
+	"nps-config-service/pkg/observability"
 	"testing"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-type MockConfigRepo struct {
-	mock.Mock
-}
-
-func (m *MockConfigRepo) CreateAdmin(admin *models.Admin) (*models.Admin, error) {
-	args := m.Called(admin)
-	return args.Get(0).(*models.Admin), args.Error(1)
-}
-
-func (m *MockConfigRepo) GetAdminByCredentials(username, password string) (*models.Admin, error) {
-	args := m.Called(username, password)
-	return args.Get(0).(*models.Admin), args.Error(1)
-}
-
-// Implement other required interface methods
-func (m *MockConfigRepo) StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *MockConfigRepo) GetConfig(serviceName, environment string) (map[string]interface{}, error) {
-	return nil, nil
-}
-
-func (m *MockConfigRepo) GetAllKeys(prefix string) (map[string]string, error) {
-	return nil, nil
-}
-
-func (m *MockConfigRepo) GetConfigMetadata(serviceName, environment string) (*models.ConfigMetadata, error) {
-	return nil, nil
-}
-
-func (m *MockConfigRepo) GetConfigValue(serviceName, environment, key string) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *MockConfigRepo) SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error {
-	return nil
-}
-
-func (m *MockConfigRepo) GetEtcdKey(ctx context.Context, key string) (string, error) {
-	return "", nil
-}
-
-func (m *MockConfigRepo) DeleteEtcdKey(ctx context.Context, key string) error {
-	return nil
+// setupAdminTestService creates a new test service with mock repository and observability stack
+func setupAdminTestService(t *testing.T) (IAdminService, *repoMock.MockRepository, *observability.ObservabilityStack) {
+	mockRepo := new(repoMock.MockRepository)
+	obsStack := observability.NewObservabilityStack("admin-service-test")
+	service := NewAdminService(mockRepo, obsStack)
+	return service, mockRepo, obsStack
 }
 
 func TestCreateAdminService(t *testing.T) {
-	// Setup
-	mockRepo := new(MockConfigRepo)
-	service := NewAdminService(mockRepo)
-
-	// Test cases
 	tests := []struct {
 		name           string
 		request        *dtos.AdminSignupDto
-		mockAdmin      *models.Admin
-		mockError      error
+		mockSetup      func(*repoMock.MockRepository)
 		expectedResult *dtos.ResponseAdminSignupDto
 		expectedError  bool
 	}{
 		{
-			name: "Successful admin creation",
+			name: "successful creation",
 			request: &dtos.AdminSignupDto{
-				Username: "testadmin",
+				Username: "testuser",
 				Password: "testpass",
 				Secret:   "validsecret",
 			},
-			mockAdmin: &models.Admin{
-				UserName: "testadmin",
-				Password: "testpass",
+			mockSetup: func(m *repoMock.MockRepository) {
+				m.On("CreateAdmin", mock.Anything, mock.AnythingOfType("*models.Admin")).Return(&models.Admin{
+					UserName: "testuser",
+					Password: "testpass",
+				}, nil)
 			},
 			expectedResult: &dtos.ResponseAdminSignupDto{
 				Success: true,
 				Message: "Admin created successfully",
-				AdminId: "testadmin",
+				AdminId: "testuser",
 			},
+			expectedError: false,
 		},
 		{
-			name: "Admin already exists",
+			name: "repository error",
 			request: &dtos.AdminSignupDto{
-				Username: "existingadmin",
+				Username: "testuser",
 				Password: "testpass",
 				Secret:   "validsecret",
 			},
-			mockAdmin: &models.Admin{
-				UserName: "existingadmin",
-				Password: "testpass",
+			mockSetup: func(m *repoMock.MockRepository) {
+				m.On("CreateAdmin", mock.Anything, mock.AnythingOfType("*models.Admin")).Return(nil, assert.AnError)
 			},
-			mockError:     assert.AnError,
 			expectedError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mock expectations
-			mockRepo.On("CreateAdmin", tt.mockAdmin).Return(tt.mockAdmin, tt.mockError)
+			service, mockRepo, _ := setupAdminTestService(t)
+			tt.mockSetup(mockRepo)
 
-			// Call service
-			result, err := service.CreateAdminService(tt.request)
+			ctx := context.Background()
+			result, err := service.CreateAdminService(ctx, tt.request)
 
-			// Assertions
 			if tt.expectedError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedResult, result)
 			}
-
 			mockRepo.AssertExpectations(t)
 		})
 	}
 }
 
 func TestFetchAdminService(t *testing.T) {
-	// Setup
-	mockRepo := new(MockConfigRepo)
-	service := NewAdminService(mockRepo)
-
-	// Test cases
 	tests := []struct {
 		name          string
 		request       *dtos.AdminLoginDto
 		secret        string
-		mockAdmin     *models.Admin
-		mockError     error
+		mockSetup     func(*repoMock.MockRepository)
 		expectedError bool
+		validateToken bool
 	}{
 		{
-			name: "Successful admin login",
+			name: "successful fetch",
 			request: &dtos.AdminLoginDto{
-				Username: "testadmin",
+				Username: "testuser",
 				Password: "testpass",
 			},
 			secret: "testsecret",
-			mockAdmin: &models.Admin{
-				UserName: "testadmin",
-				Password: "testpass",
+			mockSetup: func(m *repoMock.MockRepository) {
+				m.On("GetAdminByCredentials", mock.Anything, "testuser", "testpass").Return(&models.Admin{
+					UserName: "testuser",
+					Password: "testpass",
+				}, nil)
 			},
+			expectedError: false,
+			validateToken: true,
 		},
 		{
-			name: "Invalid credentials",
+			name: "invalid credentials",
 			request: &dtos.AdminLoginDto{
-				Username: "wrongadmin",
+				Username: "testuser",
 				Password: "wrongpass",
 			},
 			secret: "testsecret",
-			mockAdmin: &models.Admin{
-				UserName: "wrongadmin",
-				Password: "wrongpass",
+			mockSetup: func(m *repoMock.MockRepository) {
+				m.On("GetAdminByCredentials", mock.Anything, "testuser", "wrongpass").Return(nil, assert.AnError)
 			},
-			mockError:     assert.AnError,
 			expectedError: true,
+			validateToken: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mock expectations
-			mockRepo.On("GetAdminByCredentials", tt.request.Username, tt.request.Password).Return(tt.mockAdmin, tt.mockError)
+			service, mockRepo, _ := setupAdminTestService(t)
+			tt.mockSetup(mockRepo)
 
-			// Call service
-			result, err := service.FetchAdminService(tt.request, tt.secret)
+			ctx := context.Background()
+			result, err := service.FetchAdminService(ctx, tt.request, tt.secret)
 
-			// Assertions
 			if tt.expectedError {
 				assert.Error(t, err)
 			} else {
@@ -187,14 +139,15 @@ func TestFetchAdminService(t *testing.T) {
 				assert.NotEmpty(t, result.Token)
 				assert.NotEmpty(t, result.RefreshToken)
 
-				// Verify token
-				token, err := jwt.Parse(result.Token, func(token *jwt.Token) (interface{}, error) {
-					return []byte(tt.secret), nil
-				})
-				assert.NoError(t, err)
-				assert.True(t, token.Valid)
+				if tt.validateToken {
+					// Verify token
+					token, err := jwt.Parse(result.Token, func(token *jwt.Token) (interface{}, error) {
+						return []byte(tt.secret), nil
+					})
+					assert.NoError(t, err)
+					assert.True(t, token.Valid)
+				}
 			}
-
 			mockRepo.AssertExpectations(t)
 		})
 	}

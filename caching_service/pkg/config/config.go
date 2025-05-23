@@ -12,6 +12,7 @@ import (
 var (
 	REDIS_URL                    string
 	REDIS_PASSWORD               string
+	REDIS_USERNAME               string
 	REDIS_DB                     string
 	CACHING_SERVICE_REST_PORT    string
 	CACHING_SERVICE_GRPC_PORT    string
@@ -34,6 +35,7 @@ func LoadEnv() {
 
 	REDIS_URL = fmt.Sprintf("%s:%s", REDIS_HOST, REDIS_PORT)
 	REDIS_PASSWORD = getEnv("REDIS_PASSWORD", "")
+	REDIS_USERNAME = getEnv("REDIS_USERNAME", "")
 	REDIS_DB = getEnv("REDIS_DB", "0")
 	CACHING_SERVICE_REST_PORT = getEnv("CACHING_SERVICE_REST_PORT", ":8080")
 	CACHING_SERVICE_GRPC_PORT = getEnv("CACHING_SERVICE_GRPC_PORT", ":50051")
