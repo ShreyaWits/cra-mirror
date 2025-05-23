@@ -40,23 +40,23 @@ type MessaggingConfigResponse struct {
 	KafkaConsumerAutoOffsetReset  string `json:"kafkaConsumerAutoOffsetReset" validate:"required,oneof=earliest latest none"`
 	KafkaEnableAutoCommit         bool   `json:"kafkaEnableAutoCommit"`
 	KafkaIsolationLevel           string `json:"kafkaIsolationLevel" validate:"required,oneof=read_committed read_uncommitted"`
+	ObservabilityUrl              string `json:"ObservabilityUrl" validate:"required,url"`
 }
 
 // EnvConfig holds all environment configuration for the messaging service
 type EnvConfig struct {
 	// Server settings
-	GrpcPort string `json:"grpcPort" env:"GRPC_PORT" validate:"required,numeric"`
-	HttpPort string `json:"httpPort" env:"REST_PORT" validate:"required,numeric"`
+	GrpcPort string `json:"grpcPort" env:"MESSAGING_SERVICE_GRPC_PORT" validate:"required,numeric"`
+	HttpPort string `json:"httpPort" env:"MESSAGING_SERVICE_REST_PORT" validate:"required,numeric"`
 
 	// Config service
 	ConfigServiceUrl   string `json:"configServiceUrl" env:"CONFIG_SERVICE_URL" validate:"required,url"`
 	ConfigServiceToken string `json:"configServiceToken" env:"MESSAGING_CONFIG_SERVICE_TOKEN" validate:"required"`
 
 	// Cache settings
-	MESSAGING_SERVICE_REDIS_TTL int `json:"cacheTTL" env:"MESSAGING_SERVICE_REDIS_TTL" validate:"min=1"`
+	MESSAGING_SERVICE_REDIS_TTL int    `json:"cacheTTL" env:"MESSAGING_SERVICE_REDIS_TTL" validate:"min=1"`
+	CacheUrl                    string `json:"cacheUrl" env:"CACHING_SERVICE_GRPC_URL" validate:"required"`
 
 	// Deployment info
-	Environment      string `json:"environment" env:"ENVIRONMENT" validate:"required"`
-	CacheUrl         string `json:"cacheUrl" env:"CACHING_SERVICE_GRPC_URL" validate:"required"`
-	ObservabilityUrl string `json:"ObservabilityUrl" env:"OTLEL_COLLECTOR_GRPC_ENDPOINT" validate:"required,url"`
+	Environment string `json:"environment" env:"ENVIRONMENT" validate:"required"`
 }

@@ -1,7 +1,6 @@
 package routes
 
 import (
-	
 	"template-services/internal/template/dto"
 	"template-services/internal/template/handler"
 	"template-services/internal/template/middleware"
@@ -10,11 +9,12 @@ import (
 )
 
 func SetupTemplateRoutes(app *fiber.App, h *handler.TemplateHandler) {
-
+	app.Post("/config", h.HandleConfigWebhookChange)
 	// Register routes
 	v1 := app.Group("/v1/templates")
 	v1.Post("/create", middleware.ValidateBody[dto.CreateTemplateRequest](), h.CreateTemplate)
 	v1.Post("/get", middleware.ValidateBody[dto.GetTemplateRequest](), h.GetTemplate)
 	v1.Post("/update", middleware.ValidateBody[dto.UpdateTemplateRequest](), h.UpdateTemplate)
 	v1.Post("/delete", middleware.ValidateBody[dto.DeleteTemplateRequest](), h.DeleteTemplate)
+	v1.Post("/list", h.ListTemplates)
 }

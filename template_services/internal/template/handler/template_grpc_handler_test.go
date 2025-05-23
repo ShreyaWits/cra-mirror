@@ -10,8 +10,9 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"template-services/internal/models"
-	appErrors "template-services/internal/pkg/errors"
 	"template-services/internal/template/mocks"
+	appErrors "template-services/pkg/errors"
+	"template-services/pkg/observability"
 	pb "template-services/proto"
 )
 
@@ -52,7 +53,8 @@ func (m *MockTemplateService) GetTemplate(ctx context.Context, id, name, channel
 
 func TestGetTemplateV1_Success(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
-	handler := NewTemplateGRPCHandler(mockSvc)
+	obs := &observability.ObservabilityStack{}
+	handler := NewTemplateGRPCHandler(mockSvc,obs)
 
 	req := &pb.GetTemplateRequest{
 		Name:     "TestTemplate",
@@ -79,7 +81,8 @@ func TestGetTemplateV1_Success(t *testing.T) {
 
 func TestGetTemplateV1_InvalidRequest(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
-	handler := NewTemplateGRPCHandler(mockSvc)
+	obs := &observability.ObservabilityStack{}
+	handler := NewTemplateGRPCHandler(mockSvc,obs)
 
 	req := &pb.GetTemplateRequest{
 		Name:     "",
@@ -97,7 +100,8 @@ func TestGetTemplateV1_InvalidRequest(t *testing.T) {
 
 func TestGetTemplateV1_TemplateNotFound(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
-	handler := NewTemplateGRPCHandler(mockSvc)
+	obs := &observability.ObservabilityStack{}
+	handler := NewTemplateGRPCHandler(mockSvc,obs)
 
 	req := &pb.GetTemplateRequest{
 		Name:     "NotExist",

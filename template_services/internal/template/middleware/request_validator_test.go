@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	appErrors "template-services/internal/pkg/errors"
+	appErrors "template-services/pkg/errors"
 	"testing"
 
 	"github.com/go-playground/validator/v10"

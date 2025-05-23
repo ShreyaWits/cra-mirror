@@ -7,10 +7,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	configEnv "template-services/internal/configs"
 	"template-services/internal/models"
-	appErrors "template-services/internal/pkg/errors"
 	"template-services/internal/template/dto"
 	"template-services/internal/template/handler"
+	appErrors "template-services/pkg/errors"
+	"template-services/pkg/observability"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -72,6 +74,14 @@ func (m *MockTemplateService) ListTemplates(ctx context.Context) ([]models.Templ
 	return args.Get(0).([]models.Template), args.Error(1)
 }
 
+func (m *MockTemplateService) UpdateConfig(ctx context.Context, config *configEnv.Config) error {
+	args := m.Called(ctx, config)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Error(0)
+}
+
 func setupTestRouter() (*fiber.App, *handler.TemplateHandler, *MockTemplateService) {
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -79,7 +89,8 @@ func setupTestRouter() (*fiber.App, *handler.TemplateHandler, *MockTemplateServi
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
 			}
-			return c.Status(code).JSON(fiber.Map{
+			c.Status(code)
+			return c.JSON(fiber.Map{
 				"success":    false,
 				"message":    err.Error(),
 				"error_code": appErrors.TmpErrInvalidRequestBody,
@@ -88,7 +99,8 @@ func setupTestRouter() (*fiber.App, *handler.TemplateHandler, *MockTemplateServi
 	})
 
 	mockService := new(MockTemplateService)
-	templateHandler := handler.NewTemplateHandler(mockService)
+	obs := &observability.ObservabilityStack{}
+	templateHandler := handler.NewTemplateHandler(mockService, obs)
 	SetupTemplateRoutes(app, templateHandler)
 
 	return app, templateHandler, mockService

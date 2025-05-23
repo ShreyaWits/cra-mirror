@@ -51,23 +51,8 @@ func NewContainer() (*Container, error) {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// Setup OpenTelemetry
-	shutdownOtel, err := observability.SetupOTelSDK(ctx, env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup OpenTelemetry SDK: %w", err)
-	}
-	if shutdownOtel == nil {
-		// Create no-op shutdown function to avoid nil checks later
-		shutdownOtel = func(context.Context) error { return nil }
-	}
-
 	// Create observability stack
 	obs := observability.NewObservabilityStack(env)
-
-	// Validate observability components
-	if obs.TracerService == nil || obs.MetricsService == nil || obs.LoggerService == nil {
-		return nil, fmt.Errorf("failed to initialize observability components")
-	}
 
 	// Create HTTP client with timeout
 	httpClient, err := httpclient.New(5 * time.Second)
@@ -103,6 +88,21 @@ func NewContainer() (*Container, error) {
 	}
 	if cfg == nil {
 		return nil, fmt.Errorf("configuration is nil")
+	}
+
+	// Setup OpenTelemetry
+	shutdownOtel, err := observability.SetupOTelSDK(ctx, env, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup OpenTelemetry SDK: %w", err)
+	}
+	if shutdownOtel == nil {
+		// Create no-op shutdown function to avoid nil checks later
+		shutdownOtel = func(context.Context) error { return nil }
+	}
+
+	// Validate observability components
+	if obs.TracerService == nil || obs.MetricsService == nil || obs.LoggerService == nil {
+		return nil, fmt.Errorf("failed to initialize observability components")
 	}
 
 	// Create Kafka factory

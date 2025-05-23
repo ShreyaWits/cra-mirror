@@ -3,13 +3,12 @@ package dto
 import (
 	"encoding/json"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/assert"
 )
 
 func TestDeleteTemplateRequest_JSONMarshaling(t *testing.T) {
 	req := DeleteTemplateRequest{
-		TemplateID: "template-123",	
+		TemplateID: "template-123",
 	}
 	data, err := json.Marshal(req)
 	assert.NoError(t, err)

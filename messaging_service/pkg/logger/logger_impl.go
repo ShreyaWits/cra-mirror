@@ -4,16 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"messaging_service/internal/modules/message_broker/models"
 	"net"
 	"os"
 	"strings"
-	"time"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
 )
 
 type customLogger struct {
@@ -157,21 +154,4 @@ func FormatEndpoint(endpoint string) string {
 		endpoint = endpoint[8:]
 	}
 	return endpoint
-}
-
-// Check if observability backends are reachable
-func ValidateObservabilityBackends(ctx context.Context, env *models.EnvConfig) error {
-	// Try connecting to the OTLP endpoint
-	conn, err := grpc.DialContext(
-		ctx,
-		FormatEndpoint(env.ObservabilityUrl),
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
-		grpc.WithTimeout(5*time.Second),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to connect to observability backend: %w", err)
-	}
-	defer conn.Close()
-	return nil
 }
