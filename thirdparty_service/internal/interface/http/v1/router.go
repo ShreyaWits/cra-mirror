@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"log"
 	"net/http"
 	"thirdparty_service/internal/app"
 	"thirdparty_service/internal/config"
@@ -20,7 +21,7 @@ func SetupRoutes(v1 fiber.Router) error {
 
 func HandleConfig(c *fiber.Ctx) error {
 	configHandler := app.GetConfigHandler()
-	dynamicConfig, err := configHandler.GetConfig()
+	dynamicConfig, err := configHandler.GetDynamicConfig()
 	if err != nil {
 		return dtos.Response{
 			Code: http.StatusInternalServerError,
@@ -28,6 +29,19 @@ func HandleConfig(c *fiber.Ctx) error {
 		}
 	}
 	config.AppConfig.SetEnv(dynamicConfig)
+	// Set Latest config to cache
+	configManagerService := app.GetCacheManagerService()
+	ctx := c.UserContext() // Get context from Fiber Ctx
+	errorx := configManagerService.SetDataToCache(ctx, "config", dynamicConfig)
+	if errorx != nil {
+		log.Println("Error occured in SET CACHE DATA: ", err)
+	}
+	data, err := configManagerService.GetDataToCache(ctx, "config")
+	if err != nil {
+		log.Println("Error occured in GET CACHE DATA: ", err)
+	}
+	log.Println("the CACHE DATA: ", data)
+
 	return dtos.Response{
 		Code: http.StatusOK,
 		Msg:  "Webhook Received Successfully",

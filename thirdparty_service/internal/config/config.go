@@ -9,7 +9,7 @@ import (
 	"os"
 	"thirdparty_service/internal/modules/config/dto"
 	"thirdparty_service/internal/modules/config/handler"
-	"thirdparty_service/internal/modules/config/service"
+	configservice "thirdparty_service/internal/modules/config/service"
 	"thirdparty_service/internal/utils"
 
 	"github.com/joho/godotenv"
@@ -31,6 +31,7 @@ type StaticConfig struct {
 	ConfigServiceUsername string `validate:"required" env:"CONFIG_SERVICE_USERNAME"`
 	ConfigServicePassword string `validate:"required" env:"CONFIG_SERVICE_PASSWORD"`
 	OtelCollectorURL      string `validate:"required" env:"OTEL_COLLECTOR_URL"`
+	CachingServiceGrpcURL string `validate:"required" env:"CACHING_SERVICE_GRPC_URL"`
 }
 
 // LoadEnv reads from .env and sets global config variables
@@ -48,6 +49,7 @@ func LoadEnv() error {
 		ConfigServiceUsername: getEnv("CONFIG_SERVICE_USERNAME", "admin1"),
 		ConfigServicePassword: getEnv("CONFIG_SERVICE_PASSWORD", "Test@1234"),
 		OtelCollectorURL:      getEnv("OTEL_COLLECTOR_URL", "localhost:4317"),
+		CachingServiceGrpcURL: getEnv("CACHING_SERVICE_GRPC_URL", "host.docker.internal:50505"),
 	}
 
 	validateErr := utils.Validate(AppConfig.StaticConfig)
@@ -56,9 +58,9 @@ func LoadEnv() error {
 	}
 
 	// fetch config from config service
-	configService := service.NewConfigService(AppConfig.Environment, AppConfig.ServiceName, AppConfig.ConfigServiceURL, AppConfig.ConfigServiceUsername, AppConfig.ConfigServicePassword)
+	configService := configservice.NewConfigService(AppConfig.Environment, AppConfig.ServiceName, AppConfig.ConfigServiceURL, AppConfig.ConfigServiceUsername, AppConfig.ConfigServicePassword)
 	configHandler := handler.NewConfigHandler(configService)
-	dConfig, err := configHandler.GetConfig()
+	dConfig, err := configHandler.GetDynamicConfig()
 	if err != nil {
 		return err
 	}
@@ -91,8 +93,4 @@ func (c *appConfig) GetHTTPListenAddress() string {
 
 func (c *appConfig) GetGRPCListenAddress() string {
 	return fmt.Sprintf("%s:%d", c.GRPCListenAddress, c.GRPCListenPort)
-}
-
-func (c *appConfig) GetRedisAddress() string {
-	return fmt.Sprintf("%s:%d", c.RedisHost, c.RedisPort)
 }

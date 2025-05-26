@@ -13,9 +13,6 @@ type ConfigResponse struct {
 	DatabasePassword string `validate:"required" json:"DATABASE_PASSWORD"`
 	DatabaseName     string `validate:"required" json:"DATABASE_NAME"`
 
-	RedisHost string `validate:"required" json:"REDIS_HOST"`
-	RedisPort int    `validate:"required,min=1,max=65535" json:"REDIS_PORT"`
-
 	TwilioAccountSID string `validate:"required" json:"TWILIO_ACCOUNT_SID"`
 	TwilioAuthToken  string `validate:"required" json:"TWILIO_AUTH_TOKEN"`
 	TwilioFormNumber string `validate:"required" json:"TWILIO_FORM_NUMBER"`

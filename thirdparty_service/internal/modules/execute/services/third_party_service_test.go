@@ -114,7 +114,7 @@ func TestNew(t *testing.T) {
 		return push_service.FCMClient{}, nil
 	}
 
-	service := New(
+	service := NewThirdPartService(
 		mockRepo,
 		dummyTwilioConstructor,
 		dummySendGridConstructor,
@@ -128,7 +128,7 @@ func TestNew(t *testing.T) {
 func TestVerifyAadhaar(t *testing.T) {
 	mockRepo := new(MockRepository)
 	// Use the updated New function with dummy client constructors for methods that don't use them
-	service := New(mockRepo, nil, nil, nil, nil)
+	service := NewThirdPartService(mockRepo, nil, nil, nil, nil)
 
 	expectedBool := true
 	expectedString1 := "details1"
@@ -159,7 +159,7 @@ func TestVerifyAadhaar(t *testing.T) {
 func TestVerifyPAN(t *testing.T) {
 	mockRepo := new(MockRepository)
 	// Use the updated New function with dummy client constructors for methods that don't use them
-	service := New(mockRepo, nil, nil, nil, nil)
+	service := NewThirdPartService(mockRepo, nil, nil, nil, nil)
 
 	expectedBool := true
 	expectedString := "details"
@@ -187,7 +187,7 @@ func TestVerifyPAN(t *testing.T) {
 func TestSendSMS(t *testing.T) {
 	mockRepo := new(MockRepository)
 	// Use the updated New function with dummy client constructors for methods that don't use them
-	service := New(mockRepo, nil, nil, nil, nil)
+	service := NewThirdPartService(mockRepo, nil, nil, nil, nil)
 
 	expectedString := "sms_id_123"
 	expectedErr := errors.New("send sms error")
@@ -212,7 +212,7 @@ func TestSendSMS(t *testing.T) {
 func TestInitiatePayment(t *testing.T) {
 	mockRepo := new(MockRepository)
 	// Use the updated New function with dummy client constructors for methods that don't use them
-	service := New(mockRepo, nil, nil, nil, nil)
+	service := NewThirdPartService(mockRepo, nil, nil, nil, nil)
 
 	expectedString1 := "payment_id_abc"
 	expectedString2 := "transaction_id_xyz"
@@ -259,7 +259,7 @@ func TestSendTwilioSms(t *testing.T) {
 		}
 		return client
 	}
-	serviceForInteraction := New(mockRepo, mockTwilioClientConstructorForInteraction, nil, nil, nil)
+	serviceForInteraction := NewThirdPartService(mockRepo, mockTwilioClientConstructorForInteraction, nil, nil, nil)
 
 	originalConfig := config.AppConfig
 	defer func() { config.AppConfig = originalConfig }()
@@ -296,7 +296,7 @@ func TestSendTwilioSms(t *testing.T) {
 	dummyTwilioConstructor := func(accountSid, authToken string) *twilio_sms.TwilioClient {
 		panic("should not be called when credentials are missing")
 	}
-	serviceWithDummy := New(mockRepo, dummyTwilioConstructor, nil, nil, nil)
+	serviceWithDummy := NewThirdPartService(mockRepo, dummyTwilioConstructor, nil, nil, nil)
 
 	// Test error case - Missing credentials
 	resetConfig()
@@ -364,7 +364,7 @@ func TestSendEmailBySendGrid(t *testing.T) {
 		}
 		return client
 	}
-	serviceForInteraction := New(mockRepo, nil, mockSendGridClientConstructorForInteraction, nil, nil)
+	serviceForInteraction := NewThirdPartService(mockRepo, nil, mockSendGridClientConstructorForInteraction, nil, nil)
 
 	// Save and restore original config
 	originalConfig := config.AppConfig
@@ -427,7 +427,7 @@ func TestSendEmailBySendGrid(t *testing.T) {
 	dummySendGridConstructor := func(apiKey string) *sendgrid.SendGridClient {
 		panic("should not be called when credentials are missing")
 	}
-	serviceWithDummy := New(mockRepo, nil, dummySendGridConstructor, nil, nil)
+	serviceWithDummy := NewThirdPartService(mockRepo, nil, dummySendGridConstructor, nil, nil)
 
 	// Test error case - Missing credentials
 	// Ensure config is clean for this test
@@ -480,7 +480,7 @@ func TestSendWhatsAppMessage(t *testing.T) {
 		}
 		return client, nil
 	}
-	serviceForInteraction := New(mockRepo, nil, nil, mockWhatsAppClientConstructorForInteraction, nil)
+	serviceForInteraction := NewThirdPartService(mockRepo, nil, nil, mockWhatsAppClientConstructorForInteraction, nil)
 
 	// Save and restore original config
 	originalConfig := config.AppConfig
@@ -513,7 +513,7 @@ func TestSendWhatsAppMessage(t *testing.T) {
 	mockWhatsAppClientConstructorWithError := func(accountSid, authToken, fromNumber string) (*whatsapp.WhatsAppClient, error) {
 		return nil, errors.New("client creation error")
 	}
-	serviceWithError := New(mockRepo, nil, nil, mockWhatsAppClientConstructorWithError, nil)
+	serviceWithError := NewThirdPartService(mockRepo, nil, nil, mockWhatsAppClientConstructorWithError, nil)
 	err = serviceWithError.SendWhatsAppMessage(payload)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create WhatsApp client")
@@ -564,7 +564,7 @@ func TestSendPushNotification(t *testing.T) {
 	}
 
 	// Use the updated New function with the mock client constructor
-	service := New(mockRepo, nil, nil, nil, mockFCMClientConstructor)
+	service := NewThirdPartService(mockRepo, nil, nil, nil, mockFCMClientConstructor)
 
 	// Save and restore original config
 	originalConfig := config.AppConfig
@@ -597,7 +597,7 @@ func TestSendPushNotification(t *testing.T) {
 	mockFCMClientConstructorWithError := func(ctx context.Context, creds, projectID string) (push_service.FCMClient, error) {
 		return push_service.FCMClient{}, errors.New("client creation error")
 	}
-	serviceWithError := New(mockRepo, nil, nil, nil, mockFCMClientConstructorWithError)
+	serviceWithError := NewThirdPartService(mockRepo, nil, nil, nil, mockFCMClientConstructorWithError)
 	err = serviceWithError.SendPushNotification(payload)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create FCM client")

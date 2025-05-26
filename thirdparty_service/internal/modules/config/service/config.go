@@ -1,4 +1,4 @@
-package service
+package configservice
 
 import (
 	"bytes"
@@ -125,3 +125,22 @@ func (cs *ConfigServiceImpl) ValidateConfig(cfg dto.ConfigResponse) error {
 
 	return nil
 }
+
+// func (cs *ConfigServiceImpl) GetCacheConfig() (*dto.ConfigResponse, error) {
+// 	log.Println("Fetching cache config from cache")
+
+// 	// Use a context, e.g., context.Background() or a context from the request if available
+// 	// For simplicity here, we'll use context.Background()
+// 	ctx := context.Background()
+// 	cacheKey := "config" // Define a key for the cache
+
+// 	cfg, err := cs.ConfigManagerService.GetDataToCache(ctx, cacheKey)
+// 	if err != nil {
+// 		// Log the error and return it
+// 		log.Printf("Error fetching cache config from cache: %v", err)
+// 		return nil, fmt.Errorf("failed to get cache config: %w", err)
+// 	}
+
+// 	log.Println("Successfully fetched cache config from cache")
+// 	return cfg, nil
+// }

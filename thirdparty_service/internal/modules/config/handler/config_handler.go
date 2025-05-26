@@ -2,30 +2,32 @@ package handler
 
 import (
 	"thirdparty_service/internal/modules/config/dto"
-	"thirdparty_service/internal/modules/config/service"
+	configservice "thirdparty_service/internal/modules/config/service"
 )
 
 type ConfigHandler struct {
-	service service.ConfigService
+	configService configservice.ConfigService
 }
 
-func NewConfigHandler(service service.ConfigService) *ConfigHandler {
-	return &ConfigHandler{service: service}
+func NewConfigHandler(service configservice.ConfigService) *ConfigHandler { // Modified signature
+	return &ConfigHandler{
+		configService: service,
+	}
 }
 
-func (c *ConfigHandler) GetConfig() (*dto.ConfigResponse, error) {
-	token, err := c.service.LoginToConfigService()
+func (c *ConfigHandler) GetDynamicConfig() (*dto.ConfigResponse, error) {
+	token, err := c.configService.LoginToConfigService()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := c.service.FetchDynamicConfig(token)
+	config, err := c.configService.FetchDynamicConfig(token)
 
 	if err != nil {
 		return nil, err
 	}
-	
-	if err := c.service.ValidateConfig(*config); err != nil {
+
+	if err := c.configService.ValidateConfig(*config); err != nil {
 		return nil, err
 	}
 

@@ -9,7 +9,7 @@ import (
 
 	"thirdparty_service/internal/modules/config/dto"
 	"thirdparty_service/internal/modules/config/handler"
-	"thirdparty_service/internal/modules/config/service"
+	configservice "thirdparty_service/internal/modules/config/service"
 )
 
 // MockConfigService is a mock implementation of the ConfigService interface
@@ -36,10 +36,18 @@ func (m *MockConfigService) ValidateConfig(config dto.ConfigResponse) error {
 	return args.Error(0)
 }
 
-// Ensure MockConfigService implements the ConfigService interface
-var _ service.ConfigService = (*MockConfigService)(nil)
+func (m *MockConfigService) GetCacheConfig() (*dto.ConfigResponse, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*dto.ConfigResponse), args.Error(1)
+}
 
-func TestGetConfig(t *testing.T) {
+// Ensure MockConfigService implements the ConfigService interface
+var _ configservice.ConfigService = (*MockConfigService)(nil)
+
+func TestGetDynamicConfig(t *testing.T) {
 	tests := []struct {
 		name              string
 		mockLoginToken    string
@@ -111,7 +119,7 @@ func TestGetConfig(t *testing.T) {
 
 			configHandler := handler.NewConfigHandler(mockService)
 
-			config, err := configHandler.GetConfig()
+			config, err := configHandler.GetDynamicConfig()
 
 			if tt.expectedErr != nil {
 				assert.Error(t, err)
@@ -126,3 +134,51 @@ func TestGetConfig(t *testing.T) {
 		})
 	}
 }
+// func TestGetCacheConfig(t *testing.T) {
+// 	tests := []struct {
+// 		name           string
+// 		mockConfig     *dto.ConfigResponse
+// 		mockErr        error
+// 		expectedConfig *dto.ConfigResponse
+// 		expectedErr    error
+// 	}{
+// 		{
+// 			name:           "Success",
+// 			mockConfig:     &dto.ConfigResponse{HTTPListenAddress: "localhost", HTTPListenPort: 8080},
+// 			mockErr:        nil,
+// 			expectedConfig: &dto.ConfigResponse{HTTPListenAddress: "localhost", HTTPListenPort: 8080},
+// 			expectedErr:    nil,
+// 		},
+// 		{
+// 			name:           "Error",
+// 			mockConfig:     nil,
+// 			mockErr:        errors.New("cache fetch failed"),
+// 			expectedConfig: nil,
+// 			expectedErr:    errors.New("cache fetch failed"),
+// 		},
+// 	}
+
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			mockService := new(MockConfigService)
+
+// 			// Set up expectations for GetCacheConfig
+// 			mockService.On("GetCacheConfig").Return(tt.mockConfig, tt.mockErr)
+
+// 			configHandler := handler.NewConfigHandler(mockService)
+
+// 			config, err := configHandler.GetCacheConfig()
+
+// 			if tt.expectedErr != nil {
+// 				assert.Error(t, err)
+// 				assert.EqualError(t, err, tt.expectedErr.Error())
+// 				assert.Nil(t, config)
+// 			} else {
+// 				assert.NoError(t, err)
+// 				assert.Equal(t, tt.expectedConfig, config)
+// 			}
+
+// 			mockService.AssertExpectations(t)
+// 		})
+// 	}
+// }

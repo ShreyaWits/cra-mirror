@@ -20,7 +20,7 @@ func InitializeGRPCServer() (*grpc.Server, error) {
 	grpcServer := grpc.NewServer()
 
 	repository := repositories.New()
-	services := services.New(
+	services := services.NewThirdPartService(
 		repository,
 		twilio_sms.NewTwilioClient,
 		sendgrid.NewSendGridClient,

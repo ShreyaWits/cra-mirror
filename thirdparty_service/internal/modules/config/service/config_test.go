@@ -1,4 +1,4 @@
-package service
+package configservice
 
 import (
 	"encoding/json"
@@ -40,7 +40,7 @@ func TestNewConfigService(t *testing.T) {
 	username := "admin"
 	password := "password"
 
-	cfgService := NewConfigService(env, serviceName, url, username, password)
+	cfgService := NewConfigService(env, serviceName, url, username, password,)
 
 	assert.NotNil(t, cfgService)
 
@@ -176,8 +176,6 @@ func TestFetchDynamicConfig_Success(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -280,8 +278,6 @@ func TestValidateConfig_Success(t *testing.T) {
 		DatabaseUser:      "user",
 		DatabasePassword:  "password",
 		DatabaseName:      "mydb",
-		RedisHost:         "redis.example.com",
-		RedisPort:         6379,
 		TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		TwilioAuthToken:   "your_auth_token",
 		TwilioFormNumber:  "+15017122661",
@@ -319,8 +315,6 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -346,8 +340,6 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -373,8 +365,6 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -400,8 +390,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -427,8 +417,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -454,8 +444,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -481,8 +471,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabasePort:      5432,
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -508,8 +498,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabasePort:      5432,
 				DatabaseUser:      "user",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -535,8 +525,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabasePort:      5432,
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -563,7 +553,7 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisPort:         6379,
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -590,7 +580,7 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -617,8 +607,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
 				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -644,8 +634,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioFormNumber:  "+15017122661",
 				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -671,8 +661,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				SendGridApiKey:    "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -698,8 +688,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -725,8 +715,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -752,8 +742,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -779,8 +769,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -806,8 +796,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -833,8 +823,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -860,8 +850,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",
@@ -887,8 +877,8 @@ func TestValidateConfig_Failure(t *testing.T) {
 				DatabaseUser:      "user",
 				DatabasePassword:  "password",
 				DatabaseName:      "mydb",
-				RedisHost:         "redis.example.com",
-				RedisPort:         6379,
+				
+				
 				TwilioAccountSID:  "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 				TwilioAuthToken:   "your_auth_token",
 				TwilioFormNumber:  "+15017122661",

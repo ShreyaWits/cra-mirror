@@ -31,7 +31,7 @@ type service struct {
 	fcmClientConstructor      func(ctx context.Context, creds, projectID string) (push_service.FCMClient, error)
 }
 
-func New(
+func NewThirdPartService(
 	repo repositories.Repository,
 	twilioClientConstructor func(accountSid, authToken string) *twilio_sms.TwilioClient,
 	sendGridClientConstructor func(apiKey string) *sendgrid.SendGridClient,

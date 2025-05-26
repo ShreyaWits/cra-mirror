@@ -1,10 +1,13 @@
 package app
 
 import (
+	"log"
 	"log/slog"
 	"thirdparty_service/internal/config"
 	"thirdparty_service/internal/modules/config/handler"
-	"thirdparty_service/internal/modules/config/service"
+	configservice "thirdparty_service/internal/modules/config/service"
+	cacheclient "thirdparty_service/internal/modules/execute/clients/cache_client"
+	"thirdparty_service/internal/modules/execute/services"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
@@ -30,9 +33,17 @@ func InitDependencyInjection() error {
 	tracer := tracerProvider.Tracer(config.AppConfig.ServiceName)
 	logger := otelslog.NewLogger(config.AppConfig.ServiceName)
 	metricMeter := otel.Meter(config.AppConfig.ServiceName)
-	configService := service.NewConfigService(config.AppConfig.Environment, config.AppConfig.ServiceName, config.AppConfig.ConfigServiceURL, config.AppConfig.ConfigServiceUsername, config.AppConfig.ConfigServicePassword)
+	cacheClient, err := cacheclient.NewRedisClient(config.AppConfig.CachingServiceGrpcURL)
+	if err != nil {
+		log.Println("Couldn't initalise the Cache client")
+	}
+	cacheManagerService, err := services.NewCacheManager(cacheClient)
+	if err != nil {
+		log.Println("Couldn't initalise the Cache client")
+	}
+	configService := configservice.NewConfigService(config.AppConfig.Environment, config.AppConfig.ServiceName, config.AppConfig.ConfigServiceURL, config.AppConfig.ConfigServiceUsername, config.AppConfig.ConfigServicePassword)
 	configHandler := handler.NewConfigHandler(configService)
-
+	
 	if err := Container.Provide(func() trace.Tracer {
 		return tracer
 	}); err != nil {
@@ -49,7 +60,7 @@ func InitDependencyInjection() error {
 		return err
 	}
 
-	if err := Container.Provide(func() service.ConfigService {
+	if err := Container.Provide(func() configservice.ConfigService {
 		return configService
 	}); err != nil {
 		return err
@@ -57,6 +68,11 @@ func InitDependencyInjection() error {
 
 	if err := Container.Provide(func() *handler.ConfigHandler {
 		return configHandler
+	}); err != nil {
+		return err
+	}
+	if err := Container.Provide(func() *services.CacheManagerService {
+		return cacheManagerService
 	}); err != nil {
 		return err
 	}
@@ -91,9 +107,9 @@ func GetMeter() metric.Meter {
 	}
 	return meter
 }
-func GetConfigService() *service.ConfigService {
-	var configService *service.ConfigService
-	if err := Container.Invoke(func(c *service.ConfigService) {
+func GetConfigService() configservice.ConfigService {
+	var configService configservice.ConfigService
+	if err := Container.Invoke(func(c configservice.ConfigService) {
 		configService = c
 	}); err != nil {
 		panic(err)
@@ -109,4 +125,14 @@ func GetConfigHandler() *handler.ConfigHandler {
 		panic(err)
 	}
 	return configHandler
+}
+
+func GetCacheManagerService() *services.CacheManagerService {
+	var cacheManagerService *services.CacheManagerService
+	if err := Container.Invoke(func(c *services.CacheManagerService) {
+		cacheManagerService = c
+	}); err != nil {
+		panic(err)
+	}
+	return cacheManagerService
 }
