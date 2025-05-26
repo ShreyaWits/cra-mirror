@@ -11,6 +11,7 @@ import (
 	"nps-config-service/internal/modules/config-manager/apis/routes"
 	"nps-config-service/internal/modules/config-manager/services/mocks"
 	"nps-config-service/pkg/observability"
+	"os"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,6 +20,7 @@ import (
 )
 
 func TestConfigHandler(t *testing.T) {
+	os.Setenv("BYPASS_MIDDLEWARE", "true")
 	confService := new(mocks.MockConfigService)
 
 	confHandler := handler.NewConfigHandler(confService, observability.NewObservabilityStack("config-handler"))

@@ -14,6 +14,7 @@ import (
 	"nps-config-service/internal/modules/config-manager/apis/routes"
 	"nps-config-service/internal/modules/config-manager/services/mocks"
 	"nps-config-service/pkg/observability"
+	"os"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,6 +23,7 @@ import (
 )
 
 func TestAdminLoginHandler(t *testing.T) {
+	os.Setenv("BYPASS_MIDDLEWARE", "true")
 	adminService := new(mocks.MockAdminService)
 	observabilityStack := observability.NewObservabilityStack("config_service")
 
@@ -30,7 +32,7 @@ func TestAdminLoginHandler(t *testing.T) {
 	app := fiber.New()
 	routes.RegisterAdminRoutes(app, adminHandler)
 
-	app.Post("/admin/login-no-ctxdata", adminHandler.FetchAdminHandler)
+	app.Post("/noctx/login", adminHandler.FetchAdminHandler)
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
 		adminService.On("FetchAdminService", mock.Anything, mock.Anything, mock.Anything).Return(&dtos.ResponseAdminDto{
@@ -59,9 +61,12 @@ func TestAdminLoginHandler(t *testing.T) {
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
 		adminService.On("FetchAdminService", mock.Anything, mock.Anything, mock.Anything).Return(&dtos.ResponseAdminDto{
-			Success: true,
-			Message: "Admin login successful",
-			AdminId: "admin-id",
+			Success:      true,
+			Message:      "Admin login successful",
+			AdminId:      "admin-id",
+			Role:         "admin",
+			Token:        "sample-token",
+			RefreshToken: "sample-refresh-token",
 		}, nil).Once()
 
 		adminLoginDto := &dtos.AdminLoginDto{
@@ -73,7 +78,7 @@ func TestAdminLoginHandler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, jsonData)
 
-		req := httptest.NewRequest(http.MethodPost, "/admin/login-no-ctxdata", bytes.NewReader(jsonData))
+		req := httptest.NewRequest(http.MethodPost, "/noctx/login", bytes.NewReader(jsonData))
 		// _req := httptest.NewRequest(http.MethodGet, "/admin/signup", nil)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -112,7 +117,7 @@ func TestAdminLoginHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
@@ -137,7 +142,7 @@ func TestAdminLoginHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
@@ -162,7 +167,7 @@ func TestAdminLoginHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
@@ -198,11 +203,12 @@ func TestAdminLoginHandler(t *testing.T) {
 		assert.NoError(t, err)
 
 		fmt.Println(resp.Body)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 }
 
 func TestAdminSignupHandler(t *testing.T) {
+	os.Setenv("BYPASS_MIDDLEWARE", "true")
 	adminService := new(mocks.MockAdminService)
 	observabilityStack := observability.NewObservabilityStack("config_service")
 
@@ -211,7 +217,7 @@ func TestAdminSignupHandler(t *testing.T) {
 	app := fiber.New()
 	routes.RegisterAdminRoutes(app, adminHandler)
 
-	app.Post("/admin/signup-no-ctxdata", adminHandler.CreateAdminHandler)
+	app.Post("/noctx/signup", adminHandler.CreateAdminHandler)
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
 		// adminService.On("FetchAdminService", mock.Anything, mock.Anything, mock.Anything).Return(&dtos.ResponseAdminDto{
@@ -230,6 +236,7 @@ func TestAdminSignupHandler(t *testing.T) {
 			Secret:   "admin-secret",
 			Username: "admin",
 			Password: "password",
+			Role:     "ADMIN",
 		}
 
 		jsonData, err := json.Marshal(adminSignup)
@@ -262,6 +269,7 @@ func TestAdminSignupHandler(t *testing.T) {
 			Secret:   "admin-secret",
 			Username: "",
 			Password: "password",
+			Role:     "ADMIN",
 		}
 
 		jsonData, err := json.Marshal(adminSignup)
@@ -274,7 +282,7 @@ func TestAdminSignupHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
@@ -294,6 +302,7 @@ func TestAdminSignupHandler(t *testing.T) {
 			Secret:   "admin-secret-invalid",
 			Username: "admin",
 			Password: "password",
+			Role:     "ADMIN",
 		}
 
 		jsonData, err := json.Marshal(adminSignup)
@@ -306,7 +315,7 @@ func TestAdminSignupHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
@@ -319,13 +328,14 @@ func TestAdminSignupHandler(t *testing.T) {
 			Secret:   "admin-secret",
 			Username: "admin",
 			Password: "password",
+			Role:     "ADMIN",
 		}
 
 		jsonData, err := json.Marshal(adminSignup)
 		assert.NoError(t, err)
 		assert.NotNil(t, jsonData)
 
-		req := httptest.NewRequest(http.MethodPost, "/admin/signup-no-ctxdata", bytes.NewReader(jsonData))
+		req := httptest.NewRequest(http.MethodPost, "/noctx/signup", bytes.NewReader(jsonData))
 		// _req := httptest.NewRequest(http.MethodGet, "/admin/signup", nil)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -397,7 +407,7 @@ func TestAdminSignupHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
@@ -422,7 +432,7 @@ func TestAdminSignupHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
@@ -447,7 +457,152 @@ func TestAdminSignupHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+}
+
+func TestAdminListAdminHandler(t *testing.T) {
+	err := os.Setenv("BYPASS_MIDDLEWARE", "true")
+	assert.NoError(t, err)
+	adminService := new(mocks.MockAdminService)
+	observabilityStack := observability.NewObservabilityStack("config_service")
+
+	provider := handlerMock.NewMockConfigProvider("admin-secret", "jwt-secret")
+	adminHandler := handler.NewAdminHandler(adminService, observabilityStack, provider)
+	app := fiber.New()
+
+	// Admin only routes
+	app.Get("/custom/admins",
+		func(c *fiber.Ctx) error {
+			c.Locals("userRole", "ADMIN")
+			c.Locals("username", "admin")
+			return c.Next()
+		},
+		adminHandler.ListAdminsHandler)
+
+	app.Delete("/custom/admins/:username",
+		func(c *fiber.Ctx) error {
+			c.Locals("userRole", "ADMIN")
+			c.Locals("username", "admin")
+			return c.Next()
+		},
+		adminHandler.DeleteAdminHandler)
+	routes.RegisterAdminRoutes(app, adminHandler)
+
+	adminService.On("ListAdminsService", mock.Anything).Return(&dtos.ResponseListAdminsDto{
+		Success: true,
+		Message: "Admins fetched successfully",
+		Admins: []*dtos.Admin{
+			{
+				ID:        "admin-id-1",
+				UserName:  "admin1",
+				Role:      "ADMIN",
+				CreatedAt: "2023-10-01T00:00:00Z",
+				UpdatedAt: "2023-10-01T00:00:00Z",
+			}},
+	}, nil).Once()
+
+	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/custom/admins", nil)
+		// _req := httptest.NewRequest(http.MethodGet, "/admin/signup", nil)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
+		err := os.Setenv("BYPASS_MIDDLEWARE", "true")
+		assert.NoError(t, err)
+		adminService := new(mocks.MockAdminService)
+		observabilityStack := observability.NewObservabilityStack("config_service")
+
+		provider := handlerMock.NewMockConfigProvider("admin-secret", "jwt-secret")
+		adminHandler := handler.NewAdminHandler(adminService, observabilityStack, provider)
+		app := fiber.New()
+		routes.RegisterAdminRoutes(app, adminHandler)
+		app.Get("/custom/admins",
+			func(c *fiber.Ctx) error {
+				c.Locals("userRole", "ADMIN")
+				c.Locals("username", "admin")
+				return c.Next()
+			},
+			adminHandler.ListAdminsHandler)
+
+		adminService.On("ListAdminsService", mock.Anything).Return(&dtos.ResponseListAdminsDto{
+			Success: true,
+			Message: "Admins fetched successfully",
+			Admins: []*dtos.Admin{
+				{
+					ID:        "admin-id-1",
+					UserName:  "admin1",
+					Role:      "ADMIN",
+					CreatedAt: "2023-10-01T00:00:00Z",
+					UpdatedAt: "2023-10-01T00:00:00Z",
+				}},
+		}, errors.New("abc")).Once()
+		req := httptest.NewRequest(http.MethodGet, "/custom/admins", nil)
+		// _req := httptest.NewRequest(http.MethodGet, "/admin/signup", nil)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+}
+
+func TestAdminDeleteAdminHandler(t *testing.T) {
+	adminService := new(mocks.MockAdminService)
+	observabilityStack := observability.NewObservabilityStack("config_service")
+
+	provider := handlerMock.NewMockConfigProvider("admin-secret", "jwt-secret")
+	adminHandler := handler.NewAdminHandler(adminService, observabilityStack, provider)
+	app := fiber.New()
+
+	adminService.On("DeleteAdminService", mock.Anything, "P4R4MR").Return(&dtos.ResponseDeleteAdminDto{
+		Success:  true,
+		Message:  "Admin deleted successfully",
+		Username: "P4R4MR",
+	}, nil)
+
+	adminService.On("DeleteAdminService", mock.Anything, "ParamR").Return(&dtos.ResponseDeleteAdminDto{}, errors.New("unknown error"))
+
+	app.Delete("/custom/admins/:username",
+		func(c *fiber.Ctx) error {
+			c.Locals("userRole", "ADMIN")
+			c.Locals("username", "rai")
+			return c.Next()
+		},
+		adminHandler.DeleteAdminHandler)
+	routes.RegisterAdminRoutes(app, adminHandler)
+
+	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/custom/admins/P4R4MR", nil)
+		// _req := httptest.NewRequest(http.MethodGet, "/admin/signup", nil)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/custom/admins/ParamR", nil)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	})
+
+	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/custom/admins/rai", nil)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
 }
 

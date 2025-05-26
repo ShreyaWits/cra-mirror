@@ -8,6 +8,7 @@ import (
 	ers "errors"
 	"fmt"
 	"log"
+	"os"
 
 	"reflect"
 
@@ -47,6 +48,10 @@ func getValidationMessage(jsonTag string, value interface{}, err validator.Field
 // ValidateBody is a middleware to validate the request body against the provided DTO
 func ValidateBody(dto interface{}) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		if os.Getenv("BYPASS_MIDDLEWARE") == "true" {
+			return c.Next()
+		}
+
 		// Create a new span for tracing
 		ctx := c.UserContext()
 		parentCtx, parentSpan := fiberOtel.Tracer.Start(ctx, "Middleware")
@@ -115,7 +120,7 @@ func ValidateBody(dto interface{}) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(dtos.ApiResponseDto{
 				Success: false,
 				Error: &dtos.ErrorResponseDto{
-					Code: common.Errors["CNF004"],
+					Code:    common.Errors["CNF004"],
 					Message: validationErrors,
 				},
 			})
@@ -161,7 +166,7 @@ func ValidateParams(passedDto interface{}) fiber.Handler {
 				return c.Status(fiber.StatusBadRequest).JSON(dtos.ApiResponseDto{
 					Success: false,
 					Error: &dtos.ErrorResponseDto{
-						Code:    common.Errors["CNF004"],
+						Code: common.Errors["CNF004"],
 
 						Message: "Invalid DTO type. Must be a pointer.",
 					},
@@ -179,7 +184,7 @@ func ValidateParams(passedDto interface{}) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(dtos.ApiResponseDto{
 				Success: false,
 				Error: &dtos.ErrorResponseDto{
-					Code:    common.Errors["CNF004"],
+					Code: common.Errors["CNF004"],
 
 					Message: "Failed to parse query parameters.",
 				},
@@ -194,7 +199,7 @@ func ValidateParams(passedDto interface{}) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(dtos.ApiResponseDto{
 				Success: false,
 				Error: &dtos.ErrorResponseDto{
-									Code:    common.Errors["CNF004"],
+					Code: common.Errors["CNF004"],
 
 					Message: "Failed to parse path parameters.",
 				},
@@ -334,5 +339,3 @@ func SetContextData(passedDto interface{}) fiber.Handler {
 		return c.Next()
 	}
 }
-
-

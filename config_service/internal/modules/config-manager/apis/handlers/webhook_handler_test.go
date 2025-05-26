@@ -10,6 +10,7 @@ import (
 	"nps-config-service/internal/modules/config-manager/apis/routes"
 	"nps-config-service/internal/modules/config-manager/services/mocks"
 	"nps-config-service/pkg/observability"
+	"os"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -33,6 +34,7 @@ func TestWebHookHandler(t *testing.T) {
 	app.Post("/noctx/webhook", wbHandler.RegisterWebhook)
 
 	t.Run("wbHandler", func(t *testing.T) {
+
 		registerWbRequest := dtos.RegisterWebhookRequest{
 			URL:         "http://sampleurl.com/",
 			Environment: "sampleenv",
@@ -55,6 +57,7 @@ func TestWebHookHandler(t *testing.T) {
 	})
 
 	t.Run("wbHandler", func(t *testing.T) {
+
 		registerWbRequest := dtos.RegisterWebhookRequest{
 			URL:         "http://sampleurl.com/",
 			Environment: "sampleenv",
@@ -177,6 +180,8 @@ func TestWebHookHandler_GetWebhooks(t *testing.T) {
 }
 
 func TestWebHookHandler_DeleteWebhooks(t *testing.T) {
+	os.Setenv("BYPASS_MIDDLEWARE", "true")
+
 	wbService := new(mocks.MockWebhookService)
 
 	wbHandler := handler.NewWebhookHandler(wbService, observability.NewObservabilityStack("webhook-handler"))

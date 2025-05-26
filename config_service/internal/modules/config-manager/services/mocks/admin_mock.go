@@ -20,3 +20,13 @@ func (m *MockAdminService) CreateAdminService(ctx context.Context, req *dtos.Adm
 	args := m.Called(ctx, req)
 	return args.Get(0).(*dtos.ResponseAdminSignupDto), args.Error(1)
 }
+
+func (m *MockAdminService) ListAdminsService(ctx context.Context) (*dtos.ResponseListAdminsDto, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*dtos.ResponseListAdminsDto), args.Error(1)
+}
+
+func (m *MockAdminService) DeleteAdminService(ctx context.Context, username string) (*dtos.ResponseDeleteAdminDto, error) {
+	args := m.Called(ctx, username)
+	return args.Get(0).(*dtos.ResponseDeleteAdminDto), args.Error(1)
+}

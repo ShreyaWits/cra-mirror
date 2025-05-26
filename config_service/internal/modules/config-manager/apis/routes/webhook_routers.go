@@ -11,7 +11,7 @@ import (
 )
 
 func RegisterWebHookRoutes(router fiber.Router, h *handler.WebhookHandler) {
-	router.Post("/webhook", middleware.SetContextDataMiddleware[map[string]interface{}], middlewares.ValidateBody(new(dtos.RegisterWebhookRequest)), middleware.RequireRole(roles.RoleAdmin), h.RegisterWebhook)
+	router.Post("/webhook", middleware.SetContextDataMiddleware[dtos.RegisterWebhookRequest], middlewares.ValidateBody(new(dtos.RegisterWebhookRequest)), middleware.RequireRole(roles.RoleAdmin), h.RegisterWebhook)
 
 	// Get all webhooks for a specific environment/service
 	router.Get("/:environment/:service/webhooks", h.GetWebhooks)
@@ -19,5 +19,5 @@ func RegisterWebHookRoutes(router fiber.Router, h *handler.WebhookHandler) {
 	// todo: Update a specific webhook (PATCH for partial updates)
 	// router.Patch("/webhook/:environment/:service", h.UpdateWebhook)
 
-	router.Delete("/:environment/:service/webhook", middleware.SetContextDataMiddleware[map[string]interface{}], middleware.RequireRole(roles.RoleViewer), h.DeleteWebhook)
+	router.Delete("/:environment/:service/webhook", middleware.SetContextDataMiddleware[dtos.RegisterWebhookRequest], middleware.RequireRole(roles.RoleViewer), h.DeleteWebhook)
 }
