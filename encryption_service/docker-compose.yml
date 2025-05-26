@@ -31,7 +31,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8082:8082"
+      - "8002:8002"
       - "50502:50502"
     environment:
       - REST_PORT=${REST_PORT:-8082}
