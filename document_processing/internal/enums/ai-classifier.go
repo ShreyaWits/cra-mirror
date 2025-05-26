@@ -2,9 +2,10 @@
 // build +test
 package enums
 
-type AIClassifier string
+//go:generate stringer -type=AIClassifier
+type AIClassifier int
 
 const (
-	ClassifierLlama  AIClassifier = "llama"
-	ClassifierGemini AIClassifier = "gemini"
+	Llama  AIClassifier = iota
+	Gemini AIClassifier = iota + 1
 )

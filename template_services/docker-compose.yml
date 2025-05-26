@@ -5,7 +5,7 @@ services:
     build: .
     ports:
       - "${GRPC_PORT}:50051"  # gRPC
-      - "${REST_PORT}:8001"    # REST
+      - "${REST_PORT}:8081"    # REST
     environment:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}

@@ -61,23 +61,21 @@ func RefreshConfig(config *Config) {
 
 func LoadConfig() error {
 	if os.Getenv("IS_DOCKER") != "true" {
-		if err := godotenv.Load(); err != nil {
-			fmt.Printf("Warning: No .env file found. Proceeding without it. Error: %v AND IS_DOCKER not true", err)
-			return err
-		} else {
-			fmt.Println("Loaded .env file")
-		}
-	}
+        if err := godotenv.Load(); err != nil {
+            fmt.Printf("Warning: No .env file found. Proceeding without it. Error: %v AND IS_DOCKER not true", err)
+            return err
+        } else {
+            fmt.Println("Loaded .env file")
+        }
+    }
 
 	ImmutableConfigs = &ImmutableConfig{
-		ConfigServiceUrl:        getEnv("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
-		ConfigServiceToken:      getEnv("TEMPLATE_CONFIG_SERVICE_TOKEN", "kjdasklfjklajdkfljkl"),
-		Environment:             getEnv("ENVIRONMENT", "development"),
-		CacheSrvAddr:            getEnv("CACHE_SERVICE_ADDR", "localhost:6379"),
-		TemplateServiceGRPCPort: getEnv("TEMPLATE_SERVICE_GRPC_PORT", "50051"),
-		TemplateServiceRestPort: getEnv("TEMPLATE_SERVICE_REST_PORT", "8080"),
+		ConfigServiceUrl:   getEnv("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
+		ConfigServiceToken: getEnv("CONFIG_SERVICE_TOKEN", "kjdasklfjklajdkfljkl"),
+		Environment:        getEnv("ENVIRONMENT", "development"),
+		CacheSrvAddr:       getEnv("CACHE_SERVICE_ADDR", "localhost:6379"),
 	}
-	fmt.Println("Immutable Configs: ", ImmutableConfigs)
+
 	return nil
 }
 

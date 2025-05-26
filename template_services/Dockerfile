@@ -17,6 +17,5 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/.env .env
-EXPOSE 50051 
-EXPOSE 8001
+EXPOSE 50051 8080
 CMD ["./server"] 

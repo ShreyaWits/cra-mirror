@@ -1,7 +1,7 @@
 package yugabytedb
 
 import (
-	"Document-Processing/internal/models"
+	"document_processing/internal/models"
 	"fmt"
 	"log"
 	"os"
