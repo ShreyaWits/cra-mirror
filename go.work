@@ -8,3 +8,5 @@ use (
 	./protos
 	./thirdparty_service
 )
+
+replace cra-protos/redis_service => ./protos/redis_service
