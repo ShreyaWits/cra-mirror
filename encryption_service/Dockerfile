@@ -23,7 +23,8 @@ WORKDIR /app
 COPY --from=builder /app/encryption-service .
 
 # Expose the port
-EXPOSE 8080
+EXPOSE 8002
+EXPOSE 50502
 
 # Run the application
 CMD ["./encryption-service"] 
