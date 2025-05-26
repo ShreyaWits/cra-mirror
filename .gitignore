@@ -1,2 +1,7 @@
+<<<<<<< HEAD
 .vscode
 .DS_Store
+=======
+.DS_Store
+.env
+>>>>>>> origin/thirdparty-service
