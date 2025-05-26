@@ -319,7 +319,7 @@ func (h *AdminHandler) DeleteAdminHandler(c *fiber.Ctx) error {
 		if appErr, ok := responseError.(common.AppError); ok {
 			return c.Status(appErr.Status).JSON(appErr)
 		}
-		return c.Status(fiber.StatusBadGateway).JSON(common.ThrowError(fiber.StatusInternalServerError, "ADMIN010"))
+		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusInternalServerError, "ADMIN010"))
 	}
 
 	span.SetStatus(codes.Ok, "Admin user deleted successfully")

@@ -593,7 +593,7 @@ func TestAdminDeleteAdminHandler(t *testing.T) {
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("NewAdminHandler with nil observability stack", func(t *testing.T) {
