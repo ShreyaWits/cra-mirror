@@ -267,6 +267,11 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 			"error", responseError,
 			"username", contextData.Username)
 		h.recordMetrics(ctx, "fetch_admin", start, responseError)
+
+		c.Status(fiber.StatusInternalServerError).JSON(dtos.ResponseAdminDto{
+			Success: false,
+			Message: responseError.Error(),
+		})
 		return responseError
 	}
 
