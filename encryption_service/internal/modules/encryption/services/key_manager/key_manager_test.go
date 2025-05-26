@@ -1,11 +1,13 @@
 package keymanager_test
 
 import (
+	"context"
 	"testing"
 
 	"encryption_microservice/internal/common/mocks"
 	keymanager "encryption_microservice/internal/modules/encryption/services/key_manager"
 	"encryption_microservice/pkg/errors"
+	"encryption_microservice/pkg/observability"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +18,9 @@ func TestKeyManager_StoreKEK(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockKMS := mocks.NewMockKmsService(ctrl)
-	manager := keymanager.NewKeyManager(mockKMS)
+	obs := observability.NewObservabilityStack(nil)
+	manager := keymanager.NewKeyManager(mockKMS, obs)
+	ctx := context.Background()
 
 	tests := []struct {
 		name    string
@@ -45,7 +49,7 @@ func TestKeyManager_StoreKEK(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockKMS.EXPECT().StoreKEK(tc.keyID, tc.kek).Return(tc.mockErr)
 
-			err := manager.StoreKEK(tc.keyID, tc.kek)
+			err := manager.StoreKEK(ctx, tc.keyID, tc.kek)
 			if tc.wantErr {
 				assert.NotNil(t, err)
 				assert.Equal(t, tc.mockErr, err)
@@ -61,7 +65,9 @@ func TestKeyManager_RetrieveKEK(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockKMS := mocks.NewMockKmsService(ctrl)
-	manager := keymanager.NewKeyManager(mockKMS)
+	obs := observability.NewObservabilityStack(nil)
+	manager := keymanager.NewKeyManager(mockKMS, obs)
+	ctx := context.Background()
 
 	tests := []struct {
 		name      string
@@ -90,7 +96,7 @@ func TestKeyManager_RetrieveKEK(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockKMS.EXPECT().RetrieveKEK(tc.keyID).Return(tc.mockKEK, tc.mockErr)
 
-			kek, err := manager.RetrieveKEK(tc.keyID)
+			kek, err := manager.RetrieveKEK(ctx, tc.keyID)
 			if tc.expectErr {
 				assert.Nil(t, kek)
 				assert.Equal(t, tc.mockErr, err)

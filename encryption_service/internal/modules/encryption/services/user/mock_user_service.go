@@ -1,9 +1,10 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"encryption_microservice/pkg/errors"
-	"encryption_microservice/pkg/http"
+	httpclient "encryption_microservice/pkg/http"
 	"fmt"
 	"os"
 	"sync"
@@ -15,7 +16,7 @@ var mu sync.Mutex
 
 type MockFileUserService struct{}
 
-func NewMockUserService(httpClient http.HttpClient, baseURL string) UserService {
+func NewMockUserService(httpClient httpclient.HTTPClient, baseURL string) UserService {
 	return &MockFileUserService{}
 }
 
@@ -67,7 +68,7 @@ func saveUsers(users []User) error {
 }
 
 // GetUserData retrieves a user by "token" (simulated as ID). If not found, it creates one.
-func (s *MockFileUserService) GetUserData(token string) (*User, *errors.CustomError) {
+func (s *MockFileUserService) GetUserData(ctx context.Context, token string) (*User, *errors.CustomError) {
 	if token == "" {
 		return nil, errors.NewCustomError(errors.USRErrTokenRequired, fmt.Errorf("token is required"))
 	}
@@ -100,8 +101,7 @@ func (s *MockFileUserService) GetUserData(token string) (*User, *errors.CustomEr
 }
 
 // CreateUser adds a new user
-func (s *MockFileUserService) CreateUser(token string, newUser *User) *errors.CustomError {
-
+func (s *MockFileUserService) CreateUser(ctx context.Context, token string, newUser *User) *errors.CustomError {
 	users, err := loadUsers()
 	if err != nil {
 		return errors.NewCustomError(errors.USRErrFetchUserData, err)
@@ -121,7 +121,7 @@ func (s *MockFileUserService) CreateUser(token string, newUser *User) *errors.Cu
 }
 
 // DeleteUser removes a user by ID
-func (s *MockFileUserService) DeleteUser(token, userID string) *errors.CustomError {
+func (s *MockFileUserService) DeleteUser(ctx context.Context, token, userID string) *errors.CustomError {
 	users, err := loadUsers()
 	if err != nil {
 		return errors.NewCustomError(errors.USRErrFetchUserData, err)
@@ -148,7 +148,7 @@ func (s *MockFileUserService) DeleteUser(token, userID string) *errors.CustomErr
 }
 
 // UpdateUser updates the EDEKPrivate, EDEKPublic, and Name of the user by ID
-func (s *MockFileUserService) UpdateUser(userID, edekPrivate, edekPublic string) *errors.CustomError {
+func (s *MockFileUserService) UpdateUser(ctx context.Context, userID, edekPrivate, edekPublic string) *errors.CustomError {
 	users, err := loadUsers()
 	if err != nil {
 		return errors.NewCustomError(errors.USRErrFetchUserData, err)

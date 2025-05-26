@@ -18,7 +18,7 @@ func TestLoadConfig(t *testing.T) {
 	})
 
 	t.Run("LoadConfig with environment variables", func(t *testing.T) {
-		os.Setenv("GRPC_PORT", "60000")
+		os.Setenv("ENCRYPTION_SERVICE_GRPC_PORT", "60000")
 		os.Setenv("ENCRIPTION_SECRET", "custom_secret")
 		os.Setenv("DB_HOST", "custom_host")
 
@@ -26,7 +26,7 @@ func TestLoadConfig(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Clean up
-		os.Unsetenv("GRPC_PORT")
+		os.Unsetenv("ENCRYPTION_SERVICE_GRPC_PORT")
 		os.Unsetenv("ENCRIPTION_SECRET")
 		os.Unsetenv("DB_HOST")
 	})

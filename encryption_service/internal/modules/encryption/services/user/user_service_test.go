@@ -1,6 +1,7 @@
 package user_test
 
 import (
+	"context"
 	"encryption_microservice/internal/modules/encryption/services/user"
 	"encryption_microservice/pkg/errors"
 	"os"
@@ -22,9 +23,10 @@ func setup(t *testing.T) {
 func TestGetUserData_CreatesUserIfNotExist(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
+	ctx := context.Background()
 
 	token := "test123"
-	u, err := svc.GetUserData(token)
+	u, err := svc.GetUserData(ctx, token)
 
 	assert.Nil(t, err)
 	assert.Equal(t, token, u.ID)
@@ -35,17 +37,18 @@ func TestGetUserData_CreatesUserIfNotExist(t *testing.T) {
 func TestGetUserData_ReturnsExistingUser(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
+	ctx := context.Background()
 	token := "existingUser"
 
 	// Create the user manually
-	_ = svc.CreateUser(token, &user.User{
+	_ = svc.CreateUser(ctx, token, &user.User{
 		ID:    token,
 		Name:  "Alice",
 		Email: "alice@example.com",
 	})
 
 	// Now retrieve it
-	u, err := svc.GetUserData(token)
+	u, err := svc.GetUserData(ctx, token)
 	assert.Nil(t, err)
 	assert.Equal(t, "Alice", u.Name)
 	assert.Equal(t, "alice@example.com", u.Email)
@@ -54,16 +57,17 @@ func TestGetUserData_ReturnsExistingUser(t *testing.T) {
 func TestCreateUser_FailsIfExists(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
+	ctx := context.Background()
 	token := "dupeUser"
 
-	err := svc.CreateUser(token, &user.User{
+	err := svc.CreateUser(ctx, token, &user.User{
 		ID:    token,
 		Name:  "Bob",
 		Email: "bob@example.com",
 	})
 	assert.Nil(t, err)
 
-	err = svc.CreateUser(token, &user.User{
+	err = svc.CreateUser(ctx, token, &user.User{
 		ID:    token,
 		Name:  "Bob Again",
 		Email: "bob2@example.com",
@@ -75,28 +79,30 @@ func TestCreateUser_FailsIfExists(t *testing.T) {
 func TestDeleteUser_RemovesUser(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
+	ctx := context.Background()
 	token := "deleteUser"
 
-	_ = svc.CreateUser(token, &user.User{
+	_ = svc.CreateUser(ctx, token, &user.User{
 		ID:    token,
 		Name:  "To Delete",
 		Email: "delete@example.com",
 	})
 
-	err := svc.DeleteUser(token, token)
+	err := svc.DeleteUser(ctx, token, token)
 	assert.Nil(t, err)
 
 	// Try to get it again
-	_, err = svc.GetUserData(token)
+	_, err = svc.GetUserData(ctx, token)
 	assert.Nil(t, err) // Should recreate
 }
 
 func TestUpdateUser_UpdatesFields(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
+	ctx := context.Background()
 	token := "updateUser"
 
-	_ = svc.CreateUser(token, &user.User{
+	_ = svc.CreateUser(ctx, token, &user.User{
 		ID:          token,
 		Name:        "Old",
 		Email:       "old@example.com",
@@ -104,10 +110,10 @@ func TestUpdateUser_UpdatesFields(t *testing.T) {
 		EDEKPrivate: "",
 	})
 
-	err := svc.UpdateUser(token, "private-edek", "public-edek")
+	err := svc.UpdateUser(ctx, token, "private-edek", "public-edek")
 	assert.Nil(t, err)
 
-	u, err2 := svc.GetUserData(token)
+	u, err2 := svc.GetUserData(ctx, token)
 	assert.Nil(t, err2)
 	assert.Equal(t, "private-edek", u.EDEKPrivate)
 	assert.Equal(t, "public-edek", u.EDEKPublic)
@@ -116,7 +122,8 @@ func TestUpdateUser_UpdatesFields(t *testing.T) {
 func TestGetUserData_ErrorIfTokenEmpty(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
-	u, err := svc.GetUserData("")
+	ctx := context.Background()
+	u, err := svc.GetUserData(ctx, "")
 	assert.Nil(t, u)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), errors.USRErrTokenRequired)
@@ -125,15 +132,16 @@ func TestGetUserData_ErrorIfTokenEmpty(t *testing.T) {
 func TestCreateUser_Succeeds(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
+	ctx := context.Background()
 	token := "newUser"
 	newUser := &user.User{
 		ID:    token,
 		Name:  "New Name",
 		Email: "new@example.com",
 	}
-	err := svc.CreateUser(token, newUser)
+	err := svc.CreateUser(ctx, token, newUser)
 	assert.Nil(t, err)
-	u, err2 := svc.GetUserData(token)
+	u, err2 := svc.GetUserData(ctx, token)
 	assert.Nil(t, err2)
 	assert.Equal(t, "New Name", u.Name)
 	assert.Equal(t, "new@example.com", u.Email)
@@ -142,7 +150,8 @@ func TestCreateUser_Succeeds(t *testing.T) {
 func TestDeleteUser_ErrorIfNotFound(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
-	err := svc.DeleteUser("token", "nonexistent")
+	ctx := context.Background()
+	err := svc.DeleteUser(ctx, "token", "nonexistent")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), errors.USRErrDeleteUser)
 }
@@ -150,7 +159,8 @@ func TestDeleteUser_ErrorIfNotFound(t *testing.T) {
 func TestUpdateUser_ErrorIfNotFound(t *testing.T) {
 	setup(t)
 	svc := &user.MockFileUserService{}
-	err := svc.UpdateUser("nonexistent", "p", "q")
+	ctx := context.Background()
+	err := svc.UpdateUser(ctx, "nonexistent", "p", "q")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), errors.USRErrUpdateUser)
 }
@@ -163,7 +173,8 @@ func TestGetUserData_ErrorIfCorruptedFile(t *testing.T) {
 		t.Fatalf("failed to write invalid data: %v", err)
 	}
 	svc := &user.MockFileUserService{}
-	u, err2 := svc.GetUserData("token123")
+	ctx := context.Background()
+	u, err2 := svc.GetUserData(ctx, "token123")
 	assert.Nil(t, u)
 	assert.NotNil(t, err2)
 	assert.Contains(t, err2.Error(), errors.USRErrFetchUserData)
