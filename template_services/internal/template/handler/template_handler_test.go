@@ -13,6 +13,7 @@ import (
 	"template-services/internal/template/mocks"
 	appErrors "template-services/pkg/errors"
 	"template-services/pkg/observability"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,7 @@ func ptrBool(b bool) *bool { return &b }
 func TestCreateTemplate_InvalidBody(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc, obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	req := httptest.NewRequest("POST", "/template", bytes.NewReader([]byte("{invalid json")))
@@ -53,7 +54,7 @@ func TestCreateTemplate_InvalidBody(t *testing.T) {
 func TestCreateTemplate_DuplicateName(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	reqBody := dto.CreateTemplateRequest{
@@ -82,7 +83,7 @@ func TestCreateTemplate_DuplicateName(t *testing.T) {
 func TestCreateTemplate_ServiceError(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	reqBody := dto.CreateTemplateRequest{
@@ -111,7 +112,7 @@ func TestCreateTemplate_ServiceError(t *testing.T) {
 func TestCreateTemplate_Success(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	reqBody := dto.CreateTemplateRequest{
@@ -144,7 +145,7 @@ func TestCreateTemplate_Success(t *testing.T) {
 func TestGetTemplate_InvalidUUIDParam(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	req := httptest.NewRequest("GET", "/template/invalid-uuid", nil)
@@ -161,7 +162,7 @@ func TestGetTemplate_InvalidUUIDParam(t *testing.T) {
 func TestGetTemplate_NotFound(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	id := uuid.New()
@@ -181,7 +182,7 @@ func TestGetTemplate_NotFound(t *testing.T) {
 func TestGetTemplate_Success(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	id := uuid.New()
@@ -216,7 +217,7 @@ func TestGetTemplate_Success(t *testing.T) {
 func TestUpdateTemplate_InvalidBody(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	req := httptest.NewRequest("PUT", "/template", bytes.NewReader([]byte("{invalid json")))
@@ -234,7 +235,7 @@ func TestUpdateTemplate_InvalidBody(t *testing.T) {
 func TestUpdateTemplate_InvalidUUID(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	reqBody := dto.UpdateTemplateRequest{
@@ -257,7 +258,7 @@ func TestUpdateTemplate_InvalidUUID(t *testing.T) {
 func TestUpdateTemplate_NotFound(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	tmplID := uuid.New()
@@ -283,7 +284,7 @@ func TestUpdateTemplate_NotFound(t *testing.T) {
 func TestUpdateTemplate_ServiceError(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	tmplID := uuid.New()
@@ -321,7 +322,7 @@ func TestUpdateTemplate_ServiceError(t *testing.T) {
 func TestUpdateTemplate_Success(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	tmplID := uuid.New()
@@ -366,7 +367,7 @@ func TestUpdateTemplate_Success(t *testing.T) {
 func TestDeleteTemplate_InvalidBody(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	req := httptest.NewRequest("DELETE", "/template", bytes.NewReader([]byte("{invalid json")))
@@ -384,7 +385,7 @@ func TestDeleteTemplate_InvalidBody(t *testing.T) {
 func TestDeleteTemplate_InvalidUUID(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	reqBody := dto.DeleteTemplateRequest{
@@ -406,7 +407,7 @@ func TestDeleteTemplate_InvalidUUID(t *testing.T) {
 func TestDeleteTemplate_NotFound(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	tmplID := uuid.New()
@@ -431,7 +432,7 @@ func TestDeleteTemplate_NotFound(t *testing.T) {
 func TestDeleteTemplate_ServiceError(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	tmplID := uuid.New()
@@ -460,7 +461,7 @@ func TestDeleteTemplate_ServiceError(t *testing.T) {
 func TestDeleteTemplate_Success(t *testing.T) {
 	mockSvc := new(mocks.MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	handler := NewTemplateHandler(mockSvc,obs)
+	handler := NewTemplateHandler(mockSvc, obs, nil)
 	app := setupTestApp(handler)
 
 	tmplID := uuid.New()
@@ -714,5 +715,3 @@ func TestDeleteTemplate_Success(t *testing.T) {
 // func ptrBool(b bool) *bool {
 // 	return &b
 // }
-
-

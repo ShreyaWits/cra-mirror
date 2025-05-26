@@ -3,271 +3,431 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 	common "nps-config-service/internal/common/errors"
-	"nps-config-service/internal/configs/db"
 	"nps-config-service/internal/modules/config-manager/models"
 	etcdDB "nps-config-service/pkg/etcd"
-
-	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
-
+	"nps-config-service/pkg/observability"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+
+	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
+const (
+	metricPrefix = "config_repository"
+)
+
+var (
+	operationLatency metric.Float64Histogram
+	operationCount   metric.Int64Counter
+	errorCount       metric.Int64Counter
+)
+
+func initMetrics(meter metric.Meter) {
+	var err error
+	operationLatency, err = meter.Float64Histogram(
+		metricPrefix+".operation_latency",
+		metric.WithDescription("Latency of repository operations in milliseconds"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	operationCount, err = meter.Int64Counter(
+		metricPrefix+".operation_count",
+		metric.WithDescription("Count of repository operations"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	errorCount, err = meter.Int64Counter(
+		metricPrefix+".error_count",
+		metric.WithDescription("Count of repository operation errors"),
+	)
+	if err != nil {
+		panic(err)
+	}
+}
+
 type ConfigRepository struct {
-	EtcdClient *etcdDB.EtcdClientImpl
+	EtcdClient         *etcdDB.EtcdClientImpl
+	ObservabilityStack *observability.ObservabilityStack
 }
 
 type IConfigRepo interface {
-	StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error)
-	GetConfig(serviceName, environment string) (map[string]interface{}, error)
-	GetConfigValue(serviceName, environment, key string) (interface{}, error)
+	StoreConfig(ctx context.Context, serviceName, environment string, configData map[string]interface{}) (interface{}, error)
+	GetConfig(ctx context.Context, serviceName, environment string) (map[string]interface{}, error)
+	GetConfigValue(ctx context.Context, serviceName, environment, key string) (interface{}, error)
 	SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error
 	GetEtcdKey(ctx context.Context, key string) (string, error)
 	DeleteEtcdKey(ctx context.Context, key string) error
-	CreateAdmin(admin *models.Admin) (*models.Admin, error)
-	GetAdminByCredentials(username, password string) (*models.Admin, error)
+	CreateAdmin(ctx context.Context, admin *models.Admin) (*models.Admin, error)
+	GetAdminByCredentials(ctx context.Context, username, password string) (*models.Admin, error)
 }
 
-func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl) IConfigRepo {
-	return &ConfigRepository{EtcdClient: etcdClient}
+func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl, observabilityStack *observability.ObservabilityStack) IConfigRepo {
+	if observabilityStack != nil && observabilityStack.MetricsService != nil {
+		initMetrics(observabilityStack.MetricsService)
+	}
+	return &ConfigRepository{EtcdClient: etcdClient, ObservabilityStack: observabilityStack}
 }
 
-func (r *ConfigRepository) StoreConfig(serviceName, environment string, configData map[string]interface{}) (interface{}, error) {
+func (r *ConfigRepository) recordMetrics(ctx context.Context, operation string, start time.Time, err error) {
+	if r.ObservabilityStack == nil || r.ObservabilityStack.MetricsService == nil {
+		return
+	}
 
-	// Store each config field as a separate key
+	// Record latency
+	latency := float64(time.Since(start).Milliseconds())
+	operationLatency.Record(ctx, latency,
+		metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("service", "config_repository"),
+		),
+	)
+
+	// Record operation count
+	operationCount.Add(ctx, 1,
+		metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("service", "config_repository"),
+		),
+	)
+
+	// Record error if any
+	if err != nil {
+		errorCount.Add(ctx, 1,
+			metric.WithAttributes(
+				attribute.String("operation", operation),
+				attribute.String("service", "config_repository"),
+				attribute.String("error", err.Error()),
+			),
+		)
+	}
+}
+
+func (r *ConfigRepository) StoreConfig(ctx context.Context, serviceName, environment string, configData map[string]interface{}) (interface{}, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.StoreConfig")
+	defer span.End()
+	defer r.recordMetrics(ctx, "store_config", start, nil)
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Storing config",
+		"environment", environment,
+		"service", serviceName)
+
 	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
-
-	log.Printf("Storing config with base key: %s", baseKey)
 	changeHistory := []string{}
-	// Store config data fields
+
 	b, err := json.Marshal(configData)
 	if err != nil {
-		fmt.Errorf("failed to marshal config body: %v", err)
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to marshal config data",
+			"error", err,
+			"environment", environment,
+			"service", serviceName)
+		return nil, fmt.Errorf("failed to marshal config body: %v", err)
 	}
 
 	if err := r.EtcdClient.PutKey(baseKey, string(b)); err != nil {
-		log.Printf("Error storing key %s: %v", baseKey, err)
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to store config",
+			"error", err,
+			"key", baseKey,
+			"environment", environment,
+			"service", serviceName)
 		return nil, fmt.Errorf("failed to store config field %s: %v", baseKey, err)
 	}
 
-	// for key, value := range configData {
-	// 	configKey := fmt.Sprintf("%s/%s", baseKey, key)
-	// 	valueStr := fmt.Sprintf("%v", value)
-	// 	log.Printf("Storing key: %s, value: %s", configKey, valueStr)
-	// 	existingVal, err := r.GetConfigValue(serviceName, environment, key)
-	// 	if err != nil {
-	// 		changeHistory = append(changeHistory, fmt.Sprintf("added: %s", key))
-	// 	} else if existingVal != valueStr {
-	// 		changeHistory = append(changeHistory, fmt.Sprintf("updated: %s", key))
-	// 	}
-	// }
-
-	log.Println("Config data stored successfully. Change history: ", changeHistory)
-	// Store metadata, code is commented out for now, will use it later when we have to store metadata
-	// now := time.Now()
-	// type ConfigMetadata struct {
-	// 	LastModifiedBy string    `json:"last_modified_by"`
-	// 	ChangeHistory  []string  `json:"change_history"`
-	// 	LastModifiedAt time.Time `json:"last_modified_at"`
-	// }
-	// result := models.ConfigMetadata{}
-	// for key, value := range metadata {
-	// 	metadataKey := fmt.Sprintf("/metadata/%s/%s", baseKey, key)
-	// 	log.Printf("Storing metadata key: %s, value: %s", metadataKey, value)
-
-	// 	err := r.EtcdClient.PutKey(metadataKey, value)
-	// 	if err != nil {
-	// 		log.Printf("Error storing metadata key %s: %v", metadataKey, err)
-	// 		return nil, fmt.Errorf("failed to store metadata field %s: %v", key, err)
-	// 	}
-	// }
-
-	log.Printf("Successfully stored all config and metadata for %s", baseKey)
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Config stored successfully",
+		"environment", environment,
+		"service", serviceName,
+		"changes", changeHistory)
 	return configData, nil
 }
 
 // GetConfig retrieves a configuration from etcd
-func (r *ConfigRepository) GetConfig(serviceName, environment string) (map[string]interface{}, error) {
+func (r *ConfigRepository) GetConfig(ctx context.Context, serviceName, environment string) (map[string]interface{}, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.GetConfig")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "get_config", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Getting config",
+		"environment", environment,
+		"service", serviceName)
 
 	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
-	log.Printf("Getting all config for base key: %s", baseKey)
-
-	// Get all keys under the base key
 	key, err := r.EtcdClient.GetKey(baseKey)
 	if err != nil {
-		log.Printf("Error getting all keys: %v", err)
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to get config",
+			"error", err,
+			"key", baseKey,
+			"environment", environment,
+			"service", serviceName)
 		return nil, fmt.Errorf("failed to get config keys: %v", err)
 	}
 
-	// Create result map
-	type ConfigMetadata struct {
-		LastModifiedBy string    `json:"last_modified_by"`
-		ChangeHistory  []string  `json:"change_history"`
-		LastModifiedAt time.Time `json:"last_modified_at"`
-	}
 	result := map[string]interface{}{}
-
-	// // Process each key-value pair
-	// for key, value := range keys {
-	// 	// Skip metadata fields
-	// 	result[key] = value
-	// 	log.Printf("Retrieved key: %s, value: %v", key, value)
-	// }
-
 	if err := json.Unmarshal([]byte(key), &result); err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to unmarshal config data",
+			"error", err,
+			"environment", environment,
+			"service", serviceName)
 		return nil, fmt.Errorf("failed to get config keys: %v", err)
 	}
 
-	log.Printf("Successfully retrieved all config for %s", baseKey)
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Config retrieved successfully",
+		"environment", environment,
+		"service", serviceName)
 	return result, nil
 }
 
 // GetConfigValue retrieves a specific config value from etcd
-func (r *ConfigRepository) GetConfigValue(serviceName, environment, key string) (interface{}, error) {
-	// app.InitEtcdDB()
-	// defer app.Client.Close()
+func (r *ConfigRepository) GetConfigValue(ctx context.Context, serviceName, environment, key string) (interface{}, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.GetConfigValue")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "get_config_value", start, nil)
+	}()
 
-	// Construct the full key
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Getting config value",
+		"environment", environment,
+		"service", serviceName,
+		"key", key)
+
 	baseKey := fmt.Sprintf("%s/%s", environment, serviceName)
-	log.Printf("Getting config value for key: %s", key)
-
-	// Get the value
 	baseValue, err := r.EtcdClient.GetKey(baseKey)
 	if err != nil {
-		log.Printf("Error getting key %s: %v", baseKey, err)
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to get config value",
+			"error", err,
+			"base_key", baseKey,
+			"environment", environment,
+			"service", serviceName)
 		return nil, fmt.Errorf("failed to get config value: %v", err)
 	}
 
-	// Try to convert the value to appropriate type
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(baseValue), &result); err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to unmarshal config data",
+			"error", err,
+			"environment", environment,
+			"service", serviceName)
 		return nil, fmt.Errorf("failed to unmarshal baseKey data: %v", err)
 	}
 
-	// if value == "true" || value == "false" {
-	// 	result = value == "true"
-	// } else if intValue, err := strconv.Atoi(value); err == nil {
-	// 	result = intValue
-	// } else if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
-	// 	result = floatValue
-	// } else {
-	// 	result = value
-	// }
 	value, ok := result[key]
 	if !ok {
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Config key not found",
+			"key", key,
+			"environment", environment,
+			"service", serviceName)
 		return nil, fmt.Errorf("failed to get key %v from stored config", key)
 	}
 
-	log.Printf("Successfully retrieved value for key %s: %v", key, value)
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Config value retrieved successfully",
+		"environment", environment,
+		"service", serviceName,
+		"key", key)
 	return value, nil
 }
 
-// Test function to demonstrate usage
-func (r *ConfigRepository) StoreAndRetrieveConfig() {
-	// Example config data
-	configData := map[string]interface{}{
-		"db_url":      "postgres://user:pass@localhost:5432/db",
-		"retry_count": 3,
-		"timeout":     5000,
-	}
-
-	// Store config
-	_, err := r.StoreConfig("user-service", "prod", configData)
-	if err != nil {
-		log.Printf("Failed to store config: %v", err)
-		return
-	}
-
-	// Retrieve config
-	config, err := r.GetConfig("user-service", "prod")
-	if err != nil {
-		log.Printf("Failed to get config: %v", err)
-		return
-	}
-
-	fmt.Printf("Retrieved config: %+v\n", config)
-}
-
 func (r *ConfigRepository) SetEtcdKey(ctx context.Context, key string, data string, ttl time.Duration) error {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.SetEtcdKey")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "set_etcd_key", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Setting etcd key",
+		"key", key,
+		"ttl", ttl)
+
 	if ttl > 0 {
-		// Create a lease
 		leaseResp, err := r.EtcdClient.Client.Grant(ctx, int64(ttl.Seconds()))
 		if err != nil {
-			log.Printf("Failed to create lease: %v", err)
+			r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to create lease",
+				"error", err,
+				"key", key,
+				"ttl", ttl)
 			return fmt.Errorf("lease creation failed: %w", err)
 		}
 
 		_, err = r.EtcdClient.Client.Put(ctx, key, data, clientv3.WithLease(leaseResp.ID))
 		if err != nil {
-			log.Printf("Error storing key with lease %s: %v", key, err)
+			r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to store key with lease",
+				"error", err,
+				"key", key)
 			return fmt.Errorf("failed to store key %s: %w", key, err)
 		}
 	} else {
 		_, err := r.EtcdClient.Client.Put(ctx, key, data)
 		if err != nil {
-			log.Printf("Error storing key %s: %v", key, err)
+			r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to store key",
+				"error", err,
+				"key", key)
 			return fmt.Errorf("failed to store key %s: %w", key, err)
 		}
 	}
 
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Etcd key set successfully",
+		"key", key)
 	return nil
 }
 
 func (r *ConfigRepository) GetEtcdKey(ctx context.Context, key string) (string, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.GetEtcdKey")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "get_etcd_key", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Getting etcd key",
+		"key", key)
 
 	resp, err := r.EtcdClient.Client.Get(ctx, key)
 	if err != nil {
-		log.Printf("Failed to get key %s: %v", key, err)
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to get key",
+			"error", err,
+			"key", key)
 		return "", fmt.Errorf("failed to retrieve key %s: %w", key, err)
 	}
 
 	if len(resp.Kvs) == 0 {
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Key not found",
+			"key", key)
 		return "", fmt.Errorf("key %s not found", key)
 	}
 
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Etcd key retrieved successfully",
+		"key", key)
 	return string(resp.Kvs[0].Value), nil
 }
+
 func (r *ConfigRepository) DeleteEtcdKey(ctx context.Context, key string) error {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.DeleteEtcdKey")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "delete_etcd_key", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Deleting etcd key",
+		"key", key)
+
 	_, err := r.EtcdClient.Client.Delete(ctx, key)
 	if err != nil {
-		log.Printf("Failed to delete key %s: %v", key, err)
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to delete key",
+			"error", err,
+			"key", key)
 		return fmt.Errorf("failed to delete key %s: %w", key, err)
 	}
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Etcd key deleted successfully",
+		"key", key)
 	return nil
 }
 
-func (r *ConfigRepository) CreateAdmin(admin *models.Admin) (*models.Admin, error) {
-	// Check if user with the same email already exists
-	var existingUser models.Admin
-	if err := db.DB.Where("user_name = ?", admin.UserName).First(&existingUser).Error; err == nil {
-		return nil, common.ThrowError(fiber.StatusConflict, "ADMIN001") // User already exists
+func (r *ConfigRepository) CreateAdmin(ctx context.Context, admin *models.Admin) (*models.Admin, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.CreateAdmin")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "create_admin", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Creating admin user",
+		"username", admin.UserName)
+
+	// Generate UUID if not set
+	if admin.ID == uuid.Nil {
+		admin.ID = uuid.New()
 	}
 
-	// Create new user using GORM
-	if err := db.DB.Create(admin).Error; err != nil {
+	// Set timestamps
+	now := time.Now()
+	admin.CreatedAt = now
+	admin.UpdatedAt = now
+
+	// Check if admin already exists
+	key := fmt.Sprintf("/admins/%s", admin.UserName)
+	existingData, err := r.EtcdClient.GetKey(key)
+	if err == nil && existingData != "" {
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Admin user already exists",
+			"username", admin.UserName)
+		return nil, common.ThrowError(fiber.StatusConflict, "ADMIN001")
+	}
+
+	// Marshal admin data to JSON
+	adminData, err := json.Marshal(admin)
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to marshal admin data",
+			"error", err,
+			"username", admin.UserName)
 		return nil, err
 	}
 
+	// Store in etcd
+	err = r.EtcdClient.PutKey(key, string(adminData))
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to store admin in etcd",
+			"error", err,
+			"username", admin.UserName)
+		return nil, err
+	}
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Admin user created successfully",
+		"username", admin.UserName)
 	return admin, nil
 }
 
-func (r *ConfigRepository) GetAdminByCredentials(username, password string) (*models.Admin, error) {
-	var admin models.Admin
+func (r *ConfigRepository) GetAdminByCredentials(ctx context.Context, username, password string) (*models.Admin, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.GetAdminByCredentials")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "get_admin_by_credentials", start, nil)
+	}()
 
-	// Find user by username and password
-	err := db.DB.Where("user_name = ? AND password = ?", username, password).First(&admin).Error
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Getting admin by credentials",
+		"username", username)
+
+	// Get admin data from etcd
+	key := fmt.Sprintf("/admins/%s", username)
+	adminData, err := r.EtcdClient.GetKey(key)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002") // Admin not found
-		}
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Admin not found",
+			"username", username)
+		return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002")
+	}
+
+	// Unmarshal admin data
+	var admin models.Admin
+	if err := json.Unmarshal([]byte(adminData), &admin); err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to unmarshal admin data",
+			"error", err,
+			"username", username)
 		return nil, err
 	}
 
+	// Verify password
+	if admin.Password != password {
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Invalid password",
+			"username", username)
+		return nil, common.ThrowError(fiber.StatusUnauthorized, "ADMIN002")
+	}
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Admin retrieved successfully",
+		"username", username)
 	return &admin, nil
 }

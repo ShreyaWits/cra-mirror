@@ -10,27 +10,31 @@ import (
 )
 
 type Config struct {
-	Port             string
-	EtcdEndpoint     string
-	TemporalEndpoint string
-	DatabaseHost     string
-	DatabasePort     string
-	DatabaseUser     string
-	DatabasePassword string
-	DatabaseName     string
-	AdminSecret      string
-	JWTSecret        string
-	APISecret        string
+	Port                      string
+	EtcdEndpoint              string
+	TemporalEndpoint          string
+	DatabaseHost              string
+	DatabasePort              string
+	DatabaseUser              string
+	DatabasePassword          string
+	DatabaseName              string
+	AdminSecret               string
+	JWTSecret                 string
+	APISecret                 string
+	OtelCollectorGrpcEndpoint string
+	ServiceName               string
+	ServiceVersion            string
+	Environment               string
 }
 
 var AppConfig Config
 
 // LoadConfig loads environment variables, validates them, and populates AppConfig
-func LoadConfig() error {
+func LoadConfig() (*Config, error) {
 	if os.Getenv("IS_DOCKER") != "true" {
 		if err := godotenv.Load(); err != nil {
 			log.Printf("Warning: No .env file found. Proceeding without it. Error: %v AND IS_DOCKER not true", err)
-			return err
+			return nil, err
 		} else {
 			log.Println("Loaded .env file")
 		}
@@ -39,23 +43,27 @@ func LoadConfig() error {
 	// Validate environment variables
 	if err := ValidateEnv(); err != nil {
 		log.Fatalf("❌ Environment validation failed: %v", err)
-		return err
+		return nil, err
 	}
 
 	// Load values into AppConfig
 	AppConfig = Config{
-		Port:             os.Getenv("CONFIG_SERVICE_REST_PORT"),
-		EtcdEndpoint:     os.Getenv("ETCD_SERVER_ENDPOINT"),
-		TemporalEndpoint: os.Getenv("TEMPORAL_SERVER_ENDPOINT"),
-		DatabaseHost:     os.Getenv("YUGABYTE_DATABASE_HOST"),
-		DatabasePort:     os.Getenv("YUGABYTE_DATABASE_PORT"),
-		DatabaseUser:     os.Getenv("YUGABYTE_DATABASE_USER"),
-		DatabasePassword: os.Getenv("YUGABYTE_DATABASE_PASSWORD"),
-		DatabaseName:     os.Getenv("CONFIG_SERVICE_YUGABYTE_DATABASE_NAME"),
-		AdminSecret:      os.Getenv("CONFIG_SERVICE_ADMIN_SECRET"),
-		JWTSecret:        os.Getenv("CONFIG_SERVICE_JWT_SECRET"),
+		Port:                      os.Getenv("CONFIG_SERVICE_REST_PORT"),
+		EtcdEndpoint:              os.Getenv("ETCD_SERVER_ENDPOINT"),
+		TemporalEndpoint:          os.Getenv("TEMPORAL_SERVER_ENDPOINT"),
+		DatabaseHost:              os.Getenv("YUGABYTE_DATABASE_HOST"),
+		DatabasePort:              os.Getenv("YUGABYTE_DATABASE_PORT"),
+		DatabaseUser:              os.Getenv("YUGABYTE_DATABASE_USER"),
+		DatabasePassword:          os.Getenv("YUGABYTE_DATABASE_PASSWORD"),
+		DatabaseName:              os.Getenv("CONFIG_SERVICE_YUGABYTE_DATABASE_NAME"),
+		AdminSecret:               os.Getenv("CONFIG_SERVICE_ADMIN_SECRET"),
+		JWTSecret:                 os.Getenv("CONFIG_SERVICE_JWT_SECRET"),
+		OtelCollectorGrpcEndpoint: os.Getenv("OTEL_COLLECTOR_GRPC_ENDPOINT"),
+		ServiceName:               "config-service",
+		ServiceVersion:            "1.0.0",
+		Environment:               "development",
 	}
-	return nil
+	return &AppConfig, nil
 }
 
 // EnvRules contains validation functions for each environment variable

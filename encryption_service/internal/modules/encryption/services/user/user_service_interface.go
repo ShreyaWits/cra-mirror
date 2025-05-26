@@ -1,19 +1,22 @@
 package user
 
-import "encryption_microservice/pkg/errors"
+import (
+	"context"
+	"encryption_microservice/pkg/errors"
+)
 
 // UserServiceInterface defines the methods for interacting with the user service
 type UserService interface {
 	// GetUserData fetches user data by user ID
-	GetUserData(token string) (*User, *errors.CustomError)
+	GetUserData(ctx context.Context, token string) (*User, *errors.CustomError)
 
 	// CreateUser creates a new user
-	CreateUser(token string, user *User) *errors.CustomError
+	CreateUser(ctx context.Context, token string, user *User) *errors.CustomError
 
 	// DeleteUser deletes a user by user ID
-	DeleteUser(token string, userID string) *errors.CustomError
+	DeleteUser(ctx context.Context, token string, userID string) *errors.CustomError
 
-	UpdateUser(userID, edekPrivate, edekPublic string) *errors.CustomError
+	UpdateUser(ctx context.Context, userID, edekPrivate, edekPublic string) *errors.CustomError
 }
 type User struct {
 	ID          string `json:"id"`

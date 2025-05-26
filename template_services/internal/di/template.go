@@ -32,7 +32,6 @@ var GlobalContainer *Container
 func InitCacheConfig() {
 	// Initialize Redis cache
 	redisCache, err := cacheclient.NewRedisClient(configEnv.ImmutableConfigs.CacheSrvAddr)
-	fmt.Println("Redis cache initialized", redisCache)
 	if err != nil {
 		panic("failed to initialize Redis cache")
 	}
@@ -85,7 +84,7 @@ func NewContainer() (*Container, error) {
 	templateHandler := handler.NewTemplateHandler(templateService, obs, GlobalContainer.ConfigService)
 	GlobalContainer.TemplateHandler = templateHandler
 
-	templateGRPCHandler := handler.NewTemplateGRPCHandler(templateService, obs)
+	templateGRPCHandler := handler.NewTemplateGRPCHandler(templateService, obs, cacheService)
 	GlobalContainer.TemplateGRPCHandler = templateGRPCHandler
 
 	return GlobalContainer, nil

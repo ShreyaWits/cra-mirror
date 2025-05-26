@@ -12,9 +12,9 @@ import (
 
 var DB *gorm.DB
 
-func ConnectDatabase() {
+func ConnectDatabase(config *configs.Config) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s",
-		configs.AppConfig.DatabaseHost, configs.AppConfig.DatabasePort, configs.AppConfig.DatabaseUser, configs.AppConfig.DatabasePassword, configs.AppConfig.DatabaseName)
+		configs.AppConfig.DatabaseHost, config.DatabasePort, config.DatabaseUser, config.DatabasePassword, config.DatabaseName)
 	// dsn := port
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

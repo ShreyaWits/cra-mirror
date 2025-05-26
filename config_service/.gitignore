@@ -29,7 +29,7 @@ Thumbs.db
 
 # Environment/config files
 .env
-.env.*
+
 go.sum
 
 scripts

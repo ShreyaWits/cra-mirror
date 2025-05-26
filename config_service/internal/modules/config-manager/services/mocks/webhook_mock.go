@@ -1,6 +1,8 @@
 package mocks // It's common to put mocks in a dedicated 'mocks' package
 
 import (
+	"context"
+
 	"github.com/stretchr/testify/mock" // Import the mock library
 
 	// Import the DTOs and the interface you are mocking
@@ -16,9 +18,9 @@ type MockWebhookService struct {
 
 // RegisterWebhookService is a mock implementation of the corresponding IWebhookService method.
 // It records the call and returns the values set in the test.
-func (m *MockWebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
+func (m *MockWebhookService) RegisterWebhookService(ctx context.Context, req dtos.RegisterWebhookRequest) (*dtos.SuccessResponse, *dtos.ServiceErrorResponse) {
 	// Record the call with the provided arguments.
-	args := m.Called(req)
+	args := m.Called(ctx, req)
 
 	// Retrieve the return values that were set using .Return() in the test.
 	// Ensure correct type casting for each expected return value.
@@ -37,9 +39,9 @@ func (m *MockWebhookService) RegisterWebhookService(req dtos.RegisterWebhookRequ
 }
 
 // GetWebhooks is a mock implementation of the corresponding IWebhookService method.
-func (m *MockWebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse) {
+func (m *MockWebhookService) GetWebhooks(ctx context.Context, env, service string) ([]dtos.RegisterWebhookRequest, *dtos.ServiceErrorResponse) {
 	// Record the call with the provided arguments.
-	args := m.Called(env, service)
+	args := m.Called(ctx, env, service)
 
 	// Retrieve the return values.
 	var webhooks []dtos.RegisterWebhookRequest
@@ -57,9 +59,9 @@ func (m *MockWebhookService) GetWebhooks(env, service string) ([]dtos.RegisterWe
 }
 
 // DeleteWebhook is a mock implementation of the corresponding IWebhookService method.
-func (m *MockWebhookService) DeleteWebhook(env, service, url, method string) (string, *dtos.ServiceErrorResponse) {
+func (m *MockWebhookService) DeleteWebhook(ctx context.Context, env, service, url, method string) (string, *dtos.ServiceErrorResponse) {
 	// Record the call.
-	args := m.Called(env, service, url, method)
+	args := m.Called(ctx, env, service, url, method)
 
 	// Retrieve the return values.
 	var message string
@@ -76,9 +78,9 @@ func (m *MockWebhookService) DeleteWebhook(env, service, url, method string) (st
 }
 
 // DeleteAllWebhooks is a mock implementation of the corresponding IWebhookService method.
-func (m *MockWebhookService) DeleteAllWebhooks(env, service string) error {
+func (m *MockWebhookService) DeleteAllWebhooks(ctx context.Context, env, service string) error {
 	// Record the call.
-	args := m.Called(env, service)
+	args := m.Called(ctx, env, service)
 
 	// Retrieve the error return value.
 	return args.Error(0)
@@ -86,9 +88,9 @@ func (m *MockWebhookService) DeleteAllWebhooks(env, service string) error {
 
 // NotifyWebhook is a mock implementation of the corresponding IWebhookService method.
 // It has no return values, so we just record the call.
-func (m *MockWebhookService) NotifyWebhook(hook dtos.RegisterWebhookRequest, data map[string]interface{}) {
+func (m *MockWebhookService) NotifyWebhook(ctx context.Context, hook dtos.RegisterWebhookRequest, data map[string]interface{}) {
 	// Record the call.
-	m.Called(hook, data)
+	m.Called(ctx, hook, data)
 	// No return values, so nothing to retrieve.
 }
 

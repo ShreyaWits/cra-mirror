@@ -20,3 +20,10 @@ message TemplateResponse {
   map <string,string> error= 3;
   map<string, string> data = 4;
 }
+
+// Request payload example
+// {
+//   "name": "4",
+//   "channel": "email",
+//   "language": "en"
+// }
