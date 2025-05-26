@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"Document-Processing/internal/models"
+	"document_processing/internal/models"
 
 	"gorm.io/gorm"
 )

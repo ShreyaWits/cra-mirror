@@ -180,8 +180,10 @@ func TestLlamaService_ProcessImage(t *testing.T) {
 					err:      tt.mockErr,
 				},
 			}
+			modelName := "llama3.2-vision"
+			apiURL := "http://localhost:11434/api/chat"
 
-			service := NewLlamaServiceWithClient(mockClient)
+			service := NewLlamaServiceWithClient(modelName, apiURL, mockClient)
 			got, err := service.ProcessImage(context.Background(), tt.base64Image, tt.extractionFields)
 
 			if (err != nil) != tt.wantErr {
@@ -205,15 +207,20 @@ func TestLlamaService_ProcessImage(t *testing.T) {
 
 func TestNewLlamaService(t *testing.T) {
 	t.Run("default client has timeout", func(t *testing.T) {
-		service := NewLlamaService()
+		modelName := "llama3.2-vision"
+		apiURL := "http://localhost:11434/api/chat"
+
+		service := NewLlamaService(modelName, apiURL)
 		if service.client.Timeout != 2*time.Minute {
 			t.Errorf("Expected default client timeout of 2 minutes, got %v", service.client.Timeout)
 		}
 	})
 
 	t.Run("custom client is used when provided", func(t *testing.T) {
+		modelName := "llama3.2-vision"
+		apiURL := "http://localhost:11434/api/chat"
 		customClient := &http.Client{Timeout: 5 * time.Minute}
-		service := NewLlamaServiceWithClient(customClient)
+		service := NewLlamaServiceWithClient(modelName, apiURL, customClient)
 		if service.client != customClient {
 			t.Error("Expected custom client to be used")
 		}

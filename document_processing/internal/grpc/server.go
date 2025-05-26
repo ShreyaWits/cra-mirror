@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	pb "Document-Processing/proto"
+	pb "document_processing/proto"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

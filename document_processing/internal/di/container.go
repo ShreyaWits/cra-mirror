@@ -1,14 +1,16 @@
 //go:build !test
+
 // build +test
 package di
 
 import (
-	"Document-Processing/internal/config"
-	"Document-Processing/internal/grpc"
-	"Document-Processing/internal/handlers"
-	"Document-Processing/internal/repository"
-	"Document-Processing/internal/services"
-	"Document-Processing/pkg/yugabytedb"
+	"document_processing/internal/config"
+	"document_processing/internal/grpc"
+	"document_processing/internal/handlers"
+	"document_processing/internal/repository"
+	"document_processing/internal/services"
+	"document_processing/pkg/observability"
+	"document_processing/pkg/yugabytedb"
 	"log"
 )
 
@@ -40,19 +42,22 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	yugabyteRepo := repository.NewDocumentDataRepository(db)
 
 	// Initialize Gemini service
-	geminiService, err := services.NewGeminiService(cfg.GeminiAPIKey, minioRepo)
+	geminiService, err := services.NewGeminiService(cfg.GeminiAPIKey, minioRepo, *observability.NewObservabilityStack())
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize Llama service
-	llamaService := services.NewLlamaService()
+	llamaService := services.NewLlamaService(cfg.LlamaModelName, cfg.LlamaApiURL)
 
 	// Initialize services
-	documentService := services.NewDocumentService(geminiService, llamaService, minioRepo, yugabyteRepo)
+	documentService := services.NewDocumentService(geminiService, llamaService, minioRepo, yugabyteRepo, *observability.NewObservabilityStack())
+
+	// Initialize observability stack
+	obs := *observability.NewObservabilityStack()
 
 	// Initialize handlers
-	healthHandler := handlers.NewHealthHandler()
+	healthHandler := handlers.NewHealthHandler(obs)
 
 	// Initialize server
 	server := grpc.NewServer(cfg.ServerPort)

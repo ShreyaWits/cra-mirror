@@ -5,8 +5,6 @@ type ImmutableConfig struct {
 	ConfigServiceToken string `env:"CONFIG_SERVICE_TOKEN" json:"configServiceToken"`
 	Environment        string `env:"ENVIRONMENT" json:"environment"`
 	CacheSrvAddr       string `env:"CACHE_SERVICE_ADDR" json:"cacheServiceAddr"`
-	TemplateServiceGRPCPort string `env:"TEMPLATE_SERVICE_GRPC_PORT" json:"templateServiceGRPCPort"`
-	TemplateServiceRestPort  string `env:"TEMPLATE_SERVICE_REST_PORT" json:"templateServiceRestPort"`
 }
 
 type Config struct {

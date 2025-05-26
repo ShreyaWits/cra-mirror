@@ -66,7 +66,7 @@ func InitApp(app *fiber.App, tracerShutdownFuncs func(context.Context) error, ap
 
 	// Start gRPC Server
 	go func() {
-		listener, err := net.Listen("tcp", fmt.Sprintf(":%s", configEnv.ImmutableConfigs.TemplateServiceGRPCPort))
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%s", os.Getenv("GRPC_PORT")))
 		if err != nil {
 			log.Fatalf("Failed to listen: %v", err)
 		}
@@ -79,17 +79,17 @@ func InitApp(app *fiber.App, tracerShutdownFuncs func(context.Context) error, ap
 			listener.Close()
 			fmt.Println("gRPC server stopped")
 		})
-		fmt.Println("gRPC server listening on :", fmt.Sprintf(":%s", configEnv.ImmutableConfigs.TemplateServiceGRPCPort))
+		fmt.Println("gRPC server listening on :", fmt.Sprintf(":%s", appConfigs.GRPCPort))
 		if err := grpcServer.Serve(listener); err != nil {
 			log.Fatalf("Failed to serve gRPC: %v", err)
 		}
 	}()
 
 	// Start HTTP Server
-	fmt.Println("HTTP server listening on :", fmt.Sprintf(":%s", configEnv.ImmutableConfigs.TemplateServiceRestPort))
-	err = app.Listen(fmt.Sprintf(":%s", configEnv.ImmutableConfigs.TemplateServiceRestPort))
+	fmt.Println("HTTP server listening on :", fmt.Sprintf(":%s", appConfigs.HttpPort))
+	err = app.Listen(fmt.Sprintf(":%s", appConfigs.HttpPort))
 	for err != nil {
-		err = app.Listen(fmt.Sprintf(":%s", configEnv.ImmutableConfigs.TemplateServiceRestPort))
+		err = app.Listen(fmt.Sprintf(":%s", appConfigs.HttpPort))
 		fmt.Println(err)
 		time.Sleep(5 * time.Second)
 	}

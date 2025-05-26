@@ -84,7 +84,7 @@ func NewContainer() (*Container, error) {
 	templateHandler := handler.NewTemplateHandler(templateService, obs, GlobalContainer.ConfigService)
 	GlobalContainer.TemplateHandler = templateHandler
 
-	templateGRPCHandler := handler.NewTemplateGRPCHandler(templateService, obs, cacheService)
+	templateGRPCHandler := handler.NewTemplateGRPCHandler(templateService, obs)
 	GlobalContainer.TemplateGRPCHandler = templateGRPCHandler
 
 	return GlobalContainer, nil

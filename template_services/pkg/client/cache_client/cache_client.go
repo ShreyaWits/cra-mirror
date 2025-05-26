@@ -123,8 +123,6 @@ func (c *RedisClientStruct) GetCache(ctx context.Context, namespace, key string)
 		Key:       key,
 	}
 
-	fmt.Println("GetCache Request: ", req)
-
 	client, ok := c.client.(pb.CacheServiceClient)
 	if !ok {
 		return "", false, fmt.Errorf("invalid client type")
