@@ -7,7 +7,7 @@ import (
 
 	commonDtos "protected_link/internal/common/api/dtos"
 	"protected_link/internal/modules/authentication/models"
-	apiDtos "protected_link/internal/modules/link_generation/apis/dtos"
+
 	pb "protected_link/pkg/grpc/proto"
 	"protected_link/pkg/validation"
 

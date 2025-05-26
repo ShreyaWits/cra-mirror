@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/configs"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
@@ -188,20 +187,23 @@ func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
 
 	contextData, ok := c.Locals("contextData").(*dtos.AdminSignupDto)
 	if !ok {
-		err := fmt.Errorf("invalid request body")
+		err := common.ThrowError(fiber.StatusBadRequest, "CNF004")
 		span.SetStatus(codes.Error, err.Error())
 		span.SetAttributes(attribute.String("error.code", "CNF004"))
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Invalid request body for admin creation",
 			"error_code", "CNF004")
 		h.recordMetrics(ctx, "create_admin", start, err)
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	// Validate request data
 	if err := h.validateAdminSignupRequest(ctx, contextData); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		h.recordMetrics(ctx, "create_admin", start, err)
-		return err
+		if appErr, ok := err.(common.AppError); ok {
+			return c.Status(appErr.Status).JSON(appErr)
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	span.SetAttributes(
@@ -239,20 +241,23 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 
 	contextData, ok := c.Locals("contextData").(*dtos.AdminLoginDto)
 	if !ok {
-		err := fmt.Errorf("invalid request body")
+		err := common.ThrowError(fiber.StatusBadRequest, "CNF004")
 		span.SetStatus(codes.Error, err.Error())
 		span.SetAttributes(attribute.String("error.code", "CNF004"))
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Invalid request body for admin fetch",
 			"error_code", "CNF004")
 		h.recordMetrics(ctx, "fetch_admin", start, err)
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	// Validate request data
 	if err := h.validateAdminLoginRequest(ctx, contextData); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		h.recordMetrics(ctx, "fetch_admin", start, err)
-		return err
+		if appErr, ok := err.(common.AppError); ok {
+			return c.Status(appErr.Status).JSON(appErr)
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	jwtSecret := h.ConfigProvider.GetJWTSecret()
@@ -263,11 +268,13 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 	responseData, responseError := h.Service.FetchAdminService(ctx, contextData, jwtSecret)
 	if responseError != nil {
 		span.SetStatus(codes.Error, responseError.Error())
+		span.SetAttributes(attribute.String("error.code", "ADMIN002"))
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to fetch admin",
 			"error", responseError,
+			"error_code", "ADMIN002",
 			"username", contextData.Username)
 		h.recordMetrics(ctx, "fetch_admin", start, responseError)
-		return responseError
+		return c.Status(fiber.StatusUnauthorized).JSON(common.ThrowError(fiber.StatusUnauthorized, "ADMIN002"))
 	}
 
 	span.SetStatus(codes.Ok, "Admin fetched successfully")
