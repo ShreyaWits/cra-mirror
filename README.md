@@ -1,6 +1,7 @@
 # CRA
 CRA 2.0
 
+<<<<<<< HEAD
 ## Protected Link Service
 
 ### Docker Setup
@@ -61,3 +62,5 @@ The Docker Compose file is configured to use environment variables with fallback
 - Create a `.env` file (recommended for local development)
 - Set environment variables directly in your shell
 - The service will use default values if no variables are provided
+=======
+>>>>>>> thirdparty-service-main
