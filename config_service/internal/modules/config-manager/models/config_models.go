@@ -28,6 +28,7 @@ type Admin struct {
 	Password    string    `gorm:"not null"`
 	CreatedAt   time.Time `gorm:"autoCreateTime"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	Role 	  string    `gorm:"not null"` // ADMIN or VIEWER
 }
 
 func (n *Admin) BeforeCreate(tx *gorm.DB) (err error) {

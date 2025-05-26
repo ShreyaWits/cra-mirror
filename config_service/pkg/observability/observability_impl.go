@@ -1,10 +1,11 @@
 package observability
 
 import (
+	"nps-config-service/pkg/observability/logger"
+	"nps-config-service/pkg/observability/metrics"
+	"nps-config-service/pkg/observability/tracer"
+
 	"go.opentelemetry.io/contrib/bridges/otelslog"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // "messaging_service/pkg/logger"
@@ -13,17 +14,17 @@ import (
 
 // ObservabilityStack provides a unified interface for tracing, metrics, and logging
 type ObservabilityStack struct {
-	TracerService  trace.Tracer
-	MetricsService metric.Meter
-	Logger         *Logger // Using our custom Logger wrapper
+	TracerService  tracer.TracerService
+	MetricsService metrics.MetricsService
+	Logger         logger.Logger // Using our custom Logger wrapper
 }
 
 // NewObservabilityStack creates a new ObservabilityStack instance
 func NewObservabilityStack(serviceName string) *ObservabilityStack {
-	tracer := otel.Tracer(serviceName)
-	meter := otel.Meter(serviceName)
+	tracer := tracer.NewTracer(serviceName, true)
+	meter := metrics.NewMetricsService(serviceName, true)
 	baseLogger := otelslog.NewLogger(serviceName)
-	logger := NewLogger(baseLogger)
+	logger := logger.NewLogger(baseLogger)
 
 	// You might want to configure the logger further,
 	// for example, setting a specific output or format.
