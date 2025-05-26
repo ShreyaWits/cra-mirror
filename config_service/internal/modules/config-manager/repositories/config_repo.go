@@ -5,56 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	common "nps-config-service/internal/common/errors"
+	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/models"
 	etcdDB "nps-config-service/pkg/etcd"
 	"nps-config-service/pkg/observability"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
-
-const (
-	metricPrefix = "config_repository"
-)
-
-var (
-	operationLatency metric.Float64Histogram
-	operationCount   metric.Int64Counter
-	errorCount       metric.Int64Counter
-)
-
-func initMetrics(meter metric.Meter) {
-	var err error
-	operationLatency, err = meter.Float64Histogram(
-		metricPrefix+".operation_latency",
-		metric.WithDescription("Latency of repository operations in milliseconds"),
-		metric.WithUnit("ms"),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	operationCount, err = meter.Int64Counter(
-		metricPrefix+".operation_count",
-		metric.WithDescription("Count of repository operations"),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	errorCount, err = meter.Int64Counter(
-		metricPrefix+".error_count",
-		metric.WithDescription("Count of repository operation errors"),
-	)
-	if err != nil {
-		panic(err)
-	}
-}
 
 type ConfigRepository struct {
 	EtcdClient         *etcdDB.EtcdClientImpl
@@ -73,9 +34,6 @@ type IConfigRepo interface {
 }
 
 func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl, observabilityStack *observability.ObservabilityStack) IConfigRepo {
-	if observabilityStack != nil && observabilityStack.MetricsService != nil {
-		initMetrics(observabilityStack.MetricsService)
-	}
 	return &ConfigRepository{EtcdClient: etcdClient, ObservabilityStack: observabilityStack}
 }
 
@@ -86,30 +44,25 @@ func (r *ConfigRepository) recordMetrics(ctx context.Context, operation string, 
 
 	// Record latency
 	latency := float64(time.Since(start).Milliseconds())
-	operationLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "config_repository"),
-		),
-	)
+
+	r.ObservabilityStack.MetricsService.RecordHistogram(ctx, constants.ConfigRepoOperationLatencyMetric, latency, map[string]string{
+		"operation": operation,
+		"service":   "config_repository",
+	})
 
 	// Record operation count
-	operationCount.Add(ctx, 1,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "config_repository"),
-		),
-	)
+	r.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.ConfigRepoOperationCountMetric, 1, map[string]string{
+		"operation": operation,
+		"service":   "config_repository",
+	})
 
 	// Record error if any
 	if err != nil {
-		errorCount.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("operation", operation),
-				attribute.String("service", "config_repository"),
-				attribute.String("error", err.Error()),
-			),
-		)
+		r.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.ConfigRepoErrorCountMetric, 1, map[string]string{
+			"operation": operation,
+			"service":   "config_repository",
+			"error":     err.Error(),
+		})
 	}
 }
 

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/utils"
 	"nps-config-service/pkg/observability"
@@ -14,17 +15,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 )
 
 type WebhookHandler struct {
 	Service            services.IWebhookService
 	ObservabilityStack *observability.ObservabilityStack
-	// Metrics
-	requestCounter   metric.Int64Counter
-	requestLatency   metric.Float64Histogram
-	errorCounter     metric.Int64Counter
-	operationLatency metric.Float64Histogram
 }
 
 func NewWebhookHandler(service services.IWebhookService, observabilityStack *observability.ObservabilityStack) *WebhookHandler {
@@ -32,70 +27,33 @@ func NewWebhookHandler(service services.IWebhookService, observabilityStack *obs
 		panic("ObservabilityStack cannot be nil")
 	}
 
-	// Initialize metrics
-	meter := observabilityStack.MetricsService
-	requestCounter, _ := meter.Int64Counter(
-		"webhook_request_total",
-		metric.WithDescription("Total number of webhook requests"),
-	)
-	requestLatency, _ := meter.Float64Histogram(
-		"webhook_request_duration_seconds",
-		metric.WithDescription("Webhook request duration in seconds"),
-	)
-	errorCounter, _ := meter.Int64Counter(
-		"webhook_error_total",
-		metric.WithDescription("Total number of webhook errors"),
-	)
-	operationLatency, _ := meter.Float64Histogram(
-		"webhook_operation_duration_seconds",
-		metric.WithDescription("Webhook operation duration in seconds"),
-	)
-
 	return &WebhookHandler{
 		Service:            service,
 		ObservabilityStack: observabilityStack,
-		requestCounter:     requestCounter,
-		requestLatency:     requestLatency,
-		errorCounter:       errorCounter,
-		operationLatency:   operationLatency,
 	}
 }
 
 func (h *WebhookHandler) recordMetrics(ctx context.Context, operation string, start time.Time, err error) {
 	// Record request count
-	h.requestCounter.Add(ctx, 1,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "webhook_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.WebhookHandlerRequestCounterMetric, 1, map[string]string{
+		"operation": operation,
+		"service":   "webhook_handler",
+	})
 
 	// Record request latency
 	latency := time.Since(start).Seconds()
-	h.requestLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "webhook_handler"),
-		),
-	)
-
-	// Record operation latency
-	h.operationLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "webhook_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.RecordHistogram(ctx, constants.WebhookHandlerRequestLatencyMetric, latency, map[string]string{
+		"operation": operation,
+		"service":   "webhook_handler",
+	})
 
 	// Record error if any
 	if err != nil {
-		h.errorCounter.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("operation", operation),
-				attribute.String("service", "webhook_handler"),
-				attribute.String("error", err.Error()),
-			),
-		)
+		h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.WebhookHandlerErrorCounterMetric, 1, map[string]string{
+			"operation": operation,
+			"service":   "webhook_handler",
+			"error":     err.Error(),
+		})
 	}
 }
 

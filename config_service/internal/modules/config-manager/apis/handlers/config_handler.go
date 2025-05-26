@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/services"
 	"nps-config-service/internal/modules/config-manager/utils"
 	"nps-config-service/pkg/observability"
@@ -11,17 +12,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 )
 
 type ConfigHandler struct {
 	Service            services.IConfigService
 	ObservabilityStack *observability.ObservabilityStack
-	// Metrics
-	requestCounter   metric.Int64Counter
-	requestLatency   metric.Float64Histogram
-	errorCounter     metric.Int64Counter
-	operationLatency metric.Float64Histogram
 }
 
 func NewConfigHandler(service services.IConfigService, observabilityStack *observability.ObservabilityStack) *ConfigHandler {
@@ -30,69 +25,34 @@ func NewConfigHandler(service services.IConfigService, observabilityStack *obser
 	}
 
 	// Initialize metrics
-	meter := observabilityStack.MetricsService
-	requestCounter, _ := meter.Int64Counter(
-		"config_request_total",
-		metric.WithDescription("Total number of config requests"),
-	)
-	requestLatency, _ := meter.Float64Histogram(
-		"config_request_duration_seconds",
-		metric.WithDescription("Config request duration in seconds"),
-	)
-	errorCounter, _ := meter.Int64Counter(
-		"config_error_total",
-		metric.WithDescription("Total number of config errors"),
-	)
-	operationLatency, _ := meter.Float64Histogram(
-		"config_operation_duration_seconds",
-		metric.WithDescription("Config operation duration in seconds"),
-	)
 
 	return &ConfigHandler{
 		Service:            service,
 		ObservabilityStack: observabilityStack,
-		requestCounter:     requestCounter,
-		requestLatency:     requestLatency,
-		errorCounter:       errorCounter,
-		operationLatency:   operationLatency,
 	}
 }
 
 func (h *ConfigHandler) recordMetrics(ctx context.Context, operation string, start time.Time, err error) {
 	// Record request count
-	h.requestCounter.Add(ctx, 1,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "config_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.ConfigHandlerRequestCounterMetric, 1, map[string]string{
+		"operation": operation,
+		"service":   "config_handler",
+	})
 
 	// Record request latency
 	latency := time.Since(start).Seconds()
-	h.requestLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "config_handler"),
-		),
-	)
-
-	// Record operation latency
-	h.operationLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "config_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.RecordHistogram(ctx, constants.ConfigHandlerRequestLatencyMetric, latency, map[string]string{
+		"operation": operation,
+		"service":   "config_handler",
+	})
 
 	// Record error if any
 	if err != nil {
-		h.errorCounter.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("operation", operation),
-				attribute.String("service", "config_handler"),
-				attribute.String("error", err.Error()),
-			),
-		)
+		h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.ConfigHandlerErrorCounterMetric, 1, map[string]string{
+			"operation": operation,
+			"service":   "config_handler",
+			"error":     err.Error(),
+		})
 	}
 }
 

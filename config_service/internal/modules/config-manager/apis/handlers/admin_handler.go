@@ -5,6 +5,7 @@ import (
 	"fmt"
 	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/configs"
+	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services"
 	"nps-config-service/pkg/observability"
@@ -13,7 +14,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 )
 
 // ConfigProvider defines the interface for accessing configuration
@@ -37,11 +37,6 @@ type AdminHandler struct {
 	Service            services.IAdminService
 	ObservabilityStack *observability.ObservabilityStack
 	ConfigProvider     ConfigProvider
-	// Metrics
-	requestCounter   metric.Int64Counter
-	requestLatency   metric.Float64Histogram
-	errorCounter     metric.Int64Counter
-	operationLatency metric.Float64Histogram
 }
 
 func NewAdminHandler(service services.IAdminService, observabilityStack *observability.ObservabilityStack, configProvider ConfigProvider) *AdminHandler {
@@ -52,71 +47,33 @@ func NewAdminHandler(service services.IAdminService, observabilityStack *observa
 		configProvider = &DefaultConfigProvider{}
 	}
 
-	// Initialize metrics
-	meter := observabilityStack.MetricsService
-	requestCounter, _ := meter.Int64Counter(
-		"admin_request_total",
-		metric.WithDescription("Total number of admin requests"),
-	)
-	requestLatency, _ := meter.Float64Histogram(
-		"admin_request_duration_seconds",
-		metric.WithDescription("Admin request duration in seconds"),
-	)
-	errorCounter, _ := meter.Int64Counter(
-		"admin_error_total",
-		metric.WithDescription("Total number of admin errors"),
-	)
-	operationLatency, _ := meter.Float64Histogram(
-		"admin_operation_duration_seconds",
-		metric.WithDescription("Admin operation duration in seconds"),
-	)
-
 	return &AdminHandler{
 		Service:            service,
 		ObservabilityStack: observabilityStack,
 		ConfigProvider:     configProvider,
-		requestCounter:     requestCounter,
-		requestLatency:     requestLatency,
-		errorCounter:       errorCounter,
-		operationLatency:   operationLatency,
 	}
 }
 
 func (h *AdminHandler) recordMetrics(ctx context.Context, operation string, start time.Time, err error) {
 	// Record request count
-	h.requestCounter.Add(ctx, 1,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "admin_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.AdminHandlerRequestCounterMetric, 1, map[string]string{
+		"operation": operation,
+		"service":   "admin_handler",
+	})
 
 	// Record request latency
 	latency := time.Since(start).Seconds()
-	h.requestLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "admin_handler"),
-		),
-	)
-
-	// Record operation latency
-	h.operationLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "admin_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.RecordHistogram(ctx, constants.AdminHandlerRequestLatencyMetric, latency, map[string]string{
+		"operation": operation,
+		"service":   "admin_handler",
+	})
 
 	// Record error if any
 	if err != nil {
-		h.errorCounter.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("operation", operation),
-				attribute.String("service", "admin_handler"),
-				attribute.String("error", err.Error()),
-			),
-		)
+		h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.AdminHandlerErrorCounterMetric, 1, map[string]string{
+			"operation": operation,
+			"service":   "admin_handler",
+		})
 	}
 }
 
