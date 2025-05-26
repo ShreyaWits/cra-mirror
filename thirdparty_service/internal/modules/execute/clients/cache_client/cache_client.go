@@ -4,7 +4,6 @@ import (
 	"context"
 	pb "cra-protos/redis_service"
 	"fmt"
-	"log"
 	"time"
 
 	"google.golang.org/grpc"
@@ -42,7 +41,6 @@ type RedisClientStruct struct {
 
 // NewRedisClient creates a new Redis cache client
 func NewRedisClient(redisServiceAddr string) (*RedisClientStruct, error) {
-	log.Println("Cache server: ",redisServiceAddr)
 	return NewRedisClientWithOptions(redisServiceAddr, DefaultDialer, DefaultCacheServiceClientFactory)
 }
 

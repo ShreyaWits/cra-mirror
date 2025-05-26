@@ -1,4 +1,4 @@
-package services_test
+package cache_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"thirdparty_service/internal/config"
 	"thirdparty_service/internal/modules/config/dto"
 	cacheclient "thirdparty_service/internal/modules/execute/clients/cache_client"
-	cache "thirdparty_service/internal/modules/execute/services"
+	cache "thirdparty_service/internal/modules/execute/services/cache"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -63,7 +63,7 @@ func TestNewCacheManager(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager, err := cache.NewCacheManager(tt.cacheClient)
+			manager, err := cache.NewCacheManager(tt.cacheClient, config.StaticConfig{ServiceName: "test-service"})
 
 			if tt.expectedError != nil {
 				assert.Error(t, err)
@@ -79,30 +79,30 @@ func TestNewCacheManager(t *testing.T) {
 
 func TestSetDataToCache(t *testing.T) {
 	mockClient := new(MockRedisClient)
-	service, _ := cache.NewCacheManager(mockClient)
+	service, _ := cache.NewCacheManager(mockClient, config.StaticConfig{ServiceName: "test-service"})
 	ctx := context.Background()
 	key := "test-key"
 	cfg := &dto.ConfigResponse{
-		HTTPListenAddress: "localhost",
-		HTTPListenPort:    8080,
-		GRPCListenAddress: "localhost",
-		GRPCListenPort:    8081,
-		DatabaseHost:      "db.example.com",
-		DatabasePort:      5432,
-		DatabaseUser:      "user",
-		DatabasePassword:  "password",
-		DatabaseName:      "mydatabase",
-		TwilioAccountSID:  "sid",
-		TwilioAuthToken:   "token",
-		TwilioFormNumber:  "+15005550006",
-		SendGridApiKey:    "sendgridkey",
-		SendGridFromEmail: "from@example.com",
-		SendGridFromName:  "From Name",
-		SendWhatsAppMessageSID: "whatsapp_sid",
-		SendWhatsAppMessageToken: "whatsapp_token",
+		HTTPListenAddress:             "localhost",
+		HTTPListenPort:                8080,
+		GRPCListenAddress:             "localhost",
+		GRPCListenPort:                8081,
+		DatabaseHost:                  "db.example.com",
+		DatabasePort:                  5432,
+		DatabaseUser:                  "user",
+		DatabasePassword:              "password",
+		DatabaseName:                  "mydatabase",
+		TwilioAccountSID:              "sid",
+		TwilioAuthToken:               "token",
+		TwilioFormNumber:              "+15005550006",
+		SendGridApiKey:                "sendgridkey",
+		SendGridFromEmail:             "from@example.com",
+		SendGridFromName:              "From Name",
+		SendWhatsAppMessageSID:        "whatsapp_sid",
+		SendWhatsAppMessageToken:      "whatsapp_token",
 		SendWhatsAppMessageFromNumber: "+15005550007",
-		PushNotificationAccountCreds: "push_creds",
-		PushNotificationProjectID: "push_project_id",
+		PushNotificationAccountCreds:  "push_creds",
+		PushNotificationProjectID:     "push_project_id",
 	}
 	cfgJSON, _ := json.Marshal(cfg)
 	cfgString := string(cfgJSON)
@@ -173,30 +173,30 @@ func TestSetDataToCache(t *testing.T) {
 
 func TestGetDataToCache(t *testing.T) {
 	mockClient := new(MockRedisClient)
-	service, _ := cache.NewCacheManager(mockClient)
+	service, _ := cache.NewCacheManager(mockClient, config.StaticConfig{ServiceName: "test-service"})
 	ctx := context.Background()
 	key := "test-key"
 	cfg := &dto.ConfigResponse{
-		HTTPListenAddress: "localhost",
-		HTTPListenPort:    8080,
-		GRPCListenAddress: "localhost",
-		GRPCListenPort:    8081,
-		DatabaseHost:      "db.example.com",
-		DatabasePort:      5432,
-		DatabaseUser:      "user",
-		DatabasePassword:  "password",
-		DatabaseName:      "mydatabase",
-		TwilioAccountSID:  "sid",
-		TwilioAuthToken:   "token",
-		TwilioFormNumber:  "+15005550006",
-		SendGridApiKey:    "sendgridkey",
-		SendGridFromEmail: "from@example.com",
-		SendGridFromName:  "From Name",
-		SendWhatsAppMessageSID: "whatsapp_sid",
-		SendWhatsAppMessageToken: "whatsapp_token",
+		HTTPListenAddress:             "localhost",
+		HTTPListenPort:                8080,
+		GRPCListenAddress:             "localhost",
+		GRPCListenPort:                8081,
+		DatabaseHost:                  "db.example.com",
+		DatabasePort:                  5432,
+		DatabaseUser:                  "user",
+		DatabasePassword:              "password",
+		DatabaseName:                  "mydatabase",
+		TwilioAccountSID:              "sid",
+		TwilioAuthToken:               "token",
+		TwilioFormNumber:              "+15005550006",
+		SendGridApiKey:                "sendgridkey",
+		SendGridFromEmail:             "from@example.com",
+		SendGridFromName:              "From Name",
+		SendWhatsAppMessageSID:        "whatsapp_sid",
+		SendWhatsAppMessageToken:      "whatsapp_token",
 		SendWhatsAppMessageFromNumber: "+15005550007",
-		PushNotificationAccountCreds: "push_creds",
-		PushNotificationProjectID: "push_project_id",
+		PushNotificationAccountCreds:  "push_creds",
+		PushNotificationProjectID:     "push_project_id",
 	}
 	cfgJSON, _ := json.Marshal(cfg)
 	cfgString := string(cfgJSON)

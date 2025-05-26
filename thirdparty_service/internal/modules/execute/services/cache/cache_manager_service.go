@@ -1,4 +1,4 @@
-package services
+package cache
 
 import (
 	"context"
@@ -12,19 +12,26 @@ import (
 	"github.com/google/uuid"
 )
 
+type CacheManager interface {
+	SetDataToCache(ctx context.Context, key string, cfg *dto.ConfigResponse) error
+	GetDataToCache(ctx context.Context, key string) (*dto.ConfigResponse, error)
+}
+
 type CacheManagerService struct {
-	cacheclient cacheclient.RedisClient // This will be initialized later
+	cacheclient   cacheclient.RedisClient
+	configService config.StaticConfig
 }
 
 // Remove the local interface definition
 
-func NewCacheManager(cacheClient cacheclient.RedisClient) (*CacheManagerService, error) {
+func NewCacheManager(cacheClient cacheclient.RedisClient, configservice config.StaticConfig) (*CacheManagerService, error) {
 	if cacheClient == nil {
 		return nil, fmt.Errorf("cacheClient cannot be zero in NewCacheManager")
 	}
 
 	return &CacheManagerService{
-		cacheclient :cacheClient,
+		cacheclient:   cacheClient,
+		configService: configservice,
 	}, nil
 }
 
@@ -45,7 +52,7 @@ func (s *CacheManagerService) SetDataToCache(ctx context.Context, key string, cf
 	ttl := time.Duration(240) * time.Hour
 	// s.obs.LoggerService.Debug(ctx, "Cache parameters ", "ttl_hours ", s.env.MESSAGING_SERVICE_REDIS_TTL, "tracking_id", trackingID)
 
-	return s.cacheclient.SetCache(ctx, config.AppConfig.ServiceName, key, string(data), ttl, trackingID)
+	return s.cacheclient.SetCache(ctx, s.configService.ServiceName, key, string(data), ttl, trackingID)
 }
 
 func (s *CacheManagerService) GetDataToCache(ctx context.Context, key string) (*dto.ConfigResponse, error) {
@@ -58,7 +65,7 @@ func (s *CacheManagerService) GetDataToCache(ctx context.Context, key string) (*
 	trackingID := uuid.NewString()
 	// s.obs.LoggerService.Debug(ctx, "Cache lookup with tracking_id", "tracking_id", trackingID)
 
-	val, found, err := s.cacheclient.GetCache(ctx, config.AppConfig.ServiceName, key, trackingID)
+	val, found, err := s.cacheclient.GetCache(ctx, s.configService.ServiceName, key, trackingID)
 
 	if err != nil {
 		// s.obs.LoggerService.Error(ctx, "Failed to get cache", "error", err, "namespace", config.AppConfig.ServiceName, "key", key)

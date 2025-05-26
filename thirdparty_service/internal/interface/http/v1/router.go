@@ -36,12 +36,7 @@ func HandleConfig(c *fiber.Ctx) error {
 	if errorx != nil {
 		log.Println("Error occured in SET CACHE DATA: ", err)
 	}
-	data, err := configManagerService.GetDataToCache(ctx, "config")
-	if err != nil {
-		log.Println("Error occured in GET CACHE DATA: ", err)
-	}
-	log.Println("the CACHE DATA: ", data)
-
+	
 	return dtos.Response{
 		Code: http.StatusOK,
 		Msg:  "Webhook Received Successfully",

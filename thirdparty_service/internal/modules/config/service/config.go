@@ -126,6 +126,7 @@ func (cs *ConfigServiceImpl) ValidateConfig(cfg dto.ConfigResponse) error {
 	return nil
 }
 
+
 // func (cs *ConfigServiceImpl) GetCacheConfig() (*dto.ConfigResponse, error) {
 // 	log.Println("Fetching cache config from cache")
 

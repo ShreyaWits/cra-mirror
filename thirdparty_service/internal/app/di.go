@@ -1,13 +1,12 @@
 package app
 
 import (
-	"log"
 	"log/slog"
 	"thirdparty_service/internal/config"
 	"thirdparty_service/internal/modules/config/handler"
 	configservice "thirdparty_service/internal/modules/config/service"
 	cacheclient "thirdparty_service/internal/modules/execute/clients/cache_client"
-	"thirdparty_service/internal/modules/execute/services"
+	cacheservice "thirdparty_service/internal/modules/execute/services/cache"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
@@ -33,17 +32,29 @@ func InitDependencyInjection() error {
 	tracer := tracerProvider.Tracer(config.AppConfig.ServiceName)
 	logger := otelslog.NewLogger(config.AppConfig.ServiceName)
 	metricMeter := otel.Meter(config.AppConfig.ServiceName)
+
+	// Initalizing Cache and config services
 	cacheClient, err := cacheclient.NewRedisClient(config.AppConfig.CachingServiceGrpcURL)
 	if err != nil {
-		log.Println("Couldn't initalise the Cache client")
 	}
-	cacheManagerService, err := services.NewCacheManager(cacheClient)
+	cacheManagerService, err := cacheservice.NewCacheManager(cacheClient, config.AppConfig.StaticConfig)
 	if err != nil {
-		log.Println("Couldn't initalise the Cache client")
 	}
 	configService := configservice.NewConfigService(config.AppConfig.Environment, config.AppConfig.ServiceName, config.AppConfig.ConfigServiceURL, config.AppConfig.ConfigServiceUsername, config.AppConfig.ConfigServicePassword)
-	configHandler := handler.NewConfigHandler(configService)
-	
+	configHandler := handler.NewConfigHandler(configService, cacheManagerService)
+
+	// Get Config from Configuration Service - If the Service is not available -
+	// Get the Config from Cache Service
+	dynamicConfig, err := configHandler.GetDynamicConfig()
+	if err != nil {
+		cachedConfig, err := configHandler.GetCacheConfig()
+		if err != nil {
+			return err
+		}
+		config.AppConfig.SetEnv(cachedConfig)
+		return err
+	}
+	config.AppConfig.SetEnv(dynamicConfig)
 	if err := Container.Provide(func() trace.Tracer {
 		return tracer
 	}); err != nil {
@@ -71,7 +82,7 @@ func InitDependencyInjection() error {
 	}); err != nil {
 		return err
 	}
-	if err := Container.Provide(func() *services.CacheManagerService {
+	if err := Container.Provide(func() *cacheservice.CacheManagerService {
 		return cacheManagerService
 	}); err != nil {
 		return err
@@ -127,9 +138,9 @@ func GetConfigHandler() *handler.ConfigHandler {
 	return configHandler
 }
 
-func GetCacheManagerService() *services.CacheManagerService {
-	var cacheManagerService *services.CacheManagerService
-	if err := Container.Invoke(func(c *services.CacheManagerService) {
+func GetCacheManagerService() *cacheservice.CacheManagerService {
+	var cacheManagerService *cacheservice.CacheManagerService
+	if err := Container.Invoke(func(c *cacheservice.CacheManagerService) {
 		cacheManagerService = c
 	}); err != nil {
 		panic(err)

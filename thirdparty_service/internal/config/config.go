@@ -8,8 +8,7 @@ import (
 	"log"
 	"os"
 	"thirdparty_service/internal/modules/config/dto"
-	"thirdparty_service/internal/modules/config/handler"
-	configservice "thirdparty_service/internal/modules/config/service"
+
 	"thirdparty_service/internal/utils"
 
 	"github.com/joho/godotenv"
@@ -57,14 +56,7 @@ func LoadEnv() error {
 		return errors.New("invalid config")
 	}
 
-	// fetch config from config service
-	configService := configservice.NewConfigService(AppConfig.Environment, AppConfig.ServiceName, AppConfig.ConfigServiceURL, AppConfig.ConfigServiceUsername, AppConfig.ConfigServicePassword)
-	configHandler := handler.NewConfigHandler(configService)
-	dConfig, err := configHandler.GetDynamicConfig()
-	if err != nil {
-		return err
-	}
-	AppConfig.dynamicConfig = dConfig
+	
 
 	return nil
 }
