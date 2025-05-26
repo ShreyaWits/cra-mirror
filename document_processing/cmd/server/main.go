@@ -40,7 +40,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load configuration: %v", err)
 	}
-	log.Print(env)
 	redisClient, err := redis.NewRedisClient(env.CacheSrvAddr)
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
