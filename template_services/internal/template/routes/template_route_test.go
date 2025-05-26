@@ -100,7 +100,7 @@ func setupTestRouter() (*fiber.App, *handler.TemplateHandler, *MockTemplateServi
 
 	mockService := new(MockTemplateService)
 	obs := &observability.ObservabilityStack{}
-	templateHandler := handler.NewTemplateHandler(mockService, obs)
+	templateHandler := handler.NewTemplateHandler(mockService, obs, nil)
 	SetupTemplateRoutes(app, templateHandler)
 
 	return app, templateHandler, mockService
