@@ -6,4 +6,5 @@ use (
 	./encryption_service
 	./messaging_service
 	./protos
+	./config_service
 )
