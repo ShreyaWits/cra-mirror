@@ -31,6 +31,8 @@ type IConfigRepo interface {
 	DeleteEtcdKey(ctx context.Context, key string) error
 	CreateAdmin(ctx context.Context, admin *models.Admin) (*models.Admin, error)
 	GetAdminByCredentials(ctx context.Context, username, password string) (*models.Admin, error)
+	ListAdmins(ctx context.Context) ([]*models.Admin, error)
+	DeleteAdmin(ctx context.Context, username string) error
 }
 
 func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl, observabilityStack *observability.ObservabilityStack) IConfigRepo {
@@ -383,4 +385,78 @@ func (r *ConfigRepository) GetAdminByCredentials(ctx context.Context, username, 
 	r.ObservabilityStack.Logger.InfoContext(ctx, "Admin retrieved successfully",
 		"username", username)
 	return &admin, nil
+}
+
+// ListAdmins retrieves all admin users from etcd
+func (r *ConfigRepository) ListAdmins(ctx context.Context) ([]*models.Admin, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.ListAdmins")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "list_admins", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Listing all admin users")
+
+	// Get all keys under /admins/
+	resp, err := r.EtcdClient.Client.Get(ctx, "/admins/", clientv3.WithPrefix())
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to list admin users",
+			"error", err)
+		return nil, fmt.Errorf("failed to list admin users: %w", err)
+	}
+
+	admins := make([]*models.Admin, 0, len(resp.Kvs))
+	for _, kv := range resp.Kvs {
+		var admin models.Admin
+		if err := json.Unmarshal(kv.Value, &admin); err != nil {
+			r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to unmarshal admin data",
+				"error", err,
+				"key", string(kv.Key))
+			continue
+		}
+		// Don't include password in the response
+		admin.Password = ""
+		admins = append(admins, &admin)
+	}
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Successfully listed admin users",
+		"count", len(admins))
+	return admins, nil
+}
+
+// DeleteAdmin deletes an admin user from etcd
+func (r *ConfigRepository) DeleteAdmin(ctx context.Context, username string) error {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.DeleteAdmin")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "delete_admin", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Deleting admin user",
+		"username", username)
+
+	key := fmt.Sprintf("/admins/%s", username)
+
+	// Check if admin exists
+	_, err := r.EtcdClient.GetKey(key)
+	if err != nil {
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Admin not found",
+			"username", username)
+		return common.ThrowError(fiber.StatusNotFound, "ADMIN006")
+	}
+
+	// Delete the admin
+	_, err = r.EtcdClient.Client.Delete(ctx, key)
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to delete admin",
+			"error", err,
+			"username", username)
+		return fmt.Errorf("failed to delete admin: %w", err)
+	}
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Successfully deleted admin user",
+		"username", username)
+	return nil
 }

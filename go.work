@@ -7,4 +7,5 @@ use (
 	./messaging_service
 	./protos
 	./config_service
+	./template_services
 )
