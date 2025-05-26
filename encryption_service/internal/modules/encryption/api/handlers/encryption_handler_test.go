@@ -12,12 +12,16 @@ import (
 
 	mocks "encryption_microservice/internal/common/mocks"
 	pb "encryption_microservice/internal/common/proto_gen"
+	"encryption_microservice/internal/config"
 	dtos "encryption_microservice/internal/modules/encryption/api/dtos"
 	"encryption_microservice/internal/modules/encryption/api/handlers"
 	mapper "encryption_microservice/internal/modules/encryption/api/mapper"
 	user "encryption_microservice/internal/modules/encryption/services/user"
 	errors "encryption_microservice/pkg/errors"
+	"encryption_microservice/pkg/observability"
 )
+
+var obsMock = observability.NewObservabilityStack(&config.EnvConfig{})
 
 func TestEncryptionHandlerImpl_GenerateEDEK(t *testing.T) {
 	tests := []struct {
@@ -88,18 +92,18 @@ func TestEncryptionHandlerImpl_GenerateEDEK(t *testing.T) {
 			mockUsecase := mocks.NewMockEncryptionUseCase(ctrl)
 			mockUserSvc := mocks.NewMockUserService(ctrl)
 			tokenUserData, tokenErr := tc.getUserDataFunc(tc.token)
-			mockUserSvc.EXPECT().GetUserData(tc.token).Return(tokenUserData, tokenErr)
+			mockUserSvc.EXPECT().GetUserData(gomock.Any(), tc.token).Return(tokenUserData, tokenErr)
 			if tokenErr == nil {
 				mockUsecase.EXPECT().
 					GenerateEDEK(gomock.Any(), tokenUserData.ID).
 					Return(tc.genEDEKResp, tc.genEDEKErr)
 				if tc.genEDEKErr == nil {
 					mockUserSvc.EXPECT().
-						UpdateUser(tokenUserData.ID, tc.genEDEKResp.EDEKPrivate, tc.genEDEKResp.EDEKPublic).
+						UpdateUser(gomock.Any(), tokenUserData.ID, tc.genEDEKResp.EDEKPrivate, tc.genEDEKResp.EDEKPublic).
 						Return(tc.updateUserErr)
 				}
 			}
-			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc)
+			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc, observability.NewObservabilityStack(&config.EnvConfig{}))
 			resp, err := handler.GenerateEDEK(context.Background(), &pb.GenerateEDEKRequest{Token: tc.token})
 
 			if tc.expectedResp != nil {
@@ -218,18 +222,18 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 			tokenUserData, tokenErr := tc.getUserDataFunc(tc.token)
 
 			if tc.name == "panic" {
-				mockUserSvc.EXPECT().GetUserData(tc.token).Do(func(token string) {
+				mockUserSvc.EXPECT().GetUserData(gomock.Any(), tc.token).Do(func(token string) {
 					panic("panic")
 				}).Return(nil, nil)
 			} else {
-				mockUserSvc.EXPECT().GetUserData(tc.token).Return(tokenUserData, tokenErr)
+				mockUserSvc.EXPECT().GetUserData(gomock.Any(), tc.token).Return(tokenUserData, tokenErr)
 			}
 			if tc.userId != nil {
-				userIdData, userIdErr := tc.getUserDataFunc2(*tc.userId)
-				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(userIdData, userIdErr)
-				if userIdErr == nil {
+				otherUserData, otherUserErr := tc.getUserDataFunc2(*tc.userId)
+				mockUserSvc.EXPECT().GetUserData(gomock.Any(), *tc.userId).Return(otherUserData, otherUserErr)
+				if otherUserErr == nil {
 					mockUsecase.EXPECT().
-						Encrypt(gomock.Any(), userIdData.ID, userIdData.EDEKPrivate, userIdData.EDEKPublic, gomock.Any()).
+						Encrypt(gomock.Any(), otherUserData.ID, tokenUserData.EDEKPrivate, tokenUserData.EDEKPublic, gomock.Any()).
 						Return(tc.encResp, tc.encErr)
 				}
 			} else {
@@ -240,7 +244,7 @@ func TestEncryptionHandlerImpl_Encrypt(t *testing.T) {
 				}
 			}
 
-			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc)
+			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc, obsMock)
 			dataPB := mapper.ConvertToStructPB([]map[string]string{{"k": "v"}})
 			resp, err := handler.Encrypt(context.Background(), &pb.EncryptDataRequest{Token: tc.token, Data: dataPB, UserId: tc.userId})
 
@@ -356,19 +360,19 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 			mockUserSvc := mocks.NewMockUserService(ctrl)
 			tokenUserData, tokenErr := tc.getUserDataFunc(tc.token)
 			if tc.name == "panic" {
-				mockUserSvc.EXPECT().GetUserData(tc.token).Do(func(token string) {
+				mockUserSvc.EXPECT().GetUserData(gomock.Any(), tc.token).Do(func(token string) {
 					panic("panic")
 				})
 			} else {
-				mockUserSvc.EXPECT().GetUserData(tc.token).Return(tokenUserData, tokenErr)
+				mockUserSvc.EXPECT().GetUserData(gomock.Any(), tc.token).Return(tokenUserData, tokenErr)
 			}
 
 			if tc.userId != nil {
-				userIdData, userIdErr := tc.getUserDataFunc2(*tc.userId)
-				mockUserSvc.EXPECT().GetUserData(*tc.userId).Return(userIdData, userIdErr)
-				if userIdErr == nil {
+				otherUserData, otherUserErr := tc.getUserDataFunc2(*tc.userId)
+				mockUserSvc.EXPECT().GetUserData(gomock.Any(), *tc.userId).Return(otherUserData, otherUserErr)
+				if otherUserErr == nil {
 					mockUsecase.EXPECT().
-						Decrypt(gomock.Any(), userIdData.ID, userIdData.EDEKPrivate, userIdData.EDEKPublic, gomock.Any()).
+						Decrypt(gomock.Any(), otherUserData.ID, otherUserData.EDEKPrivate, otherUserData.EDEKPublic, gomock.Any()).
 						Return(tc.decResp, tc.decErr)
 				}
 			} else {
@@ -378,7 +382,7 @@ func TestEncryptionHandlerImpl_Decrypt(t *testing.T) {
 						Return(tc.decResp, tc.decErr)
 				}
 			}
-			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc)
+			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc, obsMock)
 			dataPB := mapper.ConvertToStructPB([]map[string]string{{"k": "v"}})
 			resp, err := handler.Decrypt(context.Background(), &pb.DecryptRequest{Token: tc.token, Data: dataPB, UserId: tc.userId})
 
@@ -426,7 +430,7 @@ func TestEncryptionHandlerImpl_Health(t *testing.T) {
 			mockUsecase := mocks.NewMockEncryptionUseCase(ctrl)
 			mockUserSvc := mocks.NewMockUserService(ctrl)
 
-			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc)
+			handler := handlers.NewEncryptionHandler(mockUsecase, mockUserSvc, obsMock)
 			_, err := handler.HealthCheck(context.Background(), &pb.HealthCheckRequest{})
 
 			if tc.expectedData != nil {

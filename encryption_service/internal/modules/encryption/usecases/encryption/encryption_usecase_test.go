@@ -33,15 +33,15 @@ func TestEncryptionUsecase_GenerateEDEK(t *testing.T) {
 				kek2 := []byte("kek2")
 
 				gomock.InOrder(
-					eng.EXPECT().GenerateEncryptionKey().Return(dek1, nil),
-					eng.EXPECT().GenerateEncryptionKey().Return(kek1, nil),
-					km.EXPECT().StoreKEK("private_user1", kek1).Return(nil),
-					eng.EXPECT().EncryptDEK(dek1, kek1).Return("edekPriv", nil),
+					eng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(dek1, nil),
+					eng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(kek1, nil),
+					km.EXPECT().StoreKEK(gomock.Any(), "private_user1", kek1).Return(nil),
+					eng.EXPECT().EncryptDEK(gomock.Any(), dek1, kek1).Return("edekPriv", nil),
 
-					eng.EXPECT().GenerateEncryptionKey().Return(dek2, nil),
-					eng.EXPECT().GenerateEncryptionKey().Return(kek2, nil),
-					km.EXPECT().StoreKEK("public_user1", kek2).Return(nil),
-					eng.EXPECT().EncryptDEK(dek2, kek2).Return("edekPub", nil),
+					eng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(dek2, nil),
+					eng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(kek2, nil),
+					km.EXPECT().StoreKEK(gomock.Any(), "public_user1", kek2).Return(nil),
+					eng.EXPECT().EncryptDEK(gomock.Any(), dek2, kek2).Return("edekPub", nil),
 				)
 			},
 			expectError:  false,
@@ -52,7 +52,7 @@ func TestEncryptionUsecase_GenerateEDEK(t *testing.T) {
 			name:   "DEK generation fails",
 			userID: "user1",
 			mockSetup: func(km *mocks.MockKeyManager, eng *mocks.MockEncryptionEngine) {
-				eng.EXPECT().GenerateEncryptionKey().Return(nil, &errors.CustomError{ErrorCode: errors.ENGErrGenerateDEK, Err: assert.AnError})
+				eng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(nil, &errors.CustomError{ErrorCode: errors.ENGErrGenerateDEK, Err: assert.AnError})
 			},
 			expectError: true,
 		},
@@ -106,9 +106,9 @@ func TestEncryptionUsecase_Encrypt(t *testing.T) {
 			mockSetup: func(km *mocks.MockKeyManager, eng *mocks.MockEncryptionEngine) {
 				kek := []byte("kek")
 				dek := []byte("dek")
-				km.EXPECT().RetrieveKEK("private_user1").Return(kek, nil)
-				eng.EXPECT().DecryptDEK("edekPriv", kek).Return(dek, nil)
-				eng.EXPECT().Encrypt("value", dek).Return("encryptedValue", nil)
+				km.EXPECT().RetrieveKEK(gomock.Any(), "private_user1").Return(kek, nil)
+				eng.EXPECT().DecryptDEK(gomock.Any(), "edekPriv", kek).Return(dek, nil)
+				eng.EXPECT().Encrypt(gomock.Any(), "value", dek).Return("encryptedValue", nil)
 			},
 			expectError:   false,
 			expectedField: "private_encryptedValue",
@@ -122,7 +122,7 @@ func TestEncryptionUsecase_Encrypt(t *testing.T) {
 				Data: []map[string]string{{"e_type": string(enums.KeyPrivate), "field": "value"}},
 			},
 			mockSetup: func(km *mocks.MockKeyManager, eng *mocks.MockEncryptionEngine) {
-				km.EXPECT().RetrieveKEK("private_user1").Return(nil, &errors.CustomError{ErrorCode: errors.ESErrRetrieveKEK, Err: assert.AnError})
+				km.EXPECT().RetrieveKEK(gomock.Any(), "private_user1").Return(nil, &errors.CustomError{ErrorCode: errors.ESErrRetrieveKEK, Err: assert.AnError})
 			},
 			expectError: true,
 		},
@@ -176,9 +176,9 @@ func TestEncryptionUsecase_Decrypt(t *testing.T) {
 			mockSetup: func(km *mocks.MockKeyManager, eng *mocks.MockEncryptionEngine) {
 				kek := []byte("kek")
 				dek := []byte("dek")
-				km.EXPECT().RetrieveKEK("private_user1").Return(kek, nil)
-				eng.EXPECT().DecryptDEK("edekPriv", kek).Return(dek, nil)
-				eng.EXPECT().Decrypt("cipher", dek).Return("value", nil)
+				km.EXPECT().RetrieveKEK(gomock.Any(), "private_user1").Return(kek, nil)
+				eng.EXPECT().DecryptDEK(gomock.Any(), "edekPriv", kek).Return(dek, nil)
+				eng.EXPECT().Decrypt(gomock.Any(), "cipher", dek).Return("value", nil)
 			},
 			expectError:   false,
 			expectedValue: "value",
@@ -193,8 +193,8 @@ func TestEncryptionUsecase_Decrypt(t *testing.T) {
 			},
 			mockSetup: func(km *mocks.MockKeyManager, eng *mocks.MockEncryptionEngine) {
 				kek := []byte("kek")
-				km.EXPECT().RetrieveKEK("private_user1").Return(kek, nil)
-				eng.EXPECT().DecryptDEK("edekPriv", kek).Return(nil, &errors.CustomError{ErrorCode: errors.ENGErrDecryptDEK, Err: assert.AnError})
+				km.EXPECT().RetrieveKEK(gomock.Any(), "private_user1").Return(kek, nil)
+				eng.EXPECT().DecryptDEK(gomock.Any(), "edekPriv", kek).Return(nil, &errors.CustomError{ErrorCode: errors.ENGErrDecryptDEK, Err: assert.AnError})
 			},
 			expectError: true,
 		},
@@ -235,9 +235,9 @@ func TestEncryptionUsecase_Encrypt_PublicBranch(t *testing.T) {
 	// Setup: public path
 	kek := []byte("kekP")
 	dek := []byte("dekP")
-	mockKM.EXPECT().RetrieveKEK("public_user1").Return(kek, nil)
-	mockEng.EXPECT().DecryptDEK("edekPub", kek).Return(dek, nil)
-	mockEng.EXPECT().Encrypt("valuePub", dek).Return("encryptedPub", nil)
+	mockKM.EXPECT().RetrieveKEK(gomock.Any(), "public_user1").Return(kek, nil)
+	mockEng.EXPECT().DecryptDEK(gomock.Any(), "edekPub", kek).Return(dek, nil)
+	mockEng.EXPECT().Encrypt(gomock.Any(), "valuePub", dek).Return("encryptedPub", nil)
 
 	uc := usecases.NewEncryptionUseCase(mockKM, mockEng)
 	req := dtos.EncryptRequest{Data: []map[string]string{{"e_type": string(enums.KeyPublic), "field": "valuePub"}}}
@@ -264,9 +264,9 @@ func TestEncryptionUsecase_Encrypt_EncryptError(t *testing.T) {
 	mockEng := mocks.NewMockEncryptionEngine(ctrl)
 	kek := []byte("kekE")
 	dek := []byte("dekE")
-	mockKM.EXPECT().RetrieveKEK("private_user1").Return(kek, nil)
-	mockEng.EXPECT().DecryptDEK("edekPriv", kek).Return(dek, nil)
-	mockEng.EXPECT().Encrypt("value", dek).Return("", &errors.CustomError{ErrorCode: errors.ENGErrEncryptData, Err: assert.AnError})
+	mockKM.EXPECT().RetrieveKEK(gomock.Any(), "private_user1").Return(kek, nil)
+	mockEng.EXPECT().DecryptDEK(gomock.Any(), "edekPriv", kek).Return(dek, nil)
+	mockEng.EXPECT().Encrypt(gomock.Any(), "value", dek).Return("", &errors.CustomError{ErrorCode: errors.ENGErrEncryptData, Err: assert.AnError})
 
 	uc := usecases.NewEncryptionUseCase(mockKM, mockEng)
 	req := dtos.EncryptRequest{Data: []map[string]string{{"e_type": string(enums.KeyPrivate), "field": "value"}}}
@@ -282,9 +282,9 @@ func TestEncryptionUsecase_Decrypt_PublicBranch(t *testing.T) {
 	mockEng := mocks.NewMockEncryptionEngine(ctrl)
 	kek := []byte("kekD")
 	dek := []byte("dekD")
-	mockKM.EXPECT().RetrieveKEK("public_user1").Return(kek, nil)
-	mockEng.EXPECT().DecryptDEK("edekPub", kek).Return(dek, nil)
-	mockEng.EXPECT().Decrypt("cipherPub", dek).Return("valuePub", nil)
+	mockKM.EXPECT().RetrieveKEK(gomock.Any(), "public_user1").Return(kek, nil)
+	mockEng.EXPECT().DecryptDEK(gomock.Any(), "edekPub", kek).Return(dek, nil)
+	mockEng.EXPECT().Decrypt(gomock.Any(), "cipherPub", dek).Return("valuePub", nil)
 
 	uc := usecases.NewEncryptionUseCase(mockKM, mockEng)
 	req := dtos.DecryptRequest{Data: []map[string]string{{"field": string(enums.KeyPublic) + "_cipherPub"}}}
@@ -312,9 +312,9 @@ func TestEncryptionUsecase_GenerateEDEK_StoreKEKFails(t *testing.T) {
 	mockEng := mocks.NewMockEncryptionEngine(ctrl)
 	dek1 := []byte("d1")
 	kek1 := []byte("k1")
-	mockEng.EXPECT().GenerateEncryptionKey().Return(dek1, nil)
-	mockEng.EXPECT().GenerateEncryptionKey().Return(kek1, nil)
-	mockKM.EXPECT().StoreKEK("private_user1", kek1).Return(&errors.CustomError{ErrorCode: errors.KMGErrStoreKEK, Err: assert.AnError})
+	mockEng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(dek1, nil)
+	mockEng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(kek1, nil)
+	mockKM.EXPECT().StoreKEK(gomock.Any(), "private_user1", kek1).Return(&errors.CustomError{ErrorCode: errors.KMGErrStoreKEK, Err: assert.AnError})
 
 	uc := usecases.NewEncryptionUseCase(mockKM, mockEng)
 	_, err := uc.GenerateEDEK(context.Background(), "user1")
@@ -330,10 +330,10 @@ func TestEncryptionUsecase_GenerateEDEK_EncryptDEKFails(t *testing.T) {
 	mockEng := mocks.NewMockEncryptionEngine(ctrl)
 	dek1 := []byte("d2")
 	kek1 := []byte("k2")
-	mockEng.EXPECT().GenerateEncryptionKey().Return(dek1, nil)
-	mockEng.EXPECT().GenerateEncryptionKey().Return(kek1, nil)
-	mockKM.EXPECT().StoreKEK("private_user1", kek1).Return(nil)
-	mockEng.EXPECT().EncryptDEK(dek1, kek1).Return("", &errors.CustomError{ErrorCode: errors.ENGErrEncryptDEK, Err: assert.AnError})
+	mockEng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(dek1, nil)
+	mockEng.EXPECT().GenerateEncryptionKey(gomock.Any()).Return(kek1, nil)
+	mockKM.EXPECT().StoreKEK(gomock.Any(), "private_user1", kek1).Return(nil)
+	mockEng.EXPECT().EncryptDEK(gomock.Any(), dek1, kek1).Return("", &errors.CustomError{ErrorCode: errors.ENGErrEncryptDEK, Err: assert.AnError})
 
 	uc := usecases.NewEncryptionUseCase(mockKM, mockEng)
 	_, err := uc.GenerateEDEK(context.Background(), "user1")
