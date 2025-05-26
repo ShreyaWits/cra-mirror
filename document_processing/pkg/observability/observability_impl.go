@@ -4,7 +4,7 @@ import (
 	// "Document-Processing/internal/config"
 	"document_processing/internal/constants"
 	"document_processing/pkg/logger"
-	metrics "document_processing/pkg/matrics"
+	metrics "document_processing/pkg/metrics"
 	"document_processing/pkg/tracer"
 )
 

@@ -3,7 +3,7 @@ package observability_test
 import (
 	"context"
 	"document_processing/pkg/logger"
-	metrics "document_processing/pkg/matrics"
+	metrics "document_processing/pkg/metrics"
 	"document_processing/pkg/observability"
 	"document_processing/pkg/tracer"
 	"testing"
