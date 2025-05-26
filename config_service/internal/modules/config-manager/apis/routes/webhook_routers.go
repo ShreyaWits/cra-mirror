@@ -18,5 +18,5 @@ func RegisterWebHookRoutes(router fiber.Router, h *handler.WebhookHandler) {
 	// todo: Update a specific webhook (PATCH for partial updates)
 	// router.Patch("/webhook/:environment/:service", h.UpdateWebhook)
 
-	router.Delete("/:environment/:service/webhook", middleware.SetContextDataMiddleware[map[string]interface{}], h.DeleteWebhook)
+	router.Delete("/:environment/:service/webhook", middleware.SetContextDataMiddleware[dtos.RegisterWebhookRequest], h.DeleteWebhook)
 }

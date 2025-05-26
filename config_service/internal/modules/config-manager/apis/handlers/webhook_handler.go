@@ -183,7 +183,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 		"service", service)
 
 	contextData := c.Locals("contextData")
-	bodyMap, ok := contextData.(*map[string]any)
+	deleteReq, ok := contextData.(*dtos.RegisterWebhookRequest)
 	if !ok {
 		err := fmt.Errorf("invalid context data")
 		span.SetStatus(codes.Error, err.Error())
@@ -191,16 +191,6 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 			"context_data", contextData)
 		h.recordMetrics(ctx, "delete_webhook", start, err)
 		utils.SendError(c, fiber.StatusBadRequest, "Invalid delete request", "Context data missing or invalid")
-		return nil
-	}
-
-	var deleteReq dtos.RegisterWebhookRequest
-	if err := utils.MapToStruct(*bodyMap, &deleteReq); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		h.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to map delete request data",
-			"error", err.Error())
-		h.recordMetrics(ctx, "delete_webhook", start, err)
-		utils.SendError(c, fiber.StatusBadRequest, "Invalid delete structure", err.Error())
 		return nil
 	}
 
