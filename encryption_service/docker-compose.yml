@@ -31,8 +31,8 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${ENCRYPTION_SERVICE_REST_PORT}:${ENCRYPTION_SERVICE_REST_PORT}"
-      - "${ENCRYPTION_SERVICE_GRPC_PORT}:${ENCRYPTION_SERVICE_GRPC_PORT}"
+      - "8002:8002"
+      - "50502:50502"
     environment:
      - ENVIRONMENT=${ENVIRONMENT}
       - USER_SERVICE_URL=${USER_SERVICE_URL}
