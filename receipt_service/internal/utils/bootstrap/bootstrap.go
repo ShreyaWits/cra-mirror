@@ -15,12 +15,12 @@ import (
 func BootstrapServices() *grpcServer.GrpcServer {
 	// Load .env file
 	if os.Getenv("IS_DOCKER") != "true" {
-        if err := godotenv.Load(); err != nil {
-            log.Printf("Warning: No .env file found. Proceeding without it. Error: %v AND IS_DOCKER not true", err)
-        } else {
-            log.Println("Loaded .env file")
-        }
-    }
+		if err := godotenv.Load(); err != nil {
+			log.Printf("Warning: No .env file found. Proceeding without it. Error: %v AND IS_DOCKER not true", err)
+		} else {
+			log.Println("Loaded .env file")
+		}
+	}
 
 	// Redis setup
 	redisHost := os.Getenv("REDIS_HOST")
@@ -50,7 +50,14 @@ func BootstrapServices() *grpcServer.GrpcServer {
 		log.Fatalf("Invalid REDIS_PORT: %v", err)
 	}
 
-	config.InitRedis(redisHost, redisPort, redisUsername, redisPassword, redisTTL)
+	cfg := &config.Config{
+		RedisHost: redisHost,
+		RedisPort: redisPort,
+		RedisUser: redisUsername,
+		RedisPass: redisPassword,
+		RedisTTL:  redisTTL,
+	}
+	config.InitRedis(cfg)
 
 	// gRPC setup
 	grpcAddr := os.Getenv("RECEIPT_SERVICE_GRPC_PORT")
