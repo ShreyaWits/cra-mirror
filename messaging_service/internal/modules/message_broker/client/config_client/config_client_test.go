@@ -15,6 +15,7 @@ import (
 	"messaging_service/internal/config"
 	"messaging_service/internal/modules/message_broker/models"
 	httpclient "messaging_service/pkg/http"
+	"messaging_service/pkg/observability"
 )
 
 // MockHTTPClient is a mock implementation of HTTPClient interface
@@ -27,10 +28,33 @@ func (m *MockHTTPClient) Do(ctx context.Context, req httpclient.Request) (*http.
 	return m.doFunc(ctx, req)
 }
 
+// Create a mock observability stack for testing
+func createMockObsStack() *observability.ObservabilityStack {
+	mockObsStack := observability.NewObservabilityStack(nil)
+	return mockObsStack
+}
+
+// MockServiceNameForTest temporarily sets a mock service name for testing
+func MockServiceNameForTest(t *testing.T) func() {
+	// Save the original value
+	original := config.SERVICE_NAME
+
+	// Set a test value
+	config.SERVICE_NAME = "test-service"
+
+	// Return a cleanup function
+	return func() {
+		config.SERVICE_NAME = original
+	}
+}
+
 // TestNewConfigClient tests the NewConfigClient function
 func TestNewConfigClient(t *testing.T) {
-	validEnv := &config.Env{
+	// Setup test service name and restore after test
+	defer MockServiceNameForTest(t)()
 
+	mockObs := createMockObsStack()
+	validEnv := &config.Env{
 		ConfigServiceUrl:   "http://config-service",
 		ConfigServiceToken: "test-token",
 		Environment:        "test",
@@ -42,35 +66,52 @@ func TestNewConfigClient(t *testing.T) {
 		name          string
 		httpClient    httpclient.HTTPClient
 		env           *config.Env
+		obs           *observability.ObservabilityStack
+		setupTest     func()
 		expectedError bool
 	}{
 		{
 			name:          "valid parameters",
 			httpClient:    mockHTTPClient,
 			env:           validEnv,
+			obs:           mockObs,
+			setupTest:     func() {},
 			expectedError: false,
 		},
 		{
 			name:          "nil HTTP client",
 			httpClient:    nil,
 			env:           validEnv,
+			obs:           mockObs,
+			setupTest:     func() {},
 			expectedError: true,
 		},
 		{
 			name:          "nil environment",
 			httpClient:    mockHTTPClient,
 			env:           nil,
+			obs:           mockObs,
+			setupTest:     func() {},
+			expectedError: true,
+		},
+		{
+			name:          "nil observability stack",
+			httpClient:    mockHTTPClient,
+			env:           validEnv,
+			obs:           nil,
+			setupTest:     func() {},
 			expectedError: true,
 		},
 		{
 			name:       "missing config service URL",
 			httpClient: mockHTTPClient,
 			env: &config.Env{
-
 				ConfigServiceToken: "test-token",
 				Environment:        "test",
 				// ConfigServiceUrl is missing
 			},
+			obs:           mockObs,
+			setupTest:     func() {},
 			expectedError: true,
 		},
 		{
@@ -81,17 +122,20 @@ func TestNewConfigClient(t *testing.T) {
 				Environment:      "test",
 				// ConfigServiceToken is missing
 			},
+			obs:           mockObs,
+			setupTest:     func() {},
 			expectedError: true,
 		},
 		{
 			name:       "missing environment",
 			httpClient: mockHTTPClient,
 			env: &config.Env{
-
 				ConfigServiceUrl:   "http://config-service",
 				ConfigServiceToken: "test-token",
 				// Environment is missing
 			},
+			obs:           mockObs,
+			setupTest:     func() {},
 			expectedError: true,
 		},
 		{
@@ -103,13 +147,21 @@ func TestNewConfigClient(t *testing.T) {
 				Environment:        "test",
 				// ServiceName is missing
 			},
+			obs: mockObs,
+			setupTest: func() {
+				// Temporarily set service name to empty to simulate missing service name
+				config.SERVICE_NAME = ""
+			},
 			expectedError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewConfigClient(tt.httpClient, tt.env)
+			// Setup test case specific state
+			tt.setupTest()
+
+			client, err := NewConfigClient(tt.httpClient, tt.env, tt.obs)
 
 			if tt.expectedError {
 				assert.Error(t, err)
@@ -118,14 +170,24 @@ func TestNewConfigClient(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, client)
 			}
+
+			// Restore service name after each test case
+			if tt.name == "missing service name" {
+				config.SERVICE_NAME = "test-service"
+			}
 		})
 	}
 }
 
 // TestFetchConfig tests the FetchConfig method
 func TestFetchConfig(t *testing.T) {
+	// Setup test service name and restore after test
+	defer MockServiceNameForTest(t)()
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	mockObs := createMockObsStack()
 
 	// Valid config response
 	validConfig := models.MessaggingConfigResponse{
@@ -174,7 +236,6 @@ func TestFetchConfig(t *testing.T) {
 
 	// Common test environment
 	env := &config.Env{
-
 		ConfigServiceUrl:   "http://config-service",
 		ConfigServiceToken: "test-token",
 		Environment:        "test",
@@ -271,7 +332,11 @@ func TestFetchConfig(t *testing.T) {
 			mockHTTP := tt.setupMockHTTP()
 
 			// Create the client
-			client, _ := NewConfigClient(mockHTTP, env)
+			client, err := NewConfigClient(mockHTTP, env, mockObs)
+
+			// Check that client creation was successful before proceeding
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
 
 			// Call the method
 			config, err := client.FetchConfig(context.Background())

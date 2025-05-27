@@ -164,23 +164,26 @@ func (h *TemplateGRPCHandler) GetTemplateV1(ctx context.Context, req *pb.GetTemp
 
 // Helper function to build success response
 func buildSuccessResponse(resp *models.Template) *pb.TemplateResponse {
+	requiredFieldsStr := ""
+	if len(resp.RequiredFields) > 0 {
+		requiredFieldsStr = strings.Join(resp.RequiredFields, ",")
+	}
 	return &pb.TemplateResponse{
 		Success: true,
 		Message: map[string]string{
-			"info": "Template retrieved successfully",
+			"message": "Template retrieved successfully",
 		},
-		Error: nil,
 		Data: map[string]string{
 			"id":              resp.ID.String(),
 			"name":            resp.Name,
 			"channel":         resp.Channel,
 			"language":        resp.Language,
 			"content":         resp.Content,
-			"required_fields": strings.Join(resp.RequiredFields, ","),
+			"required_fields": requiredFieldsStr,
 			"version":         fmt.Sprintf("%d", resp.Version),
-			"is_active":       fmt.Sprintf("%t", resp.IsActive),
-			"created_at":      resp.CreatedAt.String(),
-			"updated_at":      resp.UpdatedAt.String(),
+			"is_active":       fmt.Sprintf("%v", resp.IsActive),
+			"created_at":      resp.CreatedAt.Format(time.RFC3339),
+			"updated_at":      resp.UpdatedAt.Format(time.RFC3339),
 		},
 	}
 }

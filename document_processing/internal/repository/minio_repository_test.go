@@ -1,7 +1,7 @@
 package repository_test
 
 import (
-	"Document-Processing/internal/repository"
+	"document_processing/internal/repository"
 	"context"
 	"strings"
 	"testing"

@@ -33,4 +33,17 @@ const (
 	KAFErrBrokerUnavailable = "KAF002"
 	KAFErrNotAuthorized     = "KAF003"
 	KAFErrNotAuthenticated  = "KAF004"
+
+	// CFGxxx (Configuration Management)
+	CFGErrFetchFailed      = "CFG001"
+	CFGErrValidationFailed = "CFG002"
+	CFGErrMarshalFailed    = "CFG003"
+	CFGErrUnmarshalFailed  = "CFG004"
+
+	// CACxxx (Cache Operations)
+	CACErrConnectionFailed = "CAC001"
+	CACErrSetFailed        = "CAC002"
+	CACErrGetFailed        = "CAC003"
+	CACErrNotFound         = "CAC004"
+	CACErrInvalidateFailed = "CAC005"
 )

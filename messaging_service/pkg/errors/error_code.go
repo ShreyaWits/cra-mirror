@@ -65,6 +65,19 @@ func GetAppErrorMessage(code string) string {
 		KAFErrBrokerUnavailable: "Kafka broker is unavailable",
 		KAFErrNotAuthorized:     "Not authorized to perform operation",
 		KAFErrNotAuthenticated:  "Authentication failed",
+
+		// CFGxxx (Configuration Management)
+		CFGErrFetchFailed:      "Failed to fetch configuration from API",
+		CFGErrValidationFailed: "Configuration validation failed",
+		CFGErrMarshalFailed:    "Failed to marshal configuration data",
+		CFGErrUnmarshalFailed:  "Failed to unmarshal configuration data",
+
+		// CACxxx (Cache Operations)
+		CACErrConnectionFailed: "Failed to connect to cache service",
+		CACErrSetFailed:        "Failed to set data in cache",
+		CACErrGetFailed:        "Failed to get data from cache",
+		CACErrNotFound:         "Data not found in cache",
+		CACErrInvalidateFailed: "Failed to invalidate cache entry",
 	}
 
 	if message, exists := statusMessages[code]; exists {
@@ -80,11 +93,12 @@ func GetGRPCCode(errorCode string) codes.Code {
 	case MSGErrInvalidRequest, MSGErrInvalidTopic, MSGErrInvalidGroup,
 		PUBErrInvalidMessage, PUBErrInvalidConfig,
 		SUBErrInvalidConfig, SUBErrInvalidGroupID,
-		TOPErrInvalidConfig, TOPErrInvalidPartitions:
+		TOPErrInvalidConfig, TOPErrInvalidPartitions,
+		CFGErrValidationFailed:
 		return codes.InvalidArgument
 
 	// Not found errors
-	case PUBErrTopicNotExists, SUBErrTopicNotExists:
+	case PUBErrTopicNotExists, SUBErrTopicNotExists, CACErrNotFound:
 		return codes.NotFound
 
 	// Already exists errors
@@ -97,12 +111,15 @@ func GetGRPCCode(errorCode string) codes.Code {
 
 	// Unavailable errors
 	case PUBErrProducerNotReady, SUBErrConsumerNotReady,
-		KAFErrConnectionFailed, KAFErrBrokerUnavailable:
+		KAFErrConnectionFailed, KAFErrBrokerUnavailable,
+		CACErrConnectionFailed:
 		return codes.Unavailable
 
 	// Internal errors for operation failures
 	case PUBErrPublishFailed, SUBErrSubscribeFailed, SUBErrStreamError,
-		TOPErrCreateFailed:
+		TOPErrCreateFailed, CFGErrFetchFailed, CFGErrMarshalFailed,
+		CFGErrUnmarshalFailed, CACErrSetFailed, CACErrGetFailed,
+		CACErrInvalidateFailed:
 		return codes.Internal
 
 	// Default to internal error for unknown error codes
