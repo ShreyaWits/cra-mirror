@@ -8,6 +8,7 @@ import (
 	"nps-reciept-service/internal/repositories"
 	"nps-reciept-service/internal/services"
 	"nps-reciept-service/internal/utils"
+	"nps-reciept-service/pkg/observability"
 	"nps-reciept-service/proto"
 
 	"google.golang.org/grpc"
@@ -15,15 +16,17 @@ import (
 )
 
 type GrpcServer struct {
-	server *grpc.Server
-	port   int
+	server        *grpc.Server
+	port          int
+	Observability *observability.ObservabilityStack
 }
 
 // NewGrpcServer creates a new gRPC server instance
-func NewGrpcServer(port int) *GrpcServer {
+func NewGrpcServer(port int, obs *observability.ObservabilityStack) *GrpcServer {
 	return &GrpcServer{
-		server: grpc.NewServer(),
-		port:   port,
+		server:        grpc.NewServer(),
+		port:          port,
+		Observability: obs,
 	}
 }
 
@@ -38,7 +41,7 @@ func (s *GrpcServer) Start() error {
 	// Register services
 	redisClient := config.GetRedisClient()
 	claimRepo := repositories.NewRedisClaimRepository(redisClient)
-	claimServer := services.NewClaimServer(claimRepo)
+	claimServer := services.NewClaimServer(claimRepo, s.Observability)
 
 	// Create a new server with the interceptor
 	serverWithInterceptor := grpc.NewServer(grpc.UnaryInterceptor(middleware.ValidateClaimRequestInterceptor()))

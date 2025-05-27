@@ -89,7 +89,7 @@ func TestProcessClaim(t *testing.T) {
 				m.On("SetClaimSequenceExpiry", mock.Anything, "240424", 24*time.Hour).Return(errors.New("redis expiry error")).Once()
 			},
 			expectedClaimID:   "CLM24042490120001", // Claim ID is still generated
-			wantErr:           false, // Based on the comment in the code, this might not return an error
+			wantErr:           false,               // Based on the comment in the code, this might not return an error
 			expectedErrorCode: "",
 		},
 	}
@@ -101,7 +101,7 @@ func TestProcessClaim(t *testing.T) {
 				tt.mockRepoSetup(mockRepo)
 			}
 
-			server := NewClaimServer(mockRepo)
+			server := NewClaimServer(mockRepo, nil)
 
 			resp, err := server.ProcessClaim(context.Background(), tt.req)
 
