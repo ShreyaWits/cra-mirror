@@ -88,20 +88,6 @@ func (s *ConfigServiceImpl) UpdateConfig(ctx context.Context, config *configEnv.
 
 func (s *ConfigServiceImpl) GetCurrentConfig(ctx context.Context, key string) (*configEnv.Config, error) {
 	// Try to get from cache
-	val, found, err := s.cache.GetCache(ctx, constants.ServiceName, key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cache: %w", err)
-	}
-	if found {
-		fmt.Println("Cache miss, fetching from config service")
-
-		var cfg configEnv.Config
-		if err := json.Unmarshal([]byte(val), &cfg); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal cached config: %w", err)
-		}
-
-		return &cfg, nil
-	}
 
 	fmt.Println("Fetching config from config service...")
 
@@ -129,7 +115,25 @@ func (s *ConfigServiceImpl) GetCurrentConfig(ctx context.Context, key string) (*
 
 	var responseMap configEnv.ConfigServiceResponse
 	if err := json.Unmarshal(body, &responseMap); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response body into map: %w", err)
+		fmt.Println("failed to unmarshal response body into map: %w", err)
+	}
+
+	if err != nil {
+		val, found, err := s.cache.GetCache(ctx, constants.ServiceName, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cache: %w", err)
+		}
+		if found {
+			fmt.Println("Cache miss, fetching from config service")
+
+			var cfg configEnv.Config
+			if err := json.Unmarshal([]byte(val), &cfg); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal cached config: %w", err)
+			}
+
+			return &cfg, nil
+		}
+		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 
 	defer resp.Body.Close()

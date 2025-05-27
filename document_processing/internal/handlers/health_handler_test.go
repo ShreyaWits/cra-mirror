@@ -4,15 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"Document-Processing/internal/handlers"
-	pb "Document-Processing/proto"
+	"document_processing/internal/handlers"
+	"document_processing/pkg/observability"
+	pb "document_processing/proto"
 
 	"github.com/stretchr/testify/assert"
 )
 
 // TestHealthCheck_Serving tests the Check method for a valid service
 func TestHealthCheck_Serving(t *testing.T) {
-	handler := handlers.NewHealthHandler()
+	handler := handlers.NewHealthHandler(*observability.NewObservabilityStack())
 
 	req := &pb.HealthCheckRequest{
 		Service: "documentprocessing.DocumentProcessingService",
@@ -30,7 +31,7 @@ func TestHealthCheck_Serving(t *testing.T) {
 
 // TestHealthCheck_EmptyService tests the Check method for an empty service name
 func TestHealthCheck_EmptyService(t *testing.T) {
-	handler := handlers.NewHealthHandler()
+	handler := handlers.NewHealthHandler(*observability.NewObservabilityStack())
 
 	req := &pb.HealthCheckRequest{
 		Service: "",
@@ -49,7 +50,7 @@ func TestHealthCheck_EmptyService(t *testing.T) {
 
 // TestHealthCheck_UnsupportedService tests the Check method for an unsupported service name
 func TestHealthCheck_UnsupportedService(t *testing.T) {
-	handler := handlers.NewHealthHandler()
+	handler := handlers.NewHealthHandler(*observability.NewObservabilityStack())
 
 	req := &pb.HealthCheckRequest{
 		Service: "some.other.Service",

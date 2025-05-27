@@ -1,8 +1,8 @@
 package mocks
 
 import (
-	"time"
 	"template-services/pkg/cache"
+	"time"
 )
 
 // MockCache is a mock implementation of CacheInterface
@@ -34,4 +34,4 @@ func (m *MockCache) Delete(key string) error {
 		return m.DeleteFunc(key)
 	}
 	return nil
-} 
+}

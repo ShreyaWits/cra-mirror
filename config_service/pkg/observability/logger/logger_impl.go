@@ -1,62 +1,62 @@
-package observability
+package logger
 
 import (
 	"context"
 	"log/slog"
 )
 
-// Logger is a wrapper around slog.Logger that enforces context-based logging
-type Logger struct {
+// LoggerStruct is a wrapper around slog.LoggerStruct that enforces context-based logging
+type LoggerStruct struct {
 	*slog.Logger
 }
 
-// NewLogger creates a new Logger instance
-func NewLogger(logger *slog.Logger) *Logger {
-	return &Logger{Logger: logger}
+// NewLogger creates a new LoggerStruct instance
+func NewLogger(logger *slog.Logger) Logger {
+	return &LoggerStruct{Logger: logger}
 }
 
 // DebugContext logs a debug message with context and structured fields
-func (l *Logger) DebugContext(ctx context.Context, msg string, args ...any) {
+func (l *LoggerStruct) DebugContext(ctx context.Context, msg string, args ...any) {
 	l.Logger.DebugContext(ctx, msg, args...)
 }
 
 // InfoContext logs an info message with context and structured fields
-func (l *Logger) InfoContext(ctx context.Context, msg string, args ...any) {
+func (l *LoggerStruct) InfoContext(ctx context.Context, msg string, args ...any) {
 	l.Logger.InfoContext(ctx, msg, args...)
 }
 
 // WarnContext logs a warning message with context and structured fields
-func (l *Logger) WarnContext(ctx context.Context, msg string, args ...any) {
+func (l *LoggerStruct) WarnContext(ctx context.Context, msg string, args ...any) {
 	l.Logger.WarnContext(ctx, msg, args...)
 }
 
 // ErrorContext logs an error message with context and structured fields
-func (l *Logger) ErrorContext(ctx context.Context, msg string, args ...any) {
+func (l *LoggerStruct) ErrorContext(ctx context.Context, msg string, args ...any) {
 	l.Logger.ErrorContext(ctx, msg, args...)
 }
 
-// With returns a new Logger with the given attributes added to all log messages
-func (l *Logger) With(args ...any) *Logger {
-	return &Logger{Logger: l.Logger.With(args...)}
+// With returns a new LoggerStruct with the given attributes added to all log messages
+func (l *LoggerStruct) With(args ...any) Logger {
+	return &LoggerStruct{Logger: l.Logger.With(args...)}
 }
 
-// WithGroup returns a new Logger that starts a group with the given name
-func (l *Logger) WithGroup(name string) *Logger {
-	return &Logger{Logger: l.Logger.WithGroup(name)}
+// WithGroup returns a new LoggerStruct that starts a group with the given name
+func (l *LoggerStruct) WithGroup(name string) Logger {
+	return &LoggerStruct{Logger: l.Logger.WithGroup(name)}
 }
 
 // Enabled reports whether the logger handles records at the given level
-func (l *Logger) Enabled(ctx context.Context, level slog.Level) bool {
+func (l *LoggerStruct) Enabled(ctx context.Context, level slog.Level) bool {
 	return l.Logger.Enabled(ctx, level)
 }
 
 // Handler returns the underlying slog.Handler
-func (l *Logger) Handler() slog.Handler {
+func (l *LoggerStruct) Handler() slog.Handler {
 	return l.Logger.Handler()
 }
 
-// WithContext returns a new Logger with the given context
-func (l *Logger) WithContext(ctx context.Context) *ContextLogger {
+// WithContext returns a new LoggerStruct with the given context
+func (l *LoggerStruct) WithContext(ctx context.Context) *ContextLogger {
 	return &ContextLogger{
 		Logger: l,
 		ctx:    ctx,
@@ -65,7 +65,7 @@ func (l *Logger) WithContext(ctx context.Context) *ContextLogger {
 
 // ContextLogger is a logger that has a context attached to it
 type ContextLogger struct {
-	*Logger
+	Logger
 	ctx context.Context
 }
 
