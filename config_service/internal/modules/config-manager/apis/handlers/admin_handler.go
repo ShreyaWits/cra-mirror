@@ -2,9 +2,9 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	common "nps-config-service/internal/common/errors"
 	"nps-config-service/internal/configs"
+	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/apis/dtos"
 	"nps-config-service/internal/modules/config-manager/services"
 	"nps-config-service/pkg/observability"
@@ -13,7 +13,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 )
 
 // ConfigProvider defines the interface for accessing configuration
@@ -37,11 +36,6 @@ type AdminHandler struct {
 	Service            services.IAdminService
 	ObservabilityStack *observability.ObservabilityStack
 	ConfigProvider     ConfigProvider
-	// Metrics
-	requestCounter   metric.Int64Counter
-	requestLatency   metric.Float64Histogram
-	errorCounter     metric.Int64Counter
-	operationLatency metric.Float64Histogram
 }
 
 func NewAdminHandler(service services.IAdminService, observabilityStack *observability.ObservabilityStack, configProvider ConfigProvider) *AdminHandler {
@@ -52,71 +46,33 @@ func NewAdminHandler(service services.IAdminService, observabilityStack *observa
 		configProvider = &DefaultConfigProvider{}
 	}
 
-	// Initialize metrics
-	meter := observabilityStack.MetricsService
-	requestCounter, _ := meter.Int64Counter(
-		"admin_request_total",
-		metric.WithDescription("Total number of admin requests"),
-	)
-	requestLatency, _ := meter.Float64Histogram(
-		"admin_request_duration_seconds",
-		metric.WithDescription("Admin request duration in seconds"),
-	)
-	errorCounter, _ := meter.Int64Counter(
-		"admin_error_total",
-		metric.WithDescription("Total number of admin errors"),
-	)
-	operationLatency, _ := meter.Float64Histogram(
-		"admin_operation_duration_seconds",
-		metric.WithDescription("Admin operation duration in seconds"),
-	)
-
 	return &AdminHandler{
 		Service:            service,
 		ObservabilityStack: observabilityStack,
 		ConfigProvider:     configProvider,
-		requestCounter:     requestCounter,
-		requestLatency:     requestLatency,
-		errorCounter:       errorCounter,
-		operationLatency:   operationLatency,
 	}
 }
 
 func (h *AdminHandler) recordMetrics(ctx context.Context, operation string, start time.Time, err error) {
 	// Record request count
-	h.requestCounter.Add(ctx, 1,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "admin_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.AdminHandlerRequestCounterMetric, 1, map[string]string{
+		"operation": operation,
+		"service":   "admin_handler",
+	})
 
 	// Record request latency
 	latency := time.Since(start).Seconds()
-	h.requestLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "admin_handler"),
-		),
-	)
-
-	// Record operation latency
-	h.operationLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "admin_handler"),
-		),
-	)
+	h.ObservabilityStack.MetricsService.RecordHistogram(ctx, constants.AdminHandlerRequestLatencyMetric, latency, map[string]string{
+		"operation": operation,
+		"service":   "admin_handler",
+	})
 
 	// Record error if any
 	if err != nil {
-		h.errorCounter.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("operation", operation),
-				attribute.String("service", "admin_handler"),
-				attribute.String("error", err.Error()),
-			),
-		)
+		h.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.AdminHandlerErrorCounterMetric, 1, map[string]string{
+			"operation": operation,
+			"service":   "admin_handler",
+		})
 	}
 }
 
@@ -188,20 +144,23 @@ func (h *AdminHandler) CreateAdminHandler(c *fiber.Ctx) error {
 
 	contextData, ok := c.Locals("contextData").(*dtos.AdminSignupDto)
 	if !ok {
-		err := fmt.Errorf("invalid request body")
+		err := common.ThrowError(fiber.StatusBadRequest, "CNF004")
 		span.SetStatus(codes.Error, err.Error())
 		span.SetAttributes(attribute.String("error.code", "CNF004"))
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Invalid request body for admin creation",
 			"error_code", "CNF004")
 		h.recordMetrics(ctx, "create_admin", start, err)
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	// Validate request data
 	if err := h.validateAdminSignupRequest(ctx, contextData); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		h.recordMetrics(ctx, "create_admin", start, err)
-		return err
+		if appErr, ok := err.(common.AppError); ok {
+			return c.Status(appErr.Status).JSON(appErr)
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	span.SetAttributes(
@@ -239,20 +198,23 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 
 	contextData, ok := c.Locals("contextData").(*dtos.AdminLoginDto)
 	if !ok {
-		err := fmt.Errorf("invalid request body")
+		err := common.ThrowError(fiber.StatusBadRequest, "CNF004")
 		span.SetStatus(codes.Error, err.Error())
 		span.SetAttributes(attribute.String("error.code", "CNF004"))
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Invalid request body for admin fetch",
 			"error_code", "CNF004")
 		h.recordMetrics(ctx, "fetch_admin", start, err)
-		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusBadRequest, "CNF004"))
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	// Validate request data
 	if err := h.validateAdminLoginRequest(ctx, contextData); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		h.recordMetrics(ctx, "fetch_admin", start, err)
-		return err
+		if appErr, ok := err.(common.AppError); ok {
+			return c.Status(appErr.Status).JSON(appErr)
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(err)
 	}
 
 	jwtSecret := h.ConfigProvider.GetJWTSecret()
@@ -263,15 +225,105 @@ func (h *AdminHandler) FetchAdminHandler(c *fiber.Ctx) error {
 	responseData, responseError := h.Service.FetchAdminService(ctx, contextData, jwtSecret)
 	if responseError != nil {
 		span.SetStatus(codes.Error, responseError.Error())
+		span.SetAttributes(attribute.String("error.code", "ADMIN002"))
 		h.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to fetch admin",
 			"error", responseError,
+			"error_code", "ADMIN002",
 			"username", contextData.Username)
 		h.recordMetrics(ctx, "fetch_admin", start, responseError)
-		return responseError
+		return c.Status(fiber.StatusUnauthorized).JSON(common.ThrowError(fiber.StatusUnauthorized, "ADMIN002"))
 	}
 
 	span.SetStatus(codes.Ok, "Admin fetched successfully")
 	h.ObservabilityStack.Logger.InfoContext(ctx, "Admin fetched successfully",
 		"username", contextData.Username)
+	return c.Status(fiber.StatusOK).JSON(responseData)
+}
+
+// ListAdminsHandler returns a list of all admin users
+func (h *AdminHandler) ListAdminsHandler(c *fiber.Ctx) error {
+	start := time.Now()
+	ctx := c.UserContext()
+	ctx, span := h.ObservabilityStack.TracerService.Start(ctx, "AdminHandler.ListAdmins")
+	defer span.End()
+	defer func() {
+		h.recordMetrics(ctx, "list_admins", start, nil)
+	}()
+
+	h.ObservabilityStack.Logger.InfoContext(ctx, "Processing list admins request")
+
+	responseData, responseError := h.Service.ListAdminsService(ctx)
+	if responseError != nil {
+		span.SetStatus(codes.Error, responseError.Error())
+		span.SetAttributes(attribute.String("error.code", "ADMIN007"))
+		h.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to list admin users",
+			"error", responseError,
+			"error_code", "ADMIN007")
+		h.recordMetrics(ctx, "list_admins", start, responseError)
+		return c.Status(fiber.StatusInternalServerError).JSON(common.ThrowError(fiber.StatusInternalServerError, "ADMIN007"))
+	}
+
+	span.SetStatus(codes.Ok, "Admin users listed successfully")
+	h.ObservabilityStack.Logger.InfoContext(ctx, "Successfully listed admin users",
+		"count", len(responseData.Admins))
+	return c.Status(fiber.StatusOK).JSON(responseData)
+}
+
+// DeleteAdminHandler deletes an admin user
+func (h *AdminHandler) DeleteAdminHandler(c *fiber.Ctx) error {
+	start := time.Now()
+	ctx := c.UserContext()
+	ctx, span := h.ObservabilityStack.TracerService.Start(ctx, "AdminHandler.DeleteAdmin")
+	defer span.End()
+	defer func() {
+		h.recordMetrics(ctx, "delete_admin", start, nil)
+	}()
+
+	username := c.Params("username")
+	if username == "" {
+		err := common.ThrowError(fiber.StatusBadRequest, "ADMIN008")
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error.code", "ADMIN008"))
+		h.ObservabilityStack.Logger.ErrorContext(ctx, "Username is required",
+			"error_code", "ADMIN008")
+		h.recordMetrics(ctx, "delete_admin", start, err)
+		return c.Status(fiber.StatusBadRequest).JSON(err)
+	}
+
+	// Prevent self-deletion
+	currentUsername := c.Locals("username").(string)
+	if username == currentUsername {
+		err := common.ThrowError(fiber.StatusForbidden, "ADMIN009")
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(attribute.String("error.code", "ADMIN009"))
+		h.ObservabilityStack.Logger.ErrorContext(ctx, "Cannot delete own account",
+			"error_code", "ADMIN009",
+			"username", username)
+		h.recordMetrics(ctx, "delete_admin", start, err)
+		return c.Status(fiber.StatusForbidden).JSON(err)
+	}
+
+	span.SetAttributes(
+		attribute.String("username", username),
+	)
+
+	responseData, responseError := h.Service.DeleteAdminService(ctx, username)
+	if responseError != nil {
+		span.SetStatus(codes.Error, responseError.Error())
+		span.SetAttributes(attribute.String("error.code", "ADMIN010"))
+		h.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to delete admin user",
+			"error", responseError,
+			"error_code", "ADMIN010",
+			"username", username)
+		h.recordMetrics(ctx, "delete_admin", start, responseError)
+		if appErr, ok := responseError.(common.AppError); ok {
+			return c.Status(appErr.Status).JSON(appErr)
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(common.ThrowError(fiber.StatusInternalServerError, "ADMIN010"))
+	}
+
+	span.SetStatus(codes.Ok, "Admin user deleted successfully")
+	h.ObservabilityStack.Logger.InfoContext(ctx, "Successfully deleted admin user",
+		"username", username)
 	return c.Status(fiber.StatusOK).JSON(responseData)
 }

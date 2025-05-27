@@ -1,9 +1,13 @@
-go 1.24.1
-
-toolchain go1.24.3
+go 1.24.3
 
 use (
+	./document_processing
 	./encryption_service
 	./messaging_service
 	./protos
+	./config_service
+	./template_services
+	./thirdparty_service
 )
+
+replace cra-protos/redis_service => ./protos/redis_service

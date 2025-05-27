@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"Document-Processing/internal/models"
-	"Document-Processing/internal/services"
+	"document_processing/internal/models"
+	"document_processing/internal/services"
+	"document_processing/pkg/observability"
 
-	pb "Document-Processing/proto"
+	pb "document_processing/proto"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -107,7 +108,7 @@ func TestProcessBatchFilesV1_Success(t *testing.T) {
 	mockDocRepo.On("CreateDocumentData", mock.Anything).
 		Return(&models.DocumentData{}, nil)
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 
@@ -132,7 +133,7 @@ func TestProcessBatchFilesV1_NoFiles(t *testing.T) {
 		Files: []*pb.FileProcessingRequest{},
 	}
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 
@@ -165,7 +166,7 @@ func TestProcessBatchFilesV1_MinIOStoreError(t *testing.T) {
 	mockMinio.On("StoreFile", mock.Anything, mock.AnythingOfType("[]uint8"), "image/png").
 		Return("", errors.New("minio storage failed"))
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 
@@ -198,7 +199,7 @@ func TestProcessBatchFilesV1_Base64DecodeError(t *testing.T) {
 		},
 	}
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 
@@ -243,7 +244,7 @@ func TestProcessBatchFilesV1_GeneratedBatchID(t *testing.T) {
 	mockDocRepo.On("CreateDocumentData", mock.Anything).
 		Return(&models.DocumentData{}, nil)
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 
@@ -293,7 +294,7 @@ func TestProcessBatchFilesV1_GeminiProcessError(t *testing.T) {
 	mockDocRepo.On("CreateDocumentData", mock.AnythingOfType("*models.DocumentData")).
 		Return(&models.DocumentData{}, nil)
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 
@@ -356,7 +357,7 @@ func TestProcessBatchFilesV1_LlamaProcessError(t *testing.T) {
 	mockDocRepo.On("CreateDocumentData", mock.AnythingOfType("*models.DocumentData")).
 		Return(&models.DocumentData{}, nil)
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 
@@ -403,7 +404,7 @@ func TestGetBatchStatusV1_Success(t *testing.T) {
 
 	mockDocRepo.On("GetDocumentDataByID", "batch123").Return(docData, nil)
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	resp, err := svc.GetBatchStatusV1(ctx, &pb.BatchStatusRequest{BatchId: "batch123"})
 
@@ -427,7 +428,7 @@ func TestGetBatchStatusV1_NotFound(t *testing.T) {
 	mockDocRepo := new(MockDocDataRepo)
 
 	mockDocRepo.On("GetDocumentDataByID", "batchNotFound").Return(nil, nil)
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	resp, err := svc.GetBatchStatusV1(ctx, &pb.BatchStatusRequest{BatchId: "batchNotFound"})
 
@@ -449,7 +450,7 @@ func TestGetBatchStatusV1_DBError(t *testing.T) {
 
 	mockDocRepo.On("GetDocumentDataByID", "batchError").Return(nil, errors.New("db failure"))
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	resp, err := svc.GetBatchStatusV1(ctx, &pb.BatchStatusRequest{BatchId: "batchError"})
 
@@ -479,7 +480,7 @@ func TestGetBatchStatusV1_JSONDecodeError(t *testing.T) {
 
 	mockDocRepo.On("GetDocumentDataByID", "batch123").Return(docData, nil)
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	resp, err := svc.GetBatchStatusV1(ctx, &pb.BatchStatusRequest{BatchId: "batch123"})
 
@@ -523,7 +524,7 @@ func TestProcessBatchFilesV1_ProcessFile_EmptyBase64(t *testing.T) {
 	mockDocRepo.On("CreateDocumentData", mock.AnythingOfType("*models.DocumentData")).
 		Return(&models.DocumentData{}, nil)
 
-	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo)
+	svc := services.NewDocumentService(mockGemini, mockLlama, mockMinio, mockDocRepo, *observability.NewObservabilityStack())
 
 	ack, err := svc.ProcessBatchFilesV1(ctx, req)
 

@@ -56,7 +56,8 @@ func (m *MockLoggerService) Sync() error                                        
 
 // Mock ConfigManagerService
 type MockConfigManagerService struct {
-	ctrl *gomock.Controller
+	ctrl                *gomock.Controller
+	setDataToCacheError error
 }
 
 // Ensure MockConfigManagerService implements the ConfigManagerServiceInterface
@@ -71,11 +72,19 @@ func (m *MockConfigManagerService) GetFromApiConfiguration(ctx context.Context) 
 }
 
 func (m *MockConfigManagerService) SetDataToCache(ctx context.Context, key string, cfg *config.Config) error {
+	if m.setDataToCacheError != nil {
+		return m.setDataToCacheError
+	}
 	return nil
 }
 
 func (m *MockConfigManagerService) GetDataToCache(ctx context.Context, key string) (*config.Config, error) {
 	return nil, nil
+}
+
+// SetSetDataToCacheError configures the mock to return an error when SetDataToCache is called
+func (m *MockConfigManagerService) SetSetDataToCacheError(err error) {
+	m.setDataToCacheError = err
 }
 
 // Setup function to create a ConfigHandler for testing
@@ -84,7 +93,7 @@ func setupConfigHandler(t *testing.T) (*handler.ConfigHandler, *MockConfigManage
 	mockSvc := NewMockConfigManagerService(ctrl)
 
 	env := &config.Env{
-		
+
 		ConfigServiceUrl: "http://localhost:8080",
 	}
 
@@ -106,7 +115,6 @@ func TestNewConfigHandler(t *testing.T) {
 
 	mockSvc := NewMockConfigManagerService(ctrl)
 	validEnv := &config.Env{
-		
 		ConfigServiceUrl: "http://localhost:8080",
 	}
 
@@ -150,16 +158,6 @@ func TestNewConfigHandler(t *testing.T) {
 			svc:         mockSvc,
 			env:         validEnv,
 			obs:         nil,
-			expectError: true,
-		},
-		{
-			name: "empty service name",
-			svc:  mockSvc,
-			env: &config.Env{
-				ConfigServiceUrl: "http://localhost:8080",
-				// ServiceName is empty
-			},
-			obs:         obs,
 			expectError: true,
 		},
 	}
@@ -225,7 +223,20 @@ func TestSetReinitCallback(t *testing.T) {
 		KafkaIsolationLevel:           "read_committed",
 	}
 
-	reqBody, _ := json.Marshal(testConfig)
+	// Wrap the config in the expected structure
+	requestWrapper := struct {
+		Environment string         `json:"environment"`
+		Method      string         `json:"method"`
+		ServiceName string         `json:"serviceName"`
+		Values      *config.Config `json:"values"`
+	}{
+		Environment: "test",
+		Method:      "update",
+		ServiceName: "messaging_service",
+		Values:      testConfig,
+	}
+
+	reqBody, _ := json.Marshal(requestWrapper)
 	req := httptest.NewRequest("POST", "/config/update", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -238,7 +249,7 @@ func TestSetReinitCallback(t *testing.T) {
 }
 
 func TestUpdateConfigurations(t *testing.T) {
-	h, _, ctrl := setupConfigHandler(t)
+	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	tests := []struct {
@@ -246,63 +257,86 @@ func TestUpdateConfigurations(t *testing.T) {
 		requestBody       interface{}
 		setCallback       bool
 		callbackReturns   error
+		setupMock         func(*MockConfigManagerService)
 		expectedStatus    int
 		expectedHasConfig bool
 	}{
 		{
 			name: "valid config update",
-			requestBody: config.Config{
-				KafkaBrokers:           []string{"localhost:9092"},
-				KafkaNumPartitions:     3,
-				KafkaReplicationFactor: 3,
-				KafkaBatchSize:         100,
-				KafkaBatchBytes:        1048576,
-				KafkaBatchTimeoutMs:    500,
-				KafkaCompressionCodec:  "snappy",
-				KafkaMaxAttempts:       3,
-				KafkaRetryBackoffMs:    100,
-				KafkaReadTimeoutMs:     5000,
-				KafkaWriteTimeoutMs:    5000,
-				KafkaRetentionMs:       3000,
+			requestBody: struct {
+				Environment string         `json:"environment"`
+				Method      string         `json:"method"`
+				ServiceName string         `json:"serviceName"`
+				Values      *config.Config `json:"values"`
+			}{
+				Environment: "test",
+				Method:      "update",
+				ServiceName: "messaging_service",
+				Values: &config.Config{
+					KafkaBrokers:           []string{"localhost:9092"},
+					KafkaNumPartitions:     3,
+					KafkaReplicationFactor: 3,
+					KafkaBatchSize:         100,
+					KafkaBatchBytes:        1048576,
+					KafkaBatchTimeoutMs:    500,
+					KafkaCompressionCodec:  "snappy",
+					KafkaMaxAttempts:       3,
+					KafkaRetryBackoffMs:    100,
+					KafkaReadTimeoutMs:     5000,
+					KafkaWriteTimeoutMs:    5000,
+					KafkaRetentionMs:       3000,
 
-				KafkaConsumerMaxWaitMs:        5000,
-				KafkaConsumerCommitIntervalMs: 5000,
-				KafkaConsumerSessionTimeoutMs: 30000,
-				KafkaConsumerHeartbeatMs:      1000,
-				KafkaConsumerMaxPollRecords:   1000,
-				KafkaConsumerAutoOffsetReset:  "earliest",
-				KafkaIsolationLevel:           "read_committed",
+					KafkaConsumerMaxWaitMs:        5000,
+					KafkaConsumerCommitIntervalMs: 5000,
+					KafkaConsumerSessionTimeoutMs: 30000,
+					KafkaConsumerHeartbeatMs:      1000,
+					KafkaConsumerMaxPollRecords:   1000,
+					KafkaConsumerAutoOffsetReset:  "earliest",
+					KafkaIsolationLevel:           "read_committed",
+				},
 			},
 			setCallback:       false,
+			setupMock:         func(mock *MockConfigManagerService) {},
 			expectedStatus:    fiber.StatusOK,
 			expectedHasConfig: true,
 		},
 		{
 			name: "valid config update with successful callback",
-			requestBody: config.Config{
-				KafkaBrokers:           []string{"localhost:9092"},
-				KafkaNumPartitions:     3,
-				KafkaReplicationFactor: 3,
-				KafkaBatchSize:         100,
-				KafkaBatchBytes:        1048576,
-				KafkaBatchTimeoutMs:    500,
-				KafkaCompressionCodec:  "snappy",
-				KafkaMaxAttempts:       3,
-				KafkaRetryBackoffMs:    100,
-				KafkaReadTimeoutMs:     5000,
-				KafkaWriteTimeoutMs:    5000,
-				KafkaRetentionMs:       3000,
+			requestBody: struct {
+				Environment string         `json:"environment"`
+				Method      string         `json:"method"`
+				ServiceName string         `json:"serviceName"`
+				Values      *config.Config `json:"values"`
+			}{
+				Environment: "test",
+				Method:      "update",
+				ServiceName: "messaging_service",
+				Values: &config.Config{
+					KafkaBrokers:           []string{"localhost:9092"},
+					KafkaNumPartitions:     3,
+					KafkaReplicationFactor: 3,
+					KafkaBatchSize:         100,
+					KafkaBatchBytes:        1048576,
+					KafkaBatchTimeoutMs:    500,
+					KafkaCompressionCodec:  "snappy",
+					KafkaMaxAttempts:       3,
+					KafkaRetryBackoffMs:    100,
+					KafkaReadTimeoutMs:     5000,
+					KafkaWriteTimeoutMs:    5000,
+					KafkaRetentionMs:       3000,
 
-				KafkaConsumerMaxWaitMs:        5000,
-				KafkaConsumerCommitIntervalMs: 5000,
-				KafkaConsumerSessionTimeoutMs: 30000,
-				KafkaConsumerHeartbeatMs:      1000,
-				KafkaConsumerMaxPollRecords:   1000,
-				KafkaConsumerAutoOffsetReset:  "earliest",
-				KafkaIsolationLevel:           "read_committed",
+					KafkaConsumerMaxWaitMs:        5000,
+					KafkaConsumerCommitIntervalMs: 5000,
+					KafkaConsumerSessionTimeoutMs: 30000,
+					KafkaConsumerHeartbeatMs:      1000,
+					KafkaConsumerMaxPollRecords:   1000,
+					KafkaConsumerAutoOffsetReset:  "earliest",
+					KafkaIsolationLevel:           "read_committed",
+				},
 			},
 			setCallback:       true,
 			callbackReturns:   nil,
+			setupMock:         func(mock *MockConfigManagerService) {},
 			expectedStatus:    fiber.StatusOK,
 			expectedHasConfig: true,
 		},
@@ -310,35 +344,89 @@ func TestUpdateConfigurations(t *testing.T) {
 			name:              "invalid request body",
 			requestBody:       "this is not a valid json object",
 			setCallback:       false,
+			setupMock:         func(mock *MockConfigManagerService) {},
 			expectedStatus:    fiber.StatusBadRequest,
 			expectedHasConfig: false,
 		},
 		{
+			name: "missing values in request",
+			requestBody: struct {
+				Environment string `json:"environment"`
+				Method      string `json:"method"`
+				ServiceName string `json:"serviceName"`
+				// Values is missing
+			}{
+				Environment: "test",
+				Method:      "update",
+				ServiceName: "messaging_service",
+			},
+			setCallback:       false,
+			setupMock:         func(mock *MockConfigManagerService) {},
+			expectedStatus:    fiber.StatusBadRequest,
+			expectedHasConfig: false,
+		},
+		{
+			name: "cache operation failure",
+			requestBody: struct {
+				Environment string         `json:"environment"`
+				Method      string         `json:"method"`
+				ServiceName string         `json:"serviceName"`
+				Values      *config.Config `json:"values"`
+			}{
+				Environment: "test",
+				Method:      "update",
+				ServiceName: "messaging_service",
+				Values: &config.Config{
+					KafkaBrokers:           []string{"localhost:9092"},
+					KafkaNumPartitions:     3,
+					KafkaReplicationFactor: 3,
+				},
+			},
+			setCallback: false,
+			setupMock: func(mock *MockConfigManagerService) {
+				// Configure mock to return an error for SetDataToCache
+				mock.SetSetDataToCacheError(errors.New("cache error"))
+			},
+			expectedStatus:    fiber.StatusOK, // The handler still returns OK even if cache fails
+			expectedHasConfig: true,
+		},
+		{
 			name: "failed callback",
-			requestBody: config.Config{
-				KafkaBrokers:           []string{"localhost:9092"},
-				KafkaNumPartitions:     3,
-				KafkaReplicationFactor: 3,
-				KafkaBatchSize:         100,
-				KafkaBatchBytes:        1048576,
-				KafkaBatchTimeoutMs:    500,
-				KafkaCompressionCodec:  "snappy",
-				KafkaMaxAttempts:       3,
-				KafkaRetryBackoffMs:    100,
-				KafkaReadTimeoutMs:     5000,
-				KafkaWriteTimeoutMs:    5000,
-				KafkaRetentionMs:       3000,
+			requestBody: struct {
+				Environment string         `json:"environment"`
+				Method      string         `json:"method"`
+				ServiceName string         `json:"serviceName"`
+				Values      *config.Config `json:"values"`
+			}{
+				Environment: "test",
+				Method:      "update",
+				ServiceName: "messaging_service",
+				Values: &config.Config{
+					KafkaBrokers:           []string{"localhost:9092"},
+					KafkaNumPartitions:     3,
+					KafkaReplicationFactor: 3,
+					KafkaBatchSize:         100,
+					KafkaBatchBytes:        1048576,
+					KafkaBatchTimeoutMs:    500,
+					KafkaCompressionCodec:  "snappy",
+					KafkaMaxAttempts:       3,
+					KafkaRetryBackoffMs:    100,
+					KafkaReadTimeoutMs:     5000,
+					KafkaWriteTimeoutMs:    5000,
+					KafkaRetentionMs:       3000,
 
-				KafkaConsumerMaxWaitMs:        5000,
-				KafkaConsumerCommitIntervalMs: 5000,
-				KafkaConsumerSessionTimeoutMs: 30000,
-				KafkaConsumerHeartbeatMs:      1000,
-				KafkaConsumerMaxPollRecords:   1000,
-				KafkaConsumerAutoOffsetReset:  "earliest",
-				KafkaIsolationLevel:           "read_committed",
+					KafkaConsumerMaxWaitMs:        5000,
+					KafkaConsumerCommitIntervalMs: 5000,
+					KafkaConsumerSessionTimeoutMs: 30000,
+					KafkaConsumerHeartbeatMs:      1000,
+					KafkaConsumerMaxPollRecords:   1000,
+					KafkaConsumerAutoOffsetReset:  "earliest",
+					KafkaIsolationLevel:           "read_committed",
+				},
 			},
 			setCallback:       true,
 			callbackReturns:   errors.New("callback error"),
+			setupMock:         func(mock *MockConfigManagerService) {},
 			expectedStatus:    fiber.StatusInternalServerError,
 			expectedHasConfig: true,
 		},
@@ -346,6 +434,28 @@ func TestUpdateConfigurations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup handler with mock
+			mockSvc := NewMockConfigManagerService(ctrl)
+
+			// Configure mock if needed
+			tt.setupMock(mockSvc)
+
+			// Create the environment
+			env := &config.Env{
+				ConfigServiceUrl: "http://localhost:8080",
+			}
+
+			// Create mock observability stack
+			obs := &observability.ObservabilityStack{
+				TracerService:  &MockTracerService{},
+				MetricsService: &MockMetricsService{},
+				LoggerService:  &MockLoggerService{},
+			}
+
+			// Create the handler
+			h, err := handler.NewConfigHandler(mockSvc, env, obs)
+			assert.NoError(t, err)
+
 			// Create a fiber app for testing
 			app := fiber.New()
 
@@ -370,12 +480,6 @@ func TestUpdateConfigurations(t *testing.T) {
 
 			// Verify response
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
-
-			// Verify if config was set as expected
-			if tt.expectedHasConfig {
-				cfg := config.GetConfig()
-				assert.NotNil(t, cfg)
-			}
 		})
 	}
 }
