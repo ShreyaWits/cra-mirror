@@ -7,4 +7,7 @@ use (
 	./protos
 	./config_service
 	./template_services
+	./thirdparty_service
 )
+
+replace cra-protos/redis_service => ./protos/redis_service

@@ -1,0 +1,88 @@
+//go:build !test
+
+package config
+
+import (
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"thirdparty_service/internal/modules/config/dto"
+
+	"thirdparty_service/internal/utils"
+
+	"github.com/joho/godotenv"
+)
+
+var AppConfig = new(appConfig)
+
+type appConfig struct {
+	dynamicConfig
+	StaticConfig
+}
+
+type dynamicConfig = *dto.ConfigResponse
+
+type StaticConfig struct {
+	Environment           string `validate:"required" env:"ENVIRONMENT"`
+	ServiceName           string `validate:"required" env:"SERVICE_NAME"`
+	ConfigServiceURL      string `validate:"required" env:"CONFIG_SERVICE_URL"`
+	ConfigServiceUsername string `validate:"required" env:"CONFIG_SERVICE_USERNAME"`
+	ConfigServicePassword string `validate:"required" env:"CONFIG_SERVICE_PASSWORD"`
+	OtelCollectorURL      string `validate:"required" env:"OTEL_COLLECTOR_URL"`
+	CachingServiceGrpcURL string `validate:"required" env:"CACHING_SERVICE_GRPC_URL"`
+}
+
+// LoadEnv reads from .env and sets global config variables
+func LoadEnv() error {
+	if os.Getenv("IS_DOCKER") != "true" {
+		if err := godotenv.Load(".env"); err != nil {
+			log.Println(".env file not found, falling back to system env")
+		}
+	}
+
+	AppConfig.StaticConfig = StaticConfig{
+		Environment:           getEnv("ENVIRONMENT", "development"),
+		ServiceName:           getEnv("SERVICE_NAME", "thirdparty-service"),
+		ConfigServiceURL:      getEnv("CONFIG_SERVICE_URL", "http://localhost:4001/api/v1"),
+		ConfigServiceUsername: getEnv("CONFIG_SERVICE_USERNAME", "admin1"),
+		ConfigServicePassword: getEnv("CONFIG_SERVICE_PASSWORD", "Test@1234"),
+		OtelCollectorURL:      getEnv("OTEL_COLLECTOR_URL", "localhost:4317"),
+		CachingServiceGrpcURL: getEnv("CACHING_SERVICE_GRPC_URL", "host.docker.internal:50505"),
+	}
+
+	validateErr := utils.Validate(AppConfig.StaticConfig)
+	if validateErr != nil || len(validateErr) > 0 {
+		return errors.New("invalid config")
+	}
+
+	
+
+	return nil
+}
+
+func getEnv(key, fallback string) string {
+	exists := os.Getenv(key)
+	if exists == "" {
+		return fallback
+	}
+	return exists
+}
+
+func (c *appConfig) SetEnv(payload *dto.ConfigResponse) string {
+	c.dynamicConfig = payload
+	return c.Environment
+}
+
+func (c *appConfig) GetDSN() string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		c.DatabaseHost, c.DatabasePort, c.DatabaseUser, c.DatabasePassword, c.DatabaseName)
+}
+
+func (c *appConfig) GetHTTPListenAddress() string {
+	return fmt.Sprintf("%s:%d", c.HTTPListenAddress, c.HTTPListenPort)
+}
+
+func (c *appConfig) GetGRPCListenAddress() string {
+	return fmt.Sprintf("%s:%d", c.GRPCListenAddress, c.GRPCListenPort)
+}

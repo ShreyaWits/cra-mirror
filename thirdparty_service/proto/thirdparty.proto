@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+option go_package = "github.com/kkwitslab/go-boilerplate/internal/pb";
+
+package pb;
+
+// Third Party Integrations: Twilio, WhatsApp, SendGrid, Aadhar, PAN
+service ThirdPartyService {
+  rpc InvokeTwilioSms(InvokeTwilioRequest) returns (InvokeTwilioResponse);
+  rpc InvokeWhatsAppMessage(InvokeWhatsAppRequest) returns (InvokeWhatsAppResponse);
+  rpc InvokeSendgridEmail(InvokeSendGridRequest) returns (InvokeSendGridResponse);
+  rpc VerifyAadhar(AadharVerifyRequest) returns (AadharVerifyResponse);
+  rpc VerifyPan(PANVerifyRequest) returns (PANVerifyResponse);
+  rpc InvokePushNotification(PushNotificationRequest) returns (PushNotificationResponse);
+}
+
+// --- Twilio SMS ---
+message InvokeTwilioRequest {
+  string phone = 1;
+  string message = 2;
+  string country_code = 3;
+}
+
+message InvokeTwilioResponse {
+  string code = 1;
+  string message = 2;
+}
+
+// --- Twilio WhatsApp ---
+message InvokeWhatsAppRequest {
+  string phone = 1;
+  string message = 2;
+  string country_code = 3;
+}
+
+message InvokeWhatsAppResponse {
+  string code = 1;
+  string message = 2;
+}
+
+// --- Push Notification ---
+message PushNotificationRequest {
+  string to_token = 1; // Firebase device token
+  string title = 2;    // Notification title
+  string body = 3;     // Notification body
+}
+
+message PushNotificationResponse {
+  string status = 1;  // "success" or "error"
+  string message = 2; // error details or confirmation
+}
+
+// --- SendGrid Email ---
+message InvokeSendGridRequest {
+  string to = 1;
+  string subject = 2;
+  string body = 3;
+  string type = 4; // e.g., "text/plain" or "text/html"
+}
+
+message InvokeSendGridResponse {
+  string code = 1;
+  string message = 2;
+}
+
+// --- Aadhar Verification ---
+message AadharVerifyRequest {
+  string number = 1;
+}
+
+message AadharResult {
+  string name = 1;
+  string dob = 2;
+}
+
+message AadharVerifyResponse {
+  string code = 1;
+  string message = 2;
+  bool verified = 3;
+  AadharResult data = 4;
+}
+
+// --- PAN Verification ---
+message PANVerifyRequest {
+  string number = 1;
+}
+
+message PanResult {
+  string name = 1;
+  string dob = 2;
+  string pan_type = 3;
+}
+
+message PANVerifyResponse {
+  string code = 1;
+  string message = 2;
+  bool verified = 3;
+  PanResult data = 4;
+}
