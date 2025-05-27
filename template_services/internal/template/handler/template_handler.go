@@ -14,6 +14,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const (
@@ -145,11 +146,12 @@ func (h *TemplateHandler) CreateTemplate(c *fiber.Ctx) error {
 
 	// Convert to proto request
 	protoReq := &models.Template{
-		Name:     req.Name,
-		Channel:  req.Channel,
-		Language: req.Language,
-		Content:  req.Content,
-		IsActive: req.IsActive,
+		Name:           req.Name,
+		Channel:        req.Channel,
+		Language:       req.Language,
+		Content:        req.Content,
+		IsActive:       req.IsActive,
+		RequiredFields: pq.StringArray(req.RequiredFields),
 	}
 
 	// Call service
@@ -244,15 +246,16 @@ func (h *TemplateHandler) GetTemplate(c *fiber.Ctx) error {
 		Success: true,
 		Message: "Template retrieved successfully",
 		Data: dto.TemplateResponse{
-			ID:        resp.ID.String(),
-			Name:      resp.Name,
-			Channel:   resp.Channel,
-			Language:  resp.Language,
-			Version:   int(resp.Version),
-			IsActive:  resp.IsActive,
-			Content:   resp.Content,
-			CreatedAt: resp.CreatedAt,
-			UpdatedAt: resp.UpdatedAt,
+			ID:             resp.ID.String(),
+			Name:           resp.Name,
+			Channel:        resp.Channel,
+			Language:       resp.Language,
+			Version:        int(resp.Version),
+			IsActive:       resp.IsActive,
+			Content:        resp.Content,
+			RequiredFields: pq.StringArray(resp.RequiredFields),
+			CreatedAt:      resp.CreatedAt,
+			UpdatedAt:      resp.UpdatedAt,
 		},
 	})
 }

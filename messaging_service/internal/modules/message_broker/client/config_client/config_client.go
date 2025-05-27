@@ -6,8 +6,23 @@ import (
 	"fmt"
 	"messaging_service/internal/config"
 	"messaging_service/internal/modules/message_broker/models"
+	"messaging_service/pkg/errors"
 	httpclient "messaging_service/pkg/http"
+	"messaging_service/pkg/observability"
 	"net/http"
+	"time"
+)
+
+const (
+	// Metric names
+	metricConfigFetchTotal   = "config_fetch_total"
+	metricConfigFetchSuccess = "config_fetch_success"
+	metricConfigFetchFailure = "config_fetch_failure"
+
+	// Error types
+	errorTypeHttp       = "http_error"
+	errorTypeDecode     = "decode_error"
+	errorTypeValidation = "validation_error"
 )
 
 type ConfigClient interface {
@@ -17,15 +32,19 @@ type ConfigClient interface {
 type ConfigClientImpl struct {
 	httpClient httpclient.HTTPClient
 	cfg        *config.Env
+	obs        *observability.ObservabilityStack
 }
 
-func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Env) (ConfigClient, error) {
+func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Env, obs *observability.ObservabilityStack) (ConfigClient, error) {
 	// Validate input arguments
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient cannot be nil in NewConfigClient")
 	}
 	if cfg == nil {
 		return nil, fmt.Errorf("cfg cannot be nil in NewConfigClient")
+	}
+	if obs == nil {
+		return nil, fmt.Errorf("observability stack cannot be nil in NewConfigClient")
 	}
 
 	// Validate required configuration fields
@@ -45,11 +64,31 @@ func NewConfigClient(httpClient httpclient.HTTPClient, cfg *config.Env) (ConfigC
 	return &ConfigClientImpl{
 		httpClient: httpClient,
 		cfg:        cfg,
+		obs:        obs,
 	}, nil
 }
 
 // GetCurrentConfig returns the config for the given key.
 func (c *ConfigClientImpl) FetchConfig(ctx context.Context) (*models.MessaggingConfigResponse, error) {
+	// Start tracing
+	functionName := "FetchConfig"
+	tCtx, span := c.obs.TracerService.StartTracer(ctx, functionName)
+	defer c.obs.TracerService.StopSpan(span)
+
+	// Generate request ID for correlation
+	requestID := fmt.Sprintf("req-%d", time.Now().UnixNano())
+
+	// Set tracing attributes
+	c.obs.TracerService.SetAttributes(span, map[string]string{
+		"request_id":  requestID,
+		"operation":   functionName,
+		"service":     config.SERVICE_NAME,
+		"environment": c.cfg.Environment,
+	})
+
+	// Increment total metric
+	c.obs.MetricsService.IncrementCounter(tCtx, metricConfigFetchTotal, 1, nil)
+
 	fullURL := fmt.Sprintf(
 		"%s/config/%s/%s",
 		c.cfg.ConfigServiceUrl,
@@ -57,41 +96,62 @@ func (c *ConfigClientImpl) FetchConfig(ctx context.Context) (*models.MessaggingC
 		config.SERVICE_NAME,
 	)
 
-	fmt.Println("[ConfigClient] Fetching config from URL:", fullURL)
+	c.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] Fetching config from service for environment: %s",
+		requestID, c.cfg.Environment))
 
 	req := httpclient.Request{
 		Method: httpclient.GET,
 		URL:    fullURL,
 		Headers: map[string]string{
-			"Authorization": "Bearer " + c.cfg.ConfigServiceToken,
+			"Authorization": "Bearer " + c.cfg.ConfigServiceToken, // We need the actual token for the request
 		},
 	}
 
-	fmt.Println("[ConfigClient] Sending request with headers:", req.Headers)
-
 	var configResponse models.ConfigServiceResponse
-	resp, err := c.httpClient.Do(ctx, req)
+	resp, err := c.httpClient.Do(tCtx, req) // Pass traced context to maintain trace propagation
 	if err != nil {
-		fmt.Println("[ConfigClient] Request failed:", err)
-		return nil, fmt.Errorf("httpclient.Do failed: %w", err)
+		c.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] Config fetch request failed", requestID))
+		c.obs.MetricsService.IncrementCounter(tCtx, metricConfigFetchFailure, 1, map[string]string{
+			"error_type": errorTypeHttp,
+		})
+		return nil, errors.NewCustomError(errors.CFGErrFetchFailed, err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("[ConfigClient] Received response with status code:", resp.StatusCode)
+	c.obs.LoggerService.Debug(tCtx, fmt.Sprintf("[%s] Received response with status code: %d",
+		requestID, resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("config fetch failed: status=%d", resp.StatusCode)
+		c.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] Config fetch failed with status code: %d",
+			requestID, resp.StatusCode))
+		c.obs.MetricsService.IncrementCounter(tCtx, metricConfigFetchFailure, 1, map[string]string{
+			"error_type":  errorTypeHttp,
+			"status_code": fmt.Sprintf("%d", resp.StatusCode),
+		})
+		return nil, errors.NewCustomError(errors.CFGErrFetchFailed,
+			fmt.Errorf("config fetch failed: status=%d", resp.StatusCode))
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&configResponse); err != nil {
-		return nil, fmt.Errorf("failed to decode config response: %w", err)
+		c.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] Failed to decode config response", requestID))
+		c.obs.MetricsService.IncrementCounter(tCtx, metricConfigFetchFailure, 1, map[string]string{
+			"error_type": errorTypeDecode,
+		})
+		return nil, errors.NewCustomError(errors.CFGErrUnmarshalFailed, err)
 	}
 
 	// Basic validation of the response
 	if configResponse.Data.KafkaBrokers == nil || len(configResponse.Data.KafkaBrokers) == 0 {
-		return nil, fmt.Errorf("invalid config received: KafkaBrokers is required but missing or empty")
+		c.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] Invalid config received: KafkaBrokers is missing or empty", requestID))
+		c.obs.MetricsService.IncrementCounter(tCtx, metricConfigFetchFailure, 1, map[string]string{
+			"error_type": errorTypeValidation,
+		})
+		return nil, errors.NewCustomError(errors.CFGErrValidationFailed,
+			fmt.Errorf("invalid config received: KafkaBrokers is required but missing or empty"))
 	}
 
-	fmt.Println("[ConfigClient] Config data unmarshalled successfully")
+	c.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] Successfully fetched and validated config", requestID))
+	c.obs.MetricsService.IncrementCounter(tCtx, metricConfigFetchSuccess, 1, nil)
+
 	return &configResponse.Data, nil
 }

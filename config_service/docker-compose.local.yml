@@ -26,7 +26,7 @@ services:
 
         - ETCD_SERVER_ENDPOINT=etcd:2379
         - TEMPORAL_SERVER_ENDPOINT=temporal:7233
-
+        - OTEL_COLLECTOR_GRPC_ENDPOINT=host.docker.internal:4317
         - CONFIG_SERVICE_ADMIN_SECRET=abd5f3e65f1f1e40f5cbdac1ef0344519ab7b0b569313c97db13cb9cce4bcf7d
         - CONFIG_SERVICE_JWT_SECRET=aklsdjflk
      

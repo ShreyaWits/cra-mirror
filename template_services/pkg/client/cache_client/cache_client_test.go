@@ -2,9 +2,9 @@ package cacheclient
 
 import (
 	"context"
+	pb "cra-protos/redis_service"
 	"errors"
 	"fmt"
-	pb "template-services/proto"
 	"testing"
 	"time"
 
@@ -249,7 +249,7 @@ func TestSetCache(t *testing.T) {
 				client: mockClient,
 			}
 
-			err := client.SetCache(context.Background(), tt.namespace, tt.key, tt.value, tt.ttl, tt.trackingID)
+			err := client.SetCache(context.Background(), tt.namespace, tt.key, tt.value, tt.ttl)
 
 			if tt.expectedError {
 				assert.Error(t, err)
@@ -341,7 +341,7 @@ func TestGetCache(t *testing.T) {
 				client: mockClient,
 			}
 
-			value, found, err := client.GetCache(context.Background(), tt.namespace, tt.key, tt.trackingID)
+			value, found, err := client.GetCache(context.Background(), tt.namespace, tt.key)
 
 			if tt.expectedError {
 				assert.Error(t, err)
@@ -427,7 +427,7 @@ func TestInvalidateCache(t *testing.T) {
 				client: mockClient,
 			}
 
-			err := client.InvalidateCache(context.Background(), tt.namespace, tt.key, tt.trackingID)
+			err := client.InvalidateCache(context.Background(), tt.namespace, tt.key)
 
 			if tt.expectedError {
 				assert.Error(t, err)

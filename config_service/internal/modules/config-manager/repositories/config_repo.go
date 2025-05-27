@@ -5,56 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	common "nps-config-service/internal/common/errors"
+	"nps-config-service/internal/constants"
 	"nps-config-service/internal/modules/config-manager/models"
 	etcdDB "nps-config-service/pkg/etcd"
 	"nps-config-service/pkg/observability"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
-
-const (
-	metricPrefix = "config_repository"
-)
-
-var (
-	operationLatency metric.Float64Histogram
-	operationCount   metric.Int64Counter
-	errorCount       metric.Int64Counter
-)
-
-func initMetrics(meter metric.Meter) {
-	var err error
-	operationLatency, err = meter.Float64Histogram(
-		metricPrefix+".operation_latency",
-		metric.WithDescription("Latency of repository operations in milliseconds"),
-		metric.WithUnit("ms"),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	operationCount, err = meter.Int64Counter(
-		metricPrefix+".operation_count",
-		metric.WithDescription("Count of repository operations"),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	errorCount, err = meter.Int64Counter(
-		metricPrefix+".error_count",
-		metric.WithDescription("Count of repository operation errors"),
-	)
-	if err != nil {
-		panic(err)
-	}
-}
 
 type ConfigRepository struct {
 	EtcdClient         *etcdDB.EtcdClientImpl
@@ -70,12 +31,11 @@ type IConfigRepo interface {
 	DeleteEtcdKey(ctx context.Context, key string) error
 	CreateAdmin(ctx context.Context, admin *models.Admin) (*models.Admin, error)
 	GetAdminByCredentials(ctx context.Context, username, password string) (*models.Admin, error)
+	ListAdmins(ctx context.Context) ([]*models.Admin, error)
+	DeleteAdmin(ctx context.Context, username string) error
 }
 
 func NewConfigRepository(etcdClient *etcdDB.EtcdClientImpl, observabilityStack *observability.ObservabilityStack) IConfigRepo {
-	if observabilityStack != nil && observabilityStack.MetricsService != nil {
-		initMetrics(observabilityStack.MetricsService)
-	}
 	return &ConfigRepository{EtcdClient: etcdClient, ObservabilityStack: observabilityStack}
 }
 
@@ -86,30 +46,25 @@ func (r *ConfigRepository) recordMetrics(ctx context.Context, operation string, 
 
 	// Record latency
 	latency := float64(time.Since(start).Milliseconds())
-	operationLatency.Record(ctx, latency,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "config_repository"),
-		),
-	)
+
+	r.ObservabilityStack.MetricsService.RecordHistogram(ctx, constants.ConfigRepoOperationLatencyMetric, latency, map[string]string{
+		"operation": operation,
+		"service":   "config_repository",
+	})
 
 	// Record operation count
-	operationCount.Add(ctx, 1,
-		metric.WithAttributes(
-			attribute.String("operation", operation),
-			attribute.String("service", "config_repository"),
-		),
-	)
+	r.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.ConfigRepoOperationCountMetric, 1, map[string]string{
+		"operation": operation,
+		"service":   "config_repository",
+	})
 
 	// Record error if any
 	if err != nil {
-		errorCount.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("operation", operation),
-				attribute.String("service", "config_repository"),
-				attribute.String("error", err.Error()),
-			),
-		)
+		r.ObservabilityStack.MetricsService.IncrementCounter(ctx, constants.ConfigRepoErrorCountMetric, 1, map[string]string{
+			"operation": operation,
+			"service":   "config_repository",
+			"error":     err.Error(),
+		})
 	}
 }
 
@@ -430,4 +385,78 @@ func (r *ConfigRepository) GetAdminByCredentials(ctx context.Context, username, 
 	r.ObservabilityStack.Logger.InfoContext(ctx, "Admin retrieved successfully",
 		"username", username)
 	return &admin, nil
+}
+
+// ListAdmins retrieves all admin users from etcd
+func (r *ConfigRepository) ListAdmins(ctx context.Context) ([]*models.Admin, error) {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.ListAdmins")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "list_admins", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Listing all admin users")
+
+	// Get all keys under /admins/
+	resp, err := r.EtcdClient.Client.Get(ctx, "/admins/", clientv3.WithPrefix())
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to list admin users",
+			"error", err)
+		return nil, fmt.Errorf("failed to list admin users: %w", err)
+	}
+
+	admins := make([]*models.Admin, 0, len(resp.Kvs))
+	for _, kv := range resp.Kvs {
+		var admin models.Admin
+		if err := json.Unmarshal(kv.Value, &admin); err != nil {
+			r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to unmarshal admin data",
+				"error", err,
+				"key", string(kv.Key))
+			continue
+		}
+		// Don't include password in the response
+		admin.Password = ""
+		admins = append(admins, &admin)
+	}
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Successfully listed admin users",
+		"count", len(admins))
+	return admins, nil
+}
+
+// DeleteAdmin deletes an admin user from etcd
+func (r *ConfigRepository) DeleteAdmin(ctx context.Context, username string) error {
+	start := time.Now()
+	ctx, span := r.ObservabilityStack.TracerService.Start(ctx, "ConfigRepository.DeleteAdmin")
+	defer span.End()
+	defer func() {
+		r.recordMetrics(ctx, "delete_admin", start, nil)
+	}()
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Deleting admin user",
+		"username", username)
+
+	key := fmt.Sprintf("/admins/%s", username)
+
+	// Check if admin exists
+	_, err := r.EtcdClient.GetKey(key)
+	if err != nil {
+		r.ObservabilityStack.Logger.WarnContext(ctx, "Admin not found",
+			"username", username)
+		return common.ThrowError(fiber.StatusNotFound, "ADMIN006")
+	}
+
+	// Delete the admin
+	_, err = r.EtcdClient.Client.Delete(ctx, key)
+	if err != nil {
+		r.ObservabilityStack.Logger.ErrorContext(ctx, "Failed to delete admin",
+			"error", err,
+			"username", username)
+		return fmt.Errorf("failed to delete admin: %w", err)
+	}
+
+	r.ObservabilityStack.Logger.InfoContext(ctx, "Successfully deleted admin user",
+		"username", username)
+	return nil
 }

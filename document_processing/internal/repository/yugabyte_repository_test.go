@@ -1,8 +1,8 @@
 package repository_test
 
 import (
-	"Document-Processing/internal/models"
-	"Document-Processing/internal/repository"
+	"document_processing/internal/models"
+	"document_processing/internal/repository"
 	"testing"
 	"time"
 

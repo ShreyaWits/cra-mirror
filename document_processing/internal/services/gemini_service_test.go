@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 
+	"document_processing/pkg/observability"
+
 	"github.com/google/generative-ai-go/genai"
 )
 
@@ -40,6 +42,10 @@ type mockGeminiModel struct {
 
 func (m *mockGeminiModel) GenerateContent(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error) {
 	return m.generateContentFunc(ctx, parts...)
+}
+
+func createTestObservability() observability.ObservabilityStack {
+	return observability.ObservabilityStack{}
 }
 
 func TestGeminiService_ProcessImage(t *testing.T) {
@@ -99,7 +105,7 @@ func TestGeminiService_ProcessImage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockMinio := &mockMinioRepository{}
-			service, err := NewGeminiService("test-api-key", mockMinio)
+			service, err := NewGeminiService("test-api-key", mockMinio, createTestObservability())
 			if err != nil {
 				t.Fatalf("Failed to create GeminiService: %v", err)
 			}
@@ -150,7 +156,7 @@ func TestGeminiService_ProcessImage(t *testing.T) {
 	}
 }
 
-func TestCleanAndValidateBase64(t *testing.T) {
+func TestGeminiService_CleanAndValidateBase64(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -186,7 +192,12 @@ func TestCleanAndValidateBase64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotData, gotMime, err := cleanAndValidateBase64(tt.input)
+			service, err := NewGeminiService("test-api-key", &mockMinioRepository{}, createTestObservability())
+			if err != nil {
+				t.Fatalf("Failed to create GeminiService: %v", err)
+			}
+
+			gotData, gotMime, err := service.cleanAndValidateBase64(context.Background(), tt.input)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("cleanAndValidateBase64() error = %v, wantErr %v", err, tt.wantErr)
