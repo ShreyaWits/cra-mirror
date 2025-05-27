@@ -61,13 +61,13 @@ func NewContainer() (*Container, error) {
 	}
 
 	// Create config client
-	configClient, err := client.NewConfigClient(httpClient, env)
+	configClient, err := client.NewConfigClient(httpClient, env, obs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config client: %w", err)
 	}
 
 	// Create cache client
-	cacheClient, err := cacheclient.NewRedisClient(env.CacheUrl)
+	cacheClient, err := cacheclient.NewRedisClient(env.CacheUrl, obs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cache client: %w", err)
 	}
@@ -160,6 +160,7 @@ func (c *Container) Reinitialize(newConfig *config.Config) error {
 
 	// Compare configs to see if we need to reinitialize
 	if !configRequiresReinitialization(c.Config, newConfig) {
+		c.Config = newConfig
 		// Validate and set the config, even if no reinitialization is needed
 		if err := config.SetConfig(newConfig); err != nil {
 			return fmt.Errorf("failed to validate new configuration: %w", err)

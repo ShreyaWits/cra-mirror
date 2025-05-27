@@ -2,24 +2,29 @@ package mock
 
 import (
 	"messaging_service/pkg/logger"
+	metrics "messaging_service/pkg/matrics"
+	"messaging_service/pkg/tracer"
 )
 
-// MockObservabilityStack is a mock implementation of the observability stack
+// MockObservabilityStack is a test implementation of the ObservabilityStack
+// that uses mocks for its components
 type MockObservabilityStack struct {
-	LoggerService  *MockLogger
-	TracerService  *MockTracerService
-	MetricsService interface{}
+	MockTracer  *tracer.MockTracerService
+	MockMetrics *metrics.MockMetricsService
+	MockLogger  *logger.MockLogger
 }
 
-// NewMockObservabilityStack creates a new mock observability stack
+// NewMockObservabilityStack creates a new mock observability stack for testing
 func NewMockObservabilityStack() *MockObservabilityStack {
 	return &MockObservabilityStack{
-		LoggerService: new(MockLogger),
-		TracerService: new(MockTracerService),
+		MockTracer:  tracer.NewMockTracerService(),
+		MockMetrics: metrics.NewMockMetricsService(),
+		MockLogger:  logger.NewMockLogger(),
 	}
 }
 
-// GetLoggerService returns the logger service
-func (m *MockObservabilityStack) GetLoggerService() logger.Logger {
-	return m.LoggerService
+// GetObservabilityComponents returns the components of the mock observability stack
+// as interfaces that match the actual ObservabilityStack
+func (m *MockObservabilityStack) GetObservabilityComponents() (tracer.TracerService, metrics.MetricsService, logger.Logger) {
+	return m.MockTracer, m.MockMetrics, m.MockLogger
 }

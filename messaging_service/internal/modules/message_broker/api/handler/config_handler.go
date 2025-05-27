@@ -13,6 +13,18 @@ import (
 
 const (
 	defaultTimeoutConfig = 5 * time.Second
+	// Metric names
+	metricConfigUpdateTotal   = "config_update_total"
+	metricConfigUpdateSuccess = "config_update_success"
+	metricConfigUpdateFailure = "config_update_failure"
+	metricHealthCheckTotal    = "health_check_total"
+	metricHealthCheckSuccess  = "health_check_success"
+	metricHealthCheckFailure  = "health_check_failure"
+	// Error types
+	errorTypeParse      = "parse_error"
+	errorTypeCache      = "cache_error"
+	errorTypeReinit     = "reinit_error"
+	errorTypeValidation = "validation_error"
 )
 
 // ReinitializeCallback is a function type for handling reinitialization
@@ -52,25 +64,28 @@ func (h *ConfigHandler) SetReinitCallback(callback ReinitializeCallback) {
 
 func (h *ConfigHandler) UpdateConfigurations(ctx *fiber.Ctx) error {
 	functionName := "UpdateConfigurations"
-	functionFailed := "UpdateConfigurations_Failed"
 
 	// Create context with timeout
 	fiberCtx, cancel := context.WithTimeout(ctx.Context(), defaultTimeoutConfig)
 	defer cancel()
+
+	// Start tracing
 	tCtx, span := h.obs.TracerService.StartTracer(fiberCtx, functionName)
 	defer h.obs.TracerService.StopSpan(span)
 
 	// Generate request ID for correlation
 	requestID := fmt.Sprintf("req-%d", time.Now().UnixNano())
 
-	h.obs.MetricsService.IncrementCounter(tCtx, functionName, 1, nil)
-
-	// Set tracing attributes - only include request ID
+	// Set tracing attributes
 	h.obs.TracerService.SetAttributes(span, map[string]string{
 		"request_id": requestID,
+		"operation":  functionName,
 	})
 
-	h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] STEP: Request received", requestID))
+	// Increment total requests metric
+	h.obs.MetricsService.IncrementCounter(tCtx, metricConfigUpdateTotal, 1, nil)
+
+	h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] Configuration update request received", requestID))
 
 	// Define a custom wrapper struct to match the incoming JSON
 	type ConfigWrapper struct {
@@ -84,20 +99,23 @@ func (h *ConfigHandler) UpdateConfigurations(ctx *fiber.Ctx) error {
 
 	// Parse the request body
 	if err := ctx.BodyParser(&wrapper); err != nil {
-		h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] STATUS: Bad request parsing: %v", requestID, err))
-		h.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{
-			"error": "parse_error",
+		h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] Failed to parse request body", requestID))
+		h.obs.MetricsService.IncrementCounter(tCtx, metricConfigUpdateFailure, 1, map[string]string{
+			"error_type": errorTypeParse,
 		})
 
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"message": err.Error(),
+			"message": "Invalid request format",
 		})
 	}
 
 	// Check if we have values
 	if wrapper.Values == nil {
-		h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] STATUS: No values in request", requestID))
+		h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] No configuration values provided", requestID))
+		h.obs.MetricsService.IncrementCounter(tCtx, metricConfigUpdateFailure, 1, map[string]string{
+			"error_type": errorTypeValidation,
+		})
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"message": "No configuration values found",
@@ -107,52 +125,38 @@ func (h *ConfigHandler) UpdateConfigurations(ctx *fiber.Ctx) error {
 	// Use the parsed config directly
 	cfg := wrapper.Values
 
-	h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] STEP: Parsed configuration: %+v", requestID, cfg))
+	// Log only non-sensitive information
+	h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] Processing configuration update for environment: %s, service: %s",
+		requestID, wrapper.Environment, wrapper.ServiceName))
 
-	// Set the new configuration
-	if err := config.SetConfig(cfg); err != nil {
-		h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] STATUS: Configuration error: %v", requestID, err))
-		h.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{
-			"error": "config_error",
-		})
-
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
-	}
-
-	h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] STEP: Saving to cache", requestID))
 	// Save to cache if available
 	err := h.configManagerService.SetDataToCache(tCtx, "config", cfg)
 	if err != nil {
-		h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] STATUS: Cache error", requestID))
-		h.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{
-			"error": "cache_error",
+		h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] Failed to update configuration cache", requestID))
+		h.obs.MetricsService.IncrementCounter(tCtx, metricConfigUpdateFailure, 1, map[string]string{
+			"error_type": errorTypeCache,
 		})
 	}
 
 	// Execute the reinitialization callback if it's been set
 	if h.reinitCallback != nil {
-		h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] STEP: Reinitializing services", requestID))
+		h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] Initiating service reinitialization", requestID))
 		if err := h.reinitCallback(cfg); err != nil {
-			h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] STATUS: Reinitialization failed", requestID))
-			h.obs.MetricsService.IncrementCounter(tCtx, functionFailed, 1, map[string]string{
-				"error": "reinit_error",
+			h.obs.LoggerService.Error(tCtx, fmt.Sprintf("[%s] Service reinitialization failed", requestID))
+			h.obs.MetricsService.IncrementCounter(tCtx, metricConfigUpdateFailure, 1, map[string]string{
+				"error_type": errorTypeReinit,
 			})
 
 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"success": false,
-				"message": "Error reinitializing services: " + err.Error(),
+				"message": "Error reinitializing services",
 			})
 		}
-		h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] STATUS: Reinitialization successful", requestID))
-	} else {
-		h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] STATUS: No reinitialization needed", requestID))
+		h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] Service reinitialization completed successfully", requestID))
 	}
 
-	h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] STATUS: Success", requestID))
-	h.obs.MetricsService.IncrementCounter(tCtx, "operation_success", 1, nil)
+	h.obs.LoggerService.Info(tCtx, fmt.Sprintf("[%s] Configuration update completed successfully", requestID))
+	h.obs.MetricsService.IncrementCounter(tCtx, metricConfigUpdateSuccess, 1, nil)
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"success": true,
@@ -171,8 +175,16 @@ func (h *ConfigHandler) Health(ctx *fiber.Ctx) error {
 	tCtx, span := h.obs.TracerService.StartTracer(tCtx, functionName)
 	defer h.obs.TracerService.StopSpan(span)
 
-	h.obs.MetricsService.IncrementCounter(tCtx, functionName, 1, map[string]string{})
-	h.obs.LoggerService.Info(tCtx, "Health check requested")
+	// Set tracing attributes
+	h.obs.TracerService.SetAttributes(span, map[string]string{
+		"operation": functionName,
+	})
+
+	// Increment metrics
+	h.obs.MetricsService.IncrementCounter(tCtx, metricHealthCheckTotal, 1, nil)
+	h.obs.MetricsService.IncrementCounter(tCtx, metricHealthCheckSuccess, 1, nil)
+
+	h.obs.LoggerService.Info(tCtx, "Health check completed successfully")
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "OK",
